@@ -1,0 +1,54 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: WildcatArchController
+    network: sepolia
+    source:
+      address: "0x337E38b3b90ca0B208Cda586C843B33d43fad5c4"
+      abi: WildcatArchController
+      startBlock: 4557388
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - BorrowerAdded
+        - BorrowerRemoved
+        - ControllerAdded
+        - ControllerFactoryAdded
+        - ControllerFactoryRemoved
+        - ControllerRemoved
+        - MarketAdded
+        - MarketRemoved
+        - OwnershipHandoverCanceled
+        - OwnershipHandoverRequested
+        - OwnershipTransferred
+      abis:
+        - name: WildcatArchController
+          file: ./abis/WildcatArchController.json
+      eventHandlers:
+        - event: BorrowerAdded(address)
+          handler: handleBorrowerAdded
+        - event: BorrowerRemoved(address)
+          handler: handleBorrowerRemoved
+        - event: ControllerAdded(indexed address,address)
+          handler: handleControllerAdded
+        - event: ControllerFactoryAdded(address)
+          handler: handleControllerFactoryAdded
+        - event: ControllerFactoryRemoved(address)
+          handler: handleControllerFactoryRemoved
+        - event: ControllerRemoved(address)
+          handler: handleControllerRemoved
+        - event: MarketAdded(indexed address,address)
+          handler: handleMarketAdded
+        - event: MarketRemoved(address)
+          handler: handleMarketRemoved
+        - event: OwnershipHandoverCanceled(indexed address)
+          handler: handleOwnershipHandoverCanceled
+        - event: OwnershipHandoverRequested(indexed address)
+          handler: handleOwnershipHandoverRequested
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/wildcat-arch-controller.ts

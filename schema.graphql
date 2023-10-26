@@ -1,0 +1,90 @@
+type BorrowerAdded @entity(immutable: true) {
+  id: Bytes!
+  borrower: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type BorrowerRemoved @entity(immutable: true) {
+  id: Bytes!
+  borrower: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type ControllerAdded @entity(immutable: true) {
+  id: Bytes!
+  controllerFactory: Bytes! # address
+  controller: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type ControllerFactoryAdded @entity(immutable: true) {
+  id: Bytes!
+  controllerFactory: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type ControllerFactoryRemoved @entity(immutable: true) {
+  id: Bytes!
+  controllerFactory: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type ControllerRemoved @entity(immutable: true) {
+  id: Bytes!
+  controller: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type MarketAdded @entity(immutable: true) {
+  id: Bytes!
+  controller: Bytes! # address
+  market: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type MarketRemoved @entity(immutable: true) {
+  id: Bytes!
+  market: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipHandoverCanceled @entity(immutable: true) {
+  id: Bytes!
+  pendingOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipHandoverRequested @entity(immutable: true) {
+  id: Bytes!
+  pendingOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferred @entity(immutable: true) {
+  id: Bytes!
+  oldOwner: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
