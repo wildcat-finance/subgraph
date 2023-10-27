@@ -191,3 +191,5 @@ entitySettings:
     entityId:
       - name: archController
         type: Bytes
+  MarketInterestAccrued:
+    useDefault: {}
