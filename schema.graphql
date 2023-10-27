@@ -235,12 +235,6 @@ type MarketDeployed @entity(immutable: true) {
 #                                WildcatMarket                               #
 # -------------------------------------------------------------------------- #
 
-enum LenderStatus {
-  Null
-  Blocked
-  WithdrawOnly
-  DepositAndWithdraw
-}
 
 type LenderAccount @entity {
   id: ID! # LENDER-<market>-<address>
@@ -257,27 +251,18 @@ type LenderAccount @entity {
   interestAccrualRecords: [LenderInterestAccrued!]! @derivedFrom(field: "account")
 }
 
+enum LenderStatus {
+  Null
+  Blocked
+  WithdrawOnly
+  DepositAndWithdraw
+}
+
 type LenderInterestAccrued @entity(immutable: true) {
   id: ID!
   account: LenderAccount! # address
   market: Market! # address
   interestEarned: BigInt! # uint256
-  blockNumber: Int!
-  blockTimestamp: Int!
-  transactionHash: Bytes!
-}
-
-type MarketInterestAccrued @entity(immutable: true) {
-  id: ID!
-  market: Market! # address
-  fromTimestamp: Int!
-  toTimestamp: Int!
-  timeWithPenalties: Int!
-  baseInterestRay: BigInt! # uint256
-  delinquencyFeeRay: BigInt! # uint256
-  baseInterestAccrued: BigInt! # uint256
-  delinquencyFeesAccrued: BigInt! # uint256
-  protocolFeesAccrued: BigInt! # uint256
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -405,6 +390,22 @@ type Market @entity {
   depositRecords: [Deposit!]! @derivedFrom(field: "market")
   feeCollectionRecords: [FeesCollected!]! @derivedFrom(field: "market")
   repaymentRecords: [DebtRepaid!]! @derivedFrom(field: "market")
+}
+
+type MarketInterestAccrued @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  fromTimestamp: Int!
+  toTimestamp: Int!
+  timeWithPenalties: Int!
+  baseInterestRay: BigInt! # uint256
+  delinquencyFeeRay: BigInt! # uint256
+  baseInterestAccrued: BigInt! # uint256
+  delinquencyFeesAccrued: BigInt! # uint256
+  protocolFeesAccrued: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
 }
 
 type DelinquencyStatusChanged @entity(immutable: true) {
