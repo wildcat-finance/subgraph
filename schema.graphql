@@ -380,7 +380,7 @@ type Market @entity {
   withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
 
-  # ------------------------------ Relationships ----------------------------- #
+  # --------------------------------- Events --------------------------------- #
   deployedEvent: MarketDeployed! @derivedFrom(field: "market")
   removal: MarketRemoved @derivedFrom(field: "market")
   interestAccrualRecords: [MarketInterestAccrued!]!
