@@ -321,9 +321,8 @@ export function handleSanctionedAccountWithdrawalSentToEscrow(
 
 function updateTimeDelinquentAndGetPenaltyTime(
   market: Market,
-  _timeDelta: number
-): number {
-    let timeDelta = BigInt.fromI32(_timeDelta)
+  timeDelta: BigInt
+): BigInt {
     // Seconds in delinquency at last update
     let previousTimeDelinquent = BigInt.fromI32(market.timeDelinquent);
 
@@ -341,7 +340,7 @@ function updateTimeDelinquentAndGetPenaltyTime(
 
       // Penalties apply for the number of seconds the market spent in
       // delinquency outside of the grace period since the last update.
-      return satSub(timeDelta, secondsRemainingWithoutPenalty).toI32();
+      return satSub(timeDelta, secondsRemainingWithoutPenalty);
     }
 
     // Reduce the total time in delinquency by the time elapsed, stopping
@@ -350,10 +349,13 @@ function updateTimeDelinquentAndGetPenaltyTime(
 
     // Calculate the number of seconds the old timeDelinquent had remaining
     // outside the grace period, or zero if it was already in the grace period.
-    let secondsRemainingWithPenalty = satSub(previousTimeDelinquent, BigInt.fromI32(market.delinquencyGracePeriod)).toI32();
+    let secondsRemainingWithPenalty = satSub(previousTimeDelinquent, BigInt.fromI32(market.delinquencyGracePeriod));
 
     // Only apply penalties for the remaining time outside of the grace period.
-    return Math.min(secondsRemainingWithPenalty, _timeDelta);
+    if (secondsRemainingWithPenalty.lt(timeDelta)) {
+      return secondsRemainingWithPenalty;
+    }
+    return timeDelta
 }
 
 export function handleInterestAndFeesAccrued(
@@ -369,18 +371,18 @@ export function handleInterestAndFeesAccrued(
     market.scaledTotalSupply,
     delinquencyFeeRay
   );
-  let fromTimestamp = event.params.fromTimestamp.toI32();
-  let toTimestamp = event.params.toTimestamp.toI32();
+  let fromTimestamp = event.params.fromTimestamp;
+  let toTimestamp = event.params.toTimestamp;
   market.totalDelinquencyFeesAccrued = market.totalDelinquencyFeesAccrued.plus(
     delinquencyFeesAccrued
   );
   market.totalBaseInterestAccrued = market.totalBaseInterestAccrued.plus(
     baseInterestAccrued
   );
-  let timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(market, toTimestamp - fromTimestamp)
+  let timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(market, toTimestamp.minus(fromTimestamp))
   createMarketInterestAccrued(generateEventId(event), {
-    fromTimestamp,
-    toTimestamp,
+    fromTimestamp: fromTimestamp.toI32(),
+    toTimestamp: toTimestamp.toI32(),
     baseInterestRay: baseInterestRay,
     delinquencyFeeRay: delinquencyFeeRay,
     baseInterestAccrued,
@@ -390,14 +392,14 @@ export function handleInterestAndFeesAccrued(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
-    timeWithPenalties
+    timeWithPenalties: timeWithPenalties.toI32()
   });
   market.scaleFactor = scaleFactor;
   market.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued.plus(
     protocolFee
   );
   market.pendingProtocolFees = market.pendingProtocolFees.plus(protocolFee);
-  market.lastInterestAccruedTimestamp = toTimestamp;
+  market.lastInterestAccruedTimestamp = toTimestamp.toI32();
   market.save();
 }
 
