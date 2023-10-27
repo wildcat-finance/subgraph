@@ -1,0 +1,193 @@
+networkConfig:
+  entityIdPrefixes:
+    - networks:
+        - sepolia
+      prefix: ""
+entitySettings:
+  WithdrawalBatch:
+    useDefault:
+      scaledAmountBurned: {}
+      normalizedAmountPaid: {}
+      scaledTotalAmount: {}
+      isExpired: {}
+      isClosed: {}
+      paymentsCount: {}
+      totalNormalizedRequests: {}
+      totalInterestEarned: {}
+      normalizedAmountClaimed: {}
+    entityId:
+      - type: constant
+        value: "WDBATCH"
+      - name: market
+        type: Bytes
+      - name: expiry
+        type: BigInt
+    setters:
+      - name: setIsExpired
+        fields:
+          - isExpired
+      - name: setIsClosed
+        fields:
+          - isClosed
+  WithdrawalBatchPayment:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "WDPMT"
+      - name: market
+        type: Bytes
+      - name: expiry
+        type: BigInt
+      - name: paymentIndex
+        type: Int
+  LenderWithdrawalStatus:
+    useDefault:
+      normalizedAmountWithdrawn: {}
+      scaledAmount: {}
+      executionsCount: {}
+      requestsCount: {}
+      totalNormalizedRequests: {}
+    entityId:
+      - type: constant
+        value: "WDSTAT"
+      - name: market
+        type: Bytes
+      - name: expiry
+        type: BigInt
+      - name: account
+        type: Bytes
+    setters:
+      - name: setScaledAmount
+        fields:
+          - scaledAmount
+      - name: setNormalizedAmountWithdrawn
+        fields:
+          - normalizedAmountWithdrawn
+  LenderAccount:
+    useDefault:
+      scaledBalance: {}
+      role: {}
+      totalDeposited: {}
+      totalInterestEarned: {}
+    entityId:
+      - type: constant
+        value: "LENDER"
+      - name: market
+        type: Bytes
+      - name: address
+        type: Bytes
+    setters:
+      - name: setScaledBalance
+        fields:
+          - scaledBalance
+      - name: setRole
+        fields:
+          - role
+  WithdrawalExecution:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "WDEXEC"
+      - name: market
+        type: Bytes
+      - name: expiry
+        type: BigInt
+      - name: account
+        type: Bytes
+      - name: executionIndex
+        type: Int
+  WithdrawalRequest:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "WDEXEC"
+      - name: market
+        type: Bytes
+      - name: expiry
+        type: BigInt
+      - name: account
+        type: Bytes
+      - name: requestIndex
+        type: Int
+  Market:
+    useDefault:
+      isClosed: {}
+      pendingProtocolFees: {}
+      normalizedUnclaimedWithdrawals: {}
+      scaledTotalSupply: {}
+      scaledPendingWithdrawals: {}
+      pendingWithdrawalExpiry: {}
+      isDelinquent: {}
+      timeDelinquent: {}
+      totalBorrowed: {}
+      totalRepaid: {}
+      totalBaseInterestAccrued: {}
+      totalDelinquencyFeesAccrued: {}
+      totalProtocolFeesAccrued: {}
+      totalDeposited: {}
+    entityId:
+      - name: id
+        type: Bytes
+    setters:
+      - name: setMaxTotalSupply
+        fields:
+          - maxTotalSupply
+      - name: setAnnualInterestBips
+        fields:
+          - annualInterestBips
+      - name: setReserveRatioBips
+        fields:
+          - reserveRatioBips
+      - name: setMarketIsClosed
+        fields:
+          - isClosed
+      - name: setIsDelinquent
+        fields:
+          - isDelinquent
+      - name: setPendingWithdrawalExpiry
+        fields:
+          - pendingWithdrawalExpiry
+  ControllerFactory:
+    useDefault:
+      feeRecipient: {}
+      protocolFeeBips: {}
+      originationFeeAsset: {}
+      originationFeeAmount: {}
+    entityId:
+      - name: factory
+        type: Bytes
+  Controller:
+    useDefault: {}
+    entityId:
+      - name: controller
+        type: Bytes
+  LenderAuthorization:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "AUTH"
+      - name: controller
+        type: Bytes
+      - name: lender
+        type: Bytes
+  ParameterConstraints:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "CSNT"
+      - name: factory
+        type: Bytes
+  RegisteredBorrower:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "BRWR"
+      - name: archController
+        type: Bytes
+      - name: borrower
+        type: Bytes
+  ArchController:
+    useDefault: {}
+    entityId:
+      - name: archController
+        type: Bytes

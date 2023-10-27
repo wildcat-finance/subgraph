@@ -1,4 +1,26 @@
 import {
+  createBorrowerRegistrationChange,
+  createControllerAdded,
+  createControllerFactory,
+  createControllerFactoryAdded,
+  createControllerFactoryRemoved,
+  createControllerRemoved,
+  createMarketAdded,
+  createMarketRemoved,
+  createParameterConstraints,
+  generateRegisteredBorrowerId,
+  generateControllerFactoryId,
+  generateControllerId,
+  generateMarketId,
+  generateParameterConstraintsId,
+  getController,
+  getControllerFactory,
+  getMarket,
+  getOrInitializeArchController,
+  getRegisteredBorrower,
+  getOrInitializeRegisteredBorrower
+} from "../generated/UncrashableEntityHelpers";
+import {
   BorrowerAdded as BorrowerAddedEvent,
   BorrowerRemoved as BorrowerRemovedEvent,
   ControllerAdded as ControllerAddedEvent,
@@ -9,174 +31,200 @@ import {
   MarketRemoved as MarketRemovedEvent,
   OwnershipHandoverCanceled as OwnershipHandoverCanceledEvent,
   OwnershipHandoverRequested as OwnershipHandoverRequestedEvent,
-  OwnershipTransferred as OwnershipTransferredEvent
-} from "../generated/WildcatArchController/WildcatArchController"
+  OwnershipTransferred as OwnershipTransferredEvent,
+} from "../generated/WildcatArchController/WildcatArchController";
+import { WildcatMarketControllerFactory } from "../generated/WildcatArchController/WildcatMarketControllerFactory";
 import {
-  BorrowerAdded,
-  BorrowerRemoved,
-  ControllerAdded,
-  ControllerFactoryAdded,
-  ControllerFactoryRemoved,
-  ControllerRemoved,
-  MarketAdded,
-  MarketRemoved,
   OwnershipHandoverCanceled,
   OwnershipHandoverRequested,
-  OwnershipTransferred
-} from "../generated/schema"
+  OwnershipTransferred,
+} from "../generated/schema";
+import { WildcatMarketControllerFactory as ControllerFactoryTemplate } from "../generated/templates";
+import { generateEventId } from "./utils";
 
 export function handleBorrowerAdded(event: BorrowerAddedEvent): void {
-  let entity = new BorrowerAdded(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.borrower = event.params.borrower
+  let borrower = event.params.borrower;
+  getOrInitializeArchController(event.address.toHex(), {});
+  let borrowerStatus = getOrInitializeRegisteredBorrower(
+    generateRegisteredBorrowerId(event.address, borrower),
+    {
+      archController: event.address.toHex(),
+      isRegistered: true,
+      borrower,
+    }
+  );
+  if (!borrowerStatus.wasCreated) {
+    borrowerStatus.entity.isRegistered = true;
+    borrowerStatus.entity.save();
+  }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  createBorrowerRegistrationChange(generateEventId(event), {
+    // archController: event.address.toHex(),
+    // borrower: borrowerStatus.entity.borrower,
+    registration: borrowerStatus.entity.id,
+    isRegistered: true,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleBorrowerRemoved(event: BorrowerRemovedEvent): void {
-  let entity = new BorrowerRemoved(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.borrower = event.params.borrower
+  let borrower = event.params.borrower;
+  getOrInitializeArchController(event.address.toHex(), {});
+  let borrowerStatus = getRegisteredBorrower(
+    generateRegisteredBorrowerId(event.address, borrower)
+  );
+  borrowerStatus.isRegistered = false;
+  borrowerStatus.save();
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  createBorrowerRegistrationChange(generateEventId(event), {
+    registration: borrowerStatus.id,
+    isRegistered: true,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleControllerAdded(event: ControllerAddedEvent): void {
-  let entity = new ControllerAdded(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.controllerFactory = event.params.controllerFactory
-  entity.controller = event.params.controller
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  createControllerAdded(generateEventId(event), {
+    controllerFactory: generateControllerFactoryId(
+      event.params.controllerFactory
+    ),
+    controller: generateControllerId(event.params.controller),
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleControllerFactoryAdded(
   event: ControllerFactoryAddedEvent
 ): void {
-  let entity = new ControllerFactoryAdded(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.controllerFactory = event.params.controllerFactory
+  getOrInitializeArchController(event.address.toHex(), {});
+  ControllerFactoryTemplate.create(event.params.controllerFactory);
+  let controllerFactory = event.params.controllerFactory;
+  let factoryContract = WildcatMarketControllerFactory.bind(controllerFactory);
+  let constraintsResult = factoryContract.getParameterConstraints();
+  let constraints = createParameterConstraints(
+    generateParameterConstraintsId(controllerFactory),
+    {
+      minimumDelinquencyGracePeriod: constraintsResult.minimumDelinquencyGracePeriod.toI32(),
+      maximumDelinquencyGracePeriod: constraintsResult.maximumDelinquencyGracePeriod.toI32(),
+      minimumReserveRatioBips: constraintsResult.minimumReserveRatioBips,
+      maximumReserveRatioBips: constraintsResult.maximumReserveRatioBips,
+      minimumDelinquencyFeeBips: constraintsResult.minimumDelinquencyFeeBips,
+      maximumDelinquencyFeeBips: constraintsResult.maximumDelinquencyFeeBips,
+      minimumWithdrawalBatchDuration: constraintsResult.minimumWithdrawalBatchDuration.toI32(),
+      maximumWithdrawalBatchDuration: constraintsResult.maximumWithdrawalBatchDuration.toI32(),
+      minimumAnnualInterestBips: constraintsResult.minimumAnnualInterestBips,
+      maximumAnnualInterestBips: constraintsResult.maximumAnnualInterestBips,
+    }
+  );
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  createControllerFactory(generateControllerFactoryId(controllerFactory), {
+    constraints: constraints.id,
+    sentinel: factoryContract.sentinel(),
+    isRegistered: true,
+    archController: event.address.toHex(),
+  });
+  createControllerFactoryAdded(generateEventId(event), {
+    controllerFactory: generateControllerFactoryId(
+      event.params.controllerFactory
+    ),
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleControllerFactoryRemoved(
   event: ControllerFactoryRemovedEvent
 ): void {
-  let entity = new ControllerFactoryRemoved(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.controllerFactory = event.params.controllerFactory
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  let factory = getControllerFactory(
+    generateControllerFactoryId(event.params.controllerFactory)
+  );
+  factory.isRegistered = false;
+  factory.save();
+  createControllerFactoryRemoved(generateEventId(event), {
+    controllerFactory: factory.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleControllerRemoved(event: ControllerRemovedEvent): void {
-  let entity = new ControllerRemoved(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.controller = event.params.controller
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  let controller = getController(generateControllerId(event.params.controller));
+  controller.isRegistered = false;
+  controller.save();
+  createControllerRemoved(generateEventId(event), {
+    controller: controller.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleMarketAdded(event: MarketAddedEvent): void {
-  let entity = new MarketAdded(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.controller = event.params.controller
-  entity.market = event.params.market
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  createMarketAdded(generateEventId(event), {
+    controller: event.params.controller.toHex(),
+    market: event.params.market.toHex(),
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleMarketRemoved(event: MarketRemovedEvent): void {
-  let entity = new MarketRemoved(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.market = event.params.market
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  let market = getMarket(generateMarketId(event.params.market));
+  market.isRegistered = false;
+  market.save();
+  createMarketRemoved(generateEventId(event), {
+    market: market.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+  });
 }
 
 export function handleOwnershipHandoverCanceled(
   event: OwnershipHandoverCanceledEvent
 ): void {
-  let entity = new OwnershipHandoverCanceled(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.pendingOwner = event.params.pendingOwner
+  let entity = new OwnershipHandoverCanceled(generateEventId(event));
+  entity.pendingOwner = event.params.pendingOwner;
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  entity.blockNumber = event.block.number.toI32();
+  entity.blockTimestamp = event.block.timestamp.toI32();
+  entity.transactionHash = event.transaction.hash;
 
-  entity.save()
+  entity.save();
 }
 
 export function handleOwnershipHandoverRequested(
   event: OwnershipHandoverRequestedEvent
 ): void {
-  let entity = new OwnershipHandoverRequested(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.pendingOwner = event.params.pendingOwner
+  let entity = new OwnershipHandoverRequested(generateEventId(event));
+  entity.pendingOwner = event.params.pendingOwner;
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  entity.blockNumber = event.block.number.toI32();
+  entity.blockTimestamp = event.block.timestamp.toI32();
+  entity.transactionHash = event.transaction.hash;
 
-  entity.save()
+  entity.save();
 }
 
 export function handleOwnershipTransferred(
   event: OwnershipTransferredEvent
 ): void {
-  let entity = new OwnershipTransferred(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.oldOwner = event.params.oldOwner
-  entity.newOwner = event.params.newOwner
+  let entity = new OwnershipTransferred(generateEventId(event));
+  entity.oldOwner = event.params.oldOwner;
+  entity.newOwner = event.params.newOwner;
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  entity.blockNumber = event.block.number.toI32();
+  entity.blockTimestamp = event.block.timestamp.toI32();
+  entity.transactionHash = event.transaction.hash;
 
-  entity.save()
+  entity.save();
 }

@@ -6,28 +6,35 @@ dataSources:
     name: WildcatArchController
     network: sepolia
     source:
-      address: "0x337E38b3b90ca0B208Cda586C843B33d43fad5c4"
+      address: "0x1133cB138E9640013e6cFB0f2597650382b901fD"
       abi: WildcatArchController
-      startBlock: 4557388
+      startBlock: 4566896
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - BorrowerAdded
-        - BorrowerRemoved
+        - ArchController
+        - RegisteredBorrower
+        - BorrowerRegistrationChange
+        - Controller
         - ControllerAdded
+        - ControllerRemoved
+        - ControllerFactory
         - ControllerFactoryAdded
         - ControllerFactoryRemoved
-        - ControllerRemoved
+        - Market
         - MarketAdded
         - MarketRemoved
+        - ParameterConstraints
         - OwnershipHandoverCanceled
         - OwnershipHandoverRequested
         - OwnershipTransferred
       abis:
         - name: WildcatArchController
           file: ./abis/WildcatArchController.json
+        - name: WildcatMarketControllerFactory
+          file: ./abis/WildcatMarketControllerFactory.json
       eventHandlers:
         - event: BorrowerAdded(address)
           handler: handleBorrowerAdded
@@ -52,3 +59,169 @@ dataSources:
         - event: OwnershipTransferred(indexed address,indexed address)
           handler: handleOwnershipTransferred
       file: ./src/wildcat-arch-controller.ts
+  - kind: ethereum
+    name: WildcatSanctionsSentinel
+    network: sepolia
+    source:
+      address: "0xE28589c18c8b16DF979Ab1A054E07Bd361603820"
+      abi: WildcatSanctionsSentinel
+      startBlock: 4566896
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - NewSanctionsEscrow
+        - SanctionOverride
+        - SanctionOverrideRemoved
+      abis:
+        - name: WildcatSanctionsSentinel
+          file: ./abis/WildcatSanctionsSentinel.json
+      eventHandlers:
+        - event: NewSanctionsEscrow(indexed address,indexed address,indexed address)
+          handler: handleNewSanctionsEscrow
+        - event: SanctionOverride(indexed address,indexed address)
+          handler: handleSanctionOverride
+        - event: SanctionOverrideRemoved(indexed address,indexed address)
+          handler: handleSanctionOverrideRemoved
+      file: ./src/wildcat-sanctions-sentinel.ts
+templates:
+  - kind: ethereum
+    name: WildcatMarketControllerFactory
+    network: sepolia
+    source:
+      abi: WildcatMarketControllerFactory
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Controller
+        - ControllerFactory
+        - NewController
+        - UpdateProtocolFeeConfiguration
+      abis:
+        - name: WildcatMarketControllerFactory
+          file: ./abis/WildcatMarketControllerFactory.json
+      eventHandlers:
+        - event: NewController(address,address)
+          handler: handleNewController
+        - event: UpdateProtocolFeeConfiguration(address,uint16,address,uint256)
+          handler: handleUpdateProtocolFeeConfiguration
+      file: ./src/wildcat-market-controller-factory.ts
+  - kind: ethereum
+    name: WildcatMarketController
+    network: sepolia
+    source:
+      abi: WildcatMarketController
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Controller
+        - LenderAuthorization
+        - LenderAuthorizationChange
+        - MarketDeployed
+      abis:
+        - name: WildcatMarketController
+          file: ./abis/WildcatMarketController.json
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+      eventHandlers:
+        - event: LenderAuthorized(address)
+          handler: handleLenderAuthorized
+        - event: LenderDeauthorized(address)
+          handler: handleLenderDeauthorized
+        - event: MarketDeployed(indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleMarketDeployed
+      file: ./src/wildcat-market-controller.ts
+  - kind: ethereum
+    name: WildcatMarket
+    network: sepolia
+    source:
+      abi: WildcatMarket
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LenderAccount
+        - LenderInterestAccrued
+        - MarketInterestAccrued
+        - WithdrawalBatch
+        - LenderWithdrawalStatus
+        - Token
+        - Market
+        - DelinquencyStatusChanged
+        - AnnualInterestBipsUpdated
+        - Approval
+        - AuthorizationStatusUpdated
+        - Borrow
+        - DebtRepaid
+        - Deposit
+        - FeesCollected
+        - MarketClosed
+        - MaxTotalSupplyUpdated
+        - ReserveRatioBipsUpdated
+        - SanctionedAccountAssetsSentToEscrow
+        - SanctionedAccountWithdrawalSentToEscrow
+        - StateUpdated
+        - Transfer
+        - WithdrawalBatchClosed
+        - WithdrawalBatchCreated
+        - WithdrawalBatchExpired
+        - WithdrawalBatchPayment
+        - WithdrawalExecution
+        - WithdrawalRequest
+      abis:
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: AnnualInterestBipsUpdated(uint256)
+          handler: handleAnnualInterestBipsUpdated
+        - event: Approval(indexed address,indexed address,uint256)
+          handler: handleApproval
+        - event: AuthorizationStatusUpdated(indexed address,uint8)
+          handler: handleAuthorizationStatusUpdated
+        - event: Borrow(uint256)
+          handler: handleBorrow
+        - event: DebtRepaid(indexed address,uint256)
+          handler: handleDebtRepaid
+        - event: Deposit(indexed address,uint256,uint256)
+          handler: handleDeposit
+        - event: FeesCollected(uint256)
+          handler: handleFeesCollected
+        - event: MarketClosed(uint256)
+          handler: handleMarketClosed
+        - event: MaxTotalSupplyUpdated(uint256)
+          handler: handleMaxTotalSupplyUpdated
+        - event: ReserveRatioBipsUpdated(uint256)
+          handler: handleReserveRatioBipsUpdated
+        - event: SanctionedAccountAssetsSentToEscrow(indexed address,address,uint256)
+          handler: handleSanctionedAccountAssetsSentToEscrow
+        - event: SanctionedAccountWithdrawalSentToEscrow(indexed address,address,uint32,uint256)
+          handler: handleSanctionedAccountWithdrawalSentToEscrow
+        - event: InterestAndFeesAccrued(uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleInterestAndFeesAccrued
+        - event: StateUpdated(uint256,bool)
+          handler: handleStateUpdated
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: Withdrawal(indexed address,uint256,uint256)
+          handler: handleWithdrawal
+        - event: WithdrawalBatchClosed(indexed uint256)
+          handler: handleWithdrawalBatchClosed
+        - event: WithdrawalBatchCreated(indexed uint256)
+          handler: handleWithdrawalBatchCreated
+        - event: WithdrawalBatchExpired(indexed uint256,uint256,uint256,uint256)
+          handler: handleWithdrawalBatchExpired
+        - event: WithdrawalBatchPayment(indexed uint256,uint256,uint256)
+          handler: handleWithdrawalBatchPayment
+        - event: WithdrawalExecuted(indexed uint256,indexed address,uint256)
+          handler: handleWithdrawalExecuted
+        - event: WithdrawalQueued(indexed uint256,indexed address,uint256,uint256)
+          handler: handleWithdrawalQueued
+      file: ./src/wildcat-market.ts

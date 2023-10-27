@@ -1,90 +1,616 @@
-type BorrowerAdded @entity(immutable: true) {
-  id: Bytes!
-  borrower: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+# -------------------------------------------------------------------------- #
+#                            WildcatArchController                           #
+# -------------------------------------------------------------------------- #
+
+type ArchController @entity {
+  id: ID!
+  controllerFactories: [ControllerFactory!]!
+    @derivedFrom(field: "archController")
+  controllers: [Controller!]! @derivedFrom(field: "archController")
+  markets: [Market!]! @derivedFrom(field: "archController")
+  borrowers: [RegisteredBorrower!]! @derivedFrom(field: "archController")
 }
 
-type BorrowerRemoved @entity(immutable: true) {
-  id: Bytes!
-  borrower: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type RegisteredBorrower @entity {
+  id: ID!
+  archController: ArchController!
+  borrower: Bytes!
+  isRegistered: Boolean!
+  changes: [BorrowerRegistrationChange!]! @derivedFrom(field: "registration")
 }
 
-type ControllerAdded @entity(immutable: true) {
-  id: Bytes!
-  controllerFactory: Bytes! # address
-  controller: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type ControllerFactoryAdded @entity(immutable: true) {
-  id: Bytes!
-  controllerFactory: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+type BorrowerRegistrationChange @entity(immutable: true) {
+  id: ID!
+  registration: RegisteredBorrower!
+  isRegistered: Boolean!
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }
 
 type ControllerFactoryRemoved @entity(immutable: true) {
-  id: Bytes!
-  controllerFactory: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+  id: ID!
+  controllerFactory: ControllerFactory!
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }
 
 type ControllerRemoved @entity(immutable: true) {
-  id: Bytes!
-  controller: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type MarketAdded @entity(immutable: true) {
-  id: Bytes!
-  controller: Bytes! # address
-  market: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+  id: ID!
+  controller: Controller!
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }
 
 type MarketRemoved @entity(immutable: true) {
-  id: Bytes!
-  market: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+  id: ID!
+  market: Market!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type ControllerAdded @entity(immutable: true) {
+  id: ID!
+  controllerFactory: ControllerFactory! # address
+  controller: Controller! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type ControllerFactoryAdded @entity(immutable: true) {
+  id: ID!
+  controllerFactory: ControllerFactory! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type MarketAdded @entity(immutable: true) {
+  id: ID!
+  controller: Controller! # address
+  market: Market! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }
 
 type OwnershipHandoverCanceled @entity(immutable: true) {
-  id: Bytes!
+  id: ID!
   pendingOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }
 
 type OwnershipHandoverRequested @entity(immutable: true) {
-  id: Bytes!
+  id: ID!
   pendingOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }
 
 type OwnershipTransferred @entity(immutable: true) {
-  id: Bytes!
+  id: ID!
   oldOwner: Bytes! # address
   newOwner: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# -------------------------------------------------------------------------- #
+#                       WildcatMarketControllerFactory                       #
+# -------------------------------------------------------------------------- #
+
+type ControllerFactory @entity {
+  id: ID!
+  sentinel: Bytes! # address
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Bytes! # address
+  originationFeeAmount: BigInt!
+  constraints: ParameterConstraints!
+  controllers: [Controller!]! @derivedFrom(field: "controllerFactory")
+
+  archController: ArchController!
+  isRegistered: Boolean!
+  removal: ControllerFactoryRemoved @derivedFrom(field: "controllerFactory")
+}
+
+type ParameterConstraints @entity(immutable: true) {
+  id: ID!
+  minimumDelinquencyGracePeriod: Int!
+  maximumDelinquencyGracePeriod: Int!
+  minimumReserveRatioBips: Int!
+  maximumReserveRatioBips: Int!
+  minimumDelinquencyFeeBips: Int!
+  maximumDelinquencyFeeBips: Int!
+  minimumWithdrawalBatchDuration: Int!
+  maximumWithdrawalBatchDuration: Int!
+  minimumAnnualInterestBips: Int!
+  maximumAnnualInterestBips: Int!
+}
+
+type NewController @entity(immutable: true) {
+  id: ID!
+  borrower: Bytes! # address
+  controller: Bytes! # address
+  namePrefix: String! # string
+  symbolPrefix: String! # string
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type UpdateProtocolFeeConfiguration @entity(immutable: true) {
+  id: ID!
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int! # uint16
+  originationFeeAsset: Bytes! # address
+  originationFeeAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# -------------------------------------------------------------------------- #
+#                          WildcatSanctionsSentinel                          #
+# -------------------------------------------------------------------------- #
+
+type NewSanctionsEscrow @entity(immutable: true) {
+  id: ID!
+  borrower: Bytes! # address
+  account: Bytes! # address
+  asset: Bytes! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SanctionOverride @entity(immutable: true) {
+  id: ID!
+  borrower: Bytes! # address
+  account: Bytes! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SanctionOverrideRemoved @entity(immutable: true) {
+  id: ID!
+  borrower: Bytes! # address
+  account: Bytes! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# -------------------------------------------------------------------------- #
+#                           WildcatMarketController                          #
+# -------------------------------------------------------------------------- #
+
+type Controller @entity {
+  id: ID!
+  borrower: Bytes!
+  controllerFactory: ControllerFactory! # address
+  markets: [Market!]! @derivedFrom(field: "controller")
+  authorizedLenders: [LenderAuthorization!]! @derivedFrom(field: "controller")
+
+  archController: ArchController!
+  isRegistered: Boolean!
+  removal: ControllerRemoved @derivedFrom(field: "controller")
+}
+
+type LenderAuthorization @entity {
+  id: ID!
+  controller: Controller!
+  lender: Bytes!
+  authorized: Boolean!
+}
+
+type LenderAuthorizationChange @entity(immutable: true) {
+  id: ID!
+  controller: Controller!
+  lender: Bytes! # address
+  authorized: Boolean!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type MarketDeployed @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# -------------------------------------------------------------------------- #
+#                                WildcatMarket                               #
+# -------------------------------------------------------------------------- #
+
+enum LenderStatus {
+  Null
+  Blocked
+  WithdrawOnly
+  DepositAndWithdraw
+}
+
+type LenderAccount @entity {
+  id: ID! # LENDER-<market>-<address>
+  address: Bytes!
+  market: Market!
+  scaledBalance: BigInt!
+  role: LenderStatus!
+  totalDeposited: BigInt!
+  lastScaleFactor: BigInt!
+  lastUpdatedTimestamp: Int!
+  totalInterestEarned: BigInt!
+  deposits: [Deposit!]! @derivedFrom(field: "account")
+  withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "account")
+  interestAccrualRecords: [LenderInterestAccrued!]! @derivedFrom(field: "account")
+}
+
+type LenderInterestAccrued @entity(immutable: true) {
+  id: ID!
+  account: LenderAccount! # address
+  market: Market! # address
+  interestEarned: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type MarketInterestAccrued @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  fromTimestamp: Int!
+  toTimestamp: Int!
+  timeWithPenalties: Int!
+  baseInterestRay: BigInt! # uint256
+  delinquencyFeeRay: BigInt! # uint256
+  baseInterestAccrued: BigInt! # uint256
+  delinquencyFeesAccrued: BigInt! # uint256
+  protocolFeesAccrued: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type WithdrawalBatch @entity {
+  id: ID! # WDBATCH-<market>-<expiry>
+  market: Market!
+  expiry: BigInt!
+  scaledTotalAmount: BigInt!
+  scaledAmountBurned: BigInt!
+  normalizedAmountPaid: BigInt!
+  normalizedAmountClaimed: BigInt!
+  totalNormalizedRequests: BigInt! # sum of amounts originally requested
+  isExpired: Boolean!
+  isClosed: Boolean!
+  paymentsCount: Int!
+  lastScaleFactor: BigInt!
+  lastUpdatedTimestamp: Int!
+  totalInterestEarned: BigInt!
+
+  payments: [WithdrawalBatchPayment!]! @derivedFrom(field: "batch")
+  withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "batch")
+  interestAccrualRecords: [WithdrawalBatchInterestAccrued!]!
+    @derivedFrom(field: "batch")
+}
+
+type WithdrawalBatchInterestAccrued @entity(immutable: true) {
+  id: ID!
+  batch: WithdrawalBatch!
+  market: Market! # address
+  interestEarned: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type LenderWithdrawalStatus @entity {
+  id: ID! # WDSTAT-<market>-<expiry>-<lender>
+  requestsCount: Int!
+  executionsCount: Int!
+  account: LenderAccount!
+  batch: WithdrawalBatch!
+  scaledAmount: BigInt!
+  normalizedAmountWithdrawn: BigInt!
+  totalNormalizedRequests: BigInt! # sum of amounts originally requested
+  requests: [WithdrawalRequest!]! @derivedFrom(field: "status")
+  executions: [WithdrawalExecution!]! @derivedFrom(field: "status")
+}
+
+type Token @entity {
+  id: ID!
+  name: String!
+  symbol: String!
+  decimals: Int!
+}
+
+type Market @entity {
+  id: ID!
+  archController: ArchController!
+  isRegistered: Boolean!
+  # ---------------------------------- Config -------------------------------- #
+  controller: Controller!
+  borrower: Bytes!
+  name: String!
+  symbol: String!
+  decimals: Int!
+  sentinel: Bytes!
+  feeRecipient: Bytes!
+  protocolFeeBips: Int!
+  delinquencyGracePeriod: Int!
+  delinquencyFeeBips: Int!
+  asset: Bytes!
+  withdrawalBatchDuration: Int!
+
+  # ---------------------------------- State --------------------------------- #
+  isClosed: Boolean!
+  maxTotalSupply: BigInt!
+  pendingProtocolFees: BigInt!
+  # Underlying assets reserved for withdrawals which have been paid
+  # by the borrower but not yet executed.
+  normalizedUnclaimedWithdrawals: BigInt!
+  # Scaled token supply (divided by scaleFactor)
+  scaledTotalSupply: BigInt!
+  #  Scaled amount in withdrawal batches that have not been paid by borrower
+  scaledPendingWithdrawals: BigInt!
+  pendingWithdrawalExpiry: BigInt!
+  # Whether market is currently delinquent (liquidity under requirement)
+  isDelinquent: Boolean!
+  # Seconds borrower has been delinquent
+  timeDelinquent: Int!
+  # Annual interest rate accrued to lenders, in basis points
+  annualInterestBips: Int!
+  # Percentage of outstanding balance that must be held in liquid reserves
+  reserveRatioBips: Int!
+  # Ratio between internal balances and underlying token amounts
+  scaleFactor: BigInt!
+  lastInterestAccruedTimestamp: Int!
+
+  # -------------------------------- Metadata -------------------------------- #
+  # all time borrows
+  totalBorrowed: BigInt!
+  # all time DebtRepaid amounts
+  totalRepaid: BigInt!
+  # all time earnings from base APR
+  totalBaseInterestAccrued: BigInt!
+  # all time earnings from delinquency fees
+  totalDelinquencyFeesAccrued: BigInt!
+  # all time protocol fees
+  totalProtocolFeesAccrued: BigInt!
+  # all time deposits
+  totalDeposited: BigInt!
+
+  # ------------------------------- Dependents ------------------------------- #
+  withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
+  lenders: [LenderAccount!]! @derivedFrom(field: "market")
+
+  # ------------------------------ Relationships ----------------------------- #
+  deployedEvent: MarketDeployed! @derivedFrom(field: "market")
+  removal: MarketRemoved @derivedFrom(field: "market")
+  interestAccrualRecords: [MarketInterestAccrued!]!
+    @derivedFrom(field: "market")
+  delinquencyRecords: [DelinquencyStatusChanged!]! @derivedFrom(field: "market")
+  borrowRecords: [Borrow!]! @derivedFrom(field: "market")
+  depositRecords: [Deposit!]! @derivedFrom(field: "market")
+  feeCollectionRecords: [FeesCollected!]! @derivedFrom(field: "market")
+  repaymentRecords: [DebtRepaid!]! @derivedFrom(field: "market")
+}
+
+type DelinquencyStatusChanged @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  isDelinquent: Boolean! # bool
+  liquidityCoverageRequired: BigInt! # uint256
+  totalAssets: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# type AnnualInterestBipsUpdated @entity(immutable: true) {
+#   id: ID!
+#   annualInterestBipsUpdated: BigInt! # uint256
+#   blockNumber: Int!
+#   blockTimestamp: Int!
+#   transactionHash: Bytes!
+# }
+
+type Approval @entity(immutable: true) {
+  id: ID!
+  owner: Bytes! # address
+  spender: Bytes! # address
+  value: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# type AuthorizationStatusUpdated @entity(immutable: true) {
+#   id: ID!
+#   account: Bytes! # address
+#   role: Int! # uint8
+#   blockNumber: Int!
+#   blockTimestamp: Int!
+#   transactionHash: Bytes!
+# }
+
+type Borrow @entity(immutable: true) {
+  id: ID!
+  market: Market!
+  assetAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type DebtRepaid @entity(immutable: true) {
+  id: ID!
+  from: Bytes! # address
+  market: Market!
+  assetAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type Deposit @entity(immutable: true) {
+  id: ID!
+  account: LenderAccount! # address
+  market: Market! # address
+  assetAmount: BigInt! # uint256
+  scaledAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type FeesCollected @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  feesCollected: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type MarketClosed @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  timestamp: Int! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type MaxTotalSupplyUpdated @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  oldMaxTotalSupply: BigInt! # uint256
+  newMaxTotalSupply: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type ReserveRatioBipsUpdated @entity(immutable: true) {
+  id: ID!
+  market: Market! # address
+  oldReserveRatioBips: Int! # uint256
+  newReserveRatioBips: Int! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SanctionedAccountAssetsSentToEscrow @entity(immutable: true) {
+  id: ID!
+  account: Bytes! # address
+  escrow: Bytes! # address
+  amount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SanctionedAccountWithdrawalSentToEscrow @entity(immutable: true) {
+  id: ID!
+  account: Bytes! # address
+  escrow: Bytes! # address
+  expiry: BigInt! # uint32
+  amount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# type StateUpdated @entity(immutable: true) {
+#   id: ID!
+#   scaleFactor: BigInt! # uint256
+#   isDelinquent: Boolean! # bool
+#   blockNumber: Int!
+#   blockTimestamp: Int!
+#   transactionHash: Bytes!
+# }
+
+type Transfer @entity(immutable: true) {
+  id: ID!
+  market: Market!
+  from: LenderAccount! # address
+  to: LenderAccount! # address
+  amount: BigInt! # uint256
+  scaledAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# type WithdrawalBatchClosed @entity(immutable: true) {
+#   id: ID!
+#   batch: WithdrawalBatch!
+#   blockNumber: Int!
+#   blockTimestamp: Int!
+#   transactionHash: Bytes!
+# }
+
+type WithdrawalBatchCreated @entity(immutable: true) {
+  id: ID!
+  batch: WithdrawalBatch!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type WithdrawalBatchExpired @entity(immutable: true) {
+  id: ID!
+  batch: WithdrawalBatch!
+  scaledTotalAmount: BigInt! # uint256
+  scaledAmountBurned: BigInt! # uint256
+  normalizedAmountPaid: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type WithdrawalBatchPayment @entity(immutable: true) {
+  id: ID! # `WDPMT-<market>-<expiry>-<payment index>`
+  batch: WithdrawalBatch!
+  scaledAmountBurned: BigInt! # uint256
+  normalizedAmountPaid: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type WithdrawalExecution @entity(immutable: true) {
+  id: ID! # WDEXEC-<market>-<account>-<expiry>-<lender>-<execution index>
+  account: LenderAccount!
+  status: LenderWithdrawalStatus!
+  batch: WithdrawalBatch!
+  normalizedAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type WithdrawalRequest @entity(immutable: true) {
+  id: ID! # WDREQ-<market>-<account>-<expiry>-<lender>-<request index>
+  account: LenderAccount!
+  status: LenderWithdrawalStatus!
+  batch: WithdrawalBatch!
+  scaledAmount: BigInt! # uint256
+  normalizedAmount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
   transactionHash: Bytes!
 }

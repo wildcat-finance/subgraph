@@ -1,8 +1,22 @@
 {
   "sepolia": {
     "WildcatArchController": {
-      "address": "0x337E38b3b90ca0B208Cda586C843B33d43fad5c4",
-      "startBlock": 4557388
+      "address": "0x1133cB138E9640013e6cFB0f2597650382b901fD",
+      "startBlock": 4566896
+    },
+    "WildcatMarketControllerFactory": {
+      "address": "0x827aC8f2fD73a31ED20D13b85689B32902ae9C0e",
+      "startBlock": 4566896
+    },
+    "WildcatSanctionsSentinel": {
+      "address": "0xE28589c18c8b16DF979Ab1A054E07Bd361603820",
+      "startBlock": 4566896
+    },
+    "WildcatMarketController": {
+      "address": "0x5Ee3abdc4cEeD07a9d7915Fa44d4Aa3f300bAb2f"
+    },
+    "WildcatMarket": {
+      "address": "0x067a1ee8E57D99C442C38982dc5c9D34F2D7cd89"
     }
   }
 }
