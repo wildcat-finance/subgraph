@@ -7,21 +7,21 @@ import {
   afterAll
 } from "matchstick-as/assembly/index"
 import { Address } from "@graphprotocol/graph-ts"
-import { BorrowerAdded } from "../generated/schema"
-import { BorrowerAdded as BorrowerAddedEvent } from "../generated/WildcatArchController/WildcatArchController"
-import { handleBorrowerAdded } from "../src/wildcat-arch-controller"
-import { createBorrowerAddedEvent } from "./wildcat-arch-controller-utils"
+import { LenderAuthorized } from "../generated/schema"
+import { LenderAuthorized as LenderAuthorizedEvent } from "../generated/WildcatMarketController/WildcatMarketController"
+import { handleLenderAuthorized } from "../src/wildcat-market-controller"
+import { createLenderAuthorizedEvent } from "./wildcat-market-controller-utils"
 
 // Tests structure (matchstick-as >=0.5.0)
 // https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
 
 describe("Describe entity assertions", () => {
   beforeAll(() => {
-    let borrower = Address.fromString(
+    let param0 = Address.fromString(
       "0x0000000000000000000000000000000000000001"
     )
-    let newBorrowerAddedEvent = createBorrowerAddedEvent(borrower)
-    handleBorrowerAdded(newBorrowerAddedEvent)
+    let newLenderAuthorizedEvent = createLenderAuthorizedEvent(param0)
+    handleLenderAuthorized(newLenderAuthorizedEvent)
   })
 
   afterAll(() => {
@@ -31,14 +31,14 @@ describe("Describe entity assertions", () => {
   // For more test scenarios, see:
   // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
 
-  test("BorrowerAdded created and stored", () => {
-    assert.entityCount("BorrowerAdded", 1)
+  test("LenderAuthorized created and stored", () => {
+    assert.entityCount("LenderAuthorized", 1)
 
     // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
     assert.fieldEquals(
-      "BorrowerAdded",
+      "LenderAuthorized",
       "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "borrower",
+      "param0",
       "0x0000000000000000000000000000000000000001"
     )
 
