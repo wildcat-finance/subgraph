@@ -23,6 +23,7 @@ import {
 } from "../generated/templates/WildcatMarket/WildcatMarket";
 import { IERC20 } from "../generated/templates/WildcatMarket/IERC20";
 import {
+  GetOrCreateReturn,
   createBorrow,
   createDebtRepaid,
   createDelinquencyStatusChanged,
@@ -42,6 +43,7 @@ import {
   createWithdrawalExecution,
   createWithdrawalRequest,
   generateLenderAccountId,
+  generateLenderAuthorizationId,
   generateLenderWithdrawalStatusId,
   generateMarketId,
   generateWithdrawalBatchId,
@@ -52,6 +54,7 @@ import {
   getLenderWithdrawalStatus,
   getMarket,
   getOrInitializeLenderAccount,
+  getOrInitializeLenderAuthorization,
   getOrInitializeLenderWithdrawalStatus,
   getWithdrawalBatch,
   setAnnualInterestBips,
@@ -75,7 +78,35 @@ import {
   rayMul,
   satSub,
 } from "./utils";
-import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+
+function getOrCreateLenderAccount(
+  market: Market,
+  marketAddress: Address,
+  lenderAddress: Address
+): GetOrCreateReturn<LenderAccount> {
+  let authorization = getOrInitializeLenderAuthorization(
+    generateLenderAuthorizationId(
+      Bytes.fromHexString(market.controller),
+      lenderAddress
+    ),
+    {
+      authorized: false,
+      controller: market.controller,
+      lender: lenderAddress,
+    }
+  ).entity;
+  return getOrInitializeLenderAccount(
+    generateLenderAccountId(marketAddress, lenderAddress),
+    {
+      address: lenderAddress,
+      lastScaleFactor: market.scaleFactor,
+      lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
+      market: market.id,
+      controllerAuthorization: authorization.id,
+    }
+  );
+}
 
 export function handleAnnualInterestBipsUpdated(
   event: AnnualInterestBipsUpdatedEvent
@@ -103,15 +134,10 @@ export function handleAuthorizationStatusUpdated(
 ): void {
   let market = getMarket(generateMarketId(event.address));
   let lenderRoles = ["Null", "Blocked", "WithdrawOnly", "DepositAndWithdraw"];
-
-  let lender = getOrInitializeLenderAccount(
-    generateLenderAccountId(event.address, event.params.account),
-    {
-      address: event.params.account,
-      lastScaleFactor: market.scaleFactor,
-      lastUpdatedTimestamp: event.block.timestamp.toI32(),
-      market: market.id,
-    }
+  let lender = getOrCreateLenderAccount(
+    market,
+    event.address,
+    event.params.account
   ).entity;
   lender.role = lenderRoles[event.params.role];
   lender.save();
@@ -152,9 +178,8 @@ function processLenderInterestAccrued(
   if (lender.lastScaleFactor.notEqual(market.scaleFactor)) {
     let interestEarned = calculateInterestEarned(lender, market);
     lender.lastScaleFactor = market.scaleFactor;
-    lender.totalInterestEarned = lender.totalInterestEarned.plus(
-      interestEarned
-    );
+    lender.totalInterestEarned =
+      lender.totalInterestEarned.plus(interestEarned);
     createLenderInterestAccrued(generateEventId(event), {
       account: lender.id,
       interestEarned,
@@ -194,14 +219,10 @@ function processWithdrawalBatchInterestAccrued(
 
 export function handleDeposit(event: DepositEvent): void {
   let market = getMarket(generateMarketId(event.address));
-  let lender = getOrInitializeLenderAccount(
-    generateLenderAccountId(event.address, event.params.account),
-    {
-      address: event.params.account,
-      market: market.id,
-      lastScaleFactor: market.scaleFactor,
-      lastUpdatedTimestamp: event.block.timestamp.toI32(),
-    }
+  let lender = getOrCreateLenderAccount(
+    market,
+    event.address,
+    event.params.account
   ).entity;
 
   createDeposit(generateEventId(event), {
@@ -323,39 +344,42 @@ function updateTimeDelinquentAndGetPenaltyTime(
   market: Market,
   timeDelta: BigInt
 ): BigInt {
-    // Seconds in delinquency at last update
-    let previousTimeDelinquent = BigInt.fromI32(market.timeDelinquent);
+  // Seconds in delinquency at last update
+  let previousTimeDelinquent = BigInt.fromI32(market.timeDelinquent);
 
-    if (market.isDelinquent) {
-      // Since the borrower is still delinquent, increase the total
-      // time in delinquency by the time elapsed.
-      market.timeDelinquent = previousTimeDelinquent.plus(timeDelta).toI32()
+  if (market.isDelinquent) {
+    // Since the borrower is still delinquent, increase the total
+    // time in delinquency by the time elapsed.
+    market.timeDelinquent = previousTimeDelinquent.plus(timeDelta).toI32();
 
-      // Calculate the number of seconds the borrower had remaining
-      // in the grace period.
-      let secondsRemainingWithoutPenalty = satSub(
-        BigInt.fromI32(market.delinquencyGracePeriod),
-        previousTimeDelinquent
-      );
+    // Calculate the number of seconds the borrower had remaining
+    // in the grace period.
+    let secondsRemainingWithoutPenalty = satSub(
+      BigInt.fromI32(market.delinquencyGracePeriod),
+      previousTimeDelinquent
+    );
 
-      // Penalties apply for the number of seconds the market spent in
-      // delinquency outside of the grace period since the last update.
-      return satSub(timeDelta, secondsRemainingWithoutPenalty);
-    }
+    // Penalties apply for the number of seconds the market spent in
+    // delinquency outside of the grace period since the last update.
+    return satSub(timeDelta, secondsRemainingWithoutPenalty);
+  }
 
-    // Reduce the total time in delinquency by the time elapsed, stopping
-    // when it reaches zero.
-    market.timeDelinquent = satSub(previousTimeDelinquent, timeDelta).toI32()
+  // Reduce the total time in delinquency by the time elapsed, stopping
+  // when it reaches zero.
+  market.timeDelinquent = satSub(previousTimeDelinquent, timeDelta).toI32();
 
-    // Calculate the number of seconds the old timeDelinquent had remaining
-    // outside the grace period, or zero if it was already in the grace period.
-    let secondsRemainingWithPenalty = satSub(previousTimeDelinquent, BigInt.fromI32(market.delinquencyGracePeriod));
+  // Calculate the number of seconds the old timeDelinquent had remaining
+  // outside the grace period, or zero if it was already in the grace period.
+  let secondsRemainingWithPenalty = satSub(
+    previousTimeDelinquent,
+    BigInt.fromI32(market.delinquencyGracePeriod)
+  );
 
-    // Only apply penalties for the remaining time outside of the grace period.
-    if (secondsRemainingWithPenalty.lt(timeDelta)) {
-      return secondsRemainingWithPenalty;
-    }
-    return timeDelta
+  // Only apply penalties for the remaining time outside of the grace period.
+  if (secondsRemainingWithPenalty.lt(timeDelta)) {
+    return secondsRemainingWithPenalty;
+  }
+  return timeDelta;
 }
 
 export function handleInterestAndFeesAccrued(
@@ -376,10 +400,12 @@ export function handleInterestAndFeesAccrued(
   market.totalDelinquencyFeesAccrued = market.totalDelinquencyFeesAccrued.plus(
     delinquencyFeesAccrued
   );
-  market.totalBaseInterestAccrued = market.totalBaseInterestAccrued.plus(
-    baseInterestAccrued
+  market.totalBaseInterestAccrued =
+    market.totalBaseInterestAccrued.plus(baseInterestAccrued);
+  let timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(
+    market,
+    toTimestamp.minus(fromTimestamp)
   );
-  let timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(market, toTimestamp.minus(fromTimestamp))
   createMarketInterestAccrued(generateEventId(event), {
     fromTimestamp: fromTimestamp.toI32(),
     toTimestamp: toTimestamp.toI32(),
@@ -392,12 +418,11 @@ export function handleInterestAndFeesAccrued(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
-    timeWithPenalties: timeWithPenalties.toI32()
+    timeWithPenalties: timeWithPenalties.toI32(),
   });
   market.scaleFactor = scaleFactor;
-  market.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued.plus(
-    protocolFee
-  );
+  market.totalProtocolFeesAccrued =
+    market.totalProtocolFeesAccrued.plus(protocolFee);
   market.pendingProtocolFees = market.pendingProtocolFees.plus(protocolFee);
   market.lastInterestAccruedTimestamp = toTimestamp.toI32();
   market.save();
@@ -410,9 +435,10 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
   if (market.isDelinquent != isDelinquent) {
     market.isDelinquent = isDelinquent;
     market.save();
-    let totalAssets = IERC20.bind(Address.fromBytes(market.asset)).balanceOf(
-      event.address
-    );
+    let assetAddress = market.asset.slice(market.asset.indexOf(`0x`));
+    let totalAssets = IERC20.bind(
+      Address.fromBytes(Bytes.fromHexString(assetAddress))
+    ).balanceOf(event.address);
     let liquidityRequired = calculateLiquidityRequired(market);
     createDelinquencyStatusChanged(generateEventId(event), {
       blockNumber: event.block.number.toI32(),
@@ -438,24 +464,12 @@ export function handleTransfer(event: TransferEvent): void {
     )
   ) {
     let market = getMarket(generateMarketId(event.address));
-    let from = getOrInitializeLenderAccount(
-      generateLenderAccountId(event.address, fromAddress),
-      {
-        lastScaleFactor: market.scaleFactor,
-        lastUpdatedTimestamp: event.block.timestamp.toI32(),
-        address: fromAddress,
-        market: market.id,
-      }
+    let from = getOrCreateLenderAccount(
+      market,
+      event.address,
+      fromAddress
     ).entity;
-    let to = getOrInitializeLenderAccount(
-      generateLenderAccountId(event.address, fromAddress),
-      {
-        lastScaleFactor: market.scaleFactor,
-        lastUpdatedTimestamp: event.block.timestamp.toI32(),
-        address: toAddress,
-        market: market.id,
-      }
-    ).entity;
+    let to = getOrCreateLenderAccount(market, event.address, toAddress).entity;
     processLenderInterestAccrued(event, from, market);
     processLenderInterestAccrued(event, to, market);
     let scaledAmount = rayDiv(value, market.scaleFactor);
@@ -562,17 +576,14 @@ export function handleWithdrawalBatchPayment(
   });
   batch.paymentsCount = batch.paymentsCount + 1;
   batch.scaledAmountBurned = batch.scaledAmountBurned.plus(scaledAmountBurned);
-  batch.normalizedAmountPaid = batch.normalizedAmountPaid.plus(
-    normalizedAmountPaid
-  );
+  batch.normalizedAmountPaid =
+    batch.normalizedAmountPaid.plus(normalizedAmountPaid);
   batch.save();
 
-  market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.minus(
-    scaledAmountBurned
-  );
-  market.normalizedUnclaimedWithdrawals = market.normalizedUnclaimedWithdrawals.plus(
-    normalizedAmountPaid
-  );
+  market.scaledPendingWithdrawals =
+    market.scaledPendingWithdrawals.minus(scaledAmountBurned);
+  market.normalizedUnclaimedWithdrawals =
+    market.normalizedUnclaimedWithdrawals.plus(normalizedAmountPaid);
   // Withdrawal batch payment burns market tokens
   market.scaledTotalSupply = market.scaledTotalSupply.minus(scaledAmountBurned);
   market.save();
@@ -608,15 +619,20 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       transactionHash: event.transaction.hash,
     }
   );
-  status.normalizedAmountWithdrawn = status.normalizedAmountWithdrawn.plus(
-    normalizedAmount
-  );
-  batch.normalizedAmountClaimed = batch.normalizedAmountClaimed.plus(
-    normalizedAmount
-  );
-  market.normalizedUnclaimedWithdrawals = market.normalizedUnclaimedWithdrawals.minus(
-    normalizedAmount
-  );
+  status.normalizedAmountWithdrawn =
+    status.normalizedAmountWithdrawn.plus(normalizedAmount);
+  batch.normalizedAmountClaimed =
+    batch.normalizedAmountClaimed.plus(normalizedAmount);
+  market.normalizedUnclaimedWithdrawals =
+    market.normalizedUnclaimedWithdrawals.minus(normalizedAmount);
+  if (batch.isClosed) {
+    status.isCompleted = true;
+    let lender = getLenderAccount(
+      generateLenderAccountId(event.address, account)
+    );
+    lender.numPendingWithdrawalBatches = lender.numPendingWithdrawalBatches - 1;
+    lender.save();
+  }
   batch.save();
   status.save();
   market.save();
@@ -635,13 +651,14 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   let batch = getWithdrawalBatch(
     generateWithdrawalBatchId(event.address, expiry)
   );
-  let status = getOrInitializeLenderWithdrawalStatus(
+  let statusCreation = getOrInitializeLenderWithdrawalStatus(
     generateLenderWithdrawalStatusId(event.address, expiry, account),
     {
       account: lender.id,
       batch: batch.id,
     }
-  ).entity;
+  );
+  let status = statusCreation.entity;
   processWithdrawalBatchInterestAccrued(event, batch, market);
   createWithdrawalRequest(
     generateWithdrawalRequestId(
@@ -651,6 +668,7 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
       status.requestsCount
     ),
     {
+      requestIndex: status.requestsCount,
       batch: status.batch,
       status: status.id,
       account: status.account,
@@ -663,18 +681,20 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   );
   status.requestsCount = status.requestsCount + 1;
   status.scaledAmount = status.scaledAmount.plus(scaledAmount);
-  status.totalNormalizedRequests = status.totalNormalizedRequests.plus(
-    normalizedAmount
-  );
+  status.totalNormalizedRequests =
+    status.totalNormalizedRequests.plus(normalizedAmount);
   processLenderInterestAccrued(event, lender, market);
   lender.scaledBalance = lender.scaledBalance.minus(scaledAmount);
-  market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.plus(
-    scaledAmount
-  );
+  market.scaledPendingWithdrawals =
+    market.scaledPendingWithdrawals.plus(scaledAmount);
   batch.scaledTotalAmount = batch.scaledTotalAmount.plus(scaledAmount);
-  batch.totalNormalizedRequests = batch.totalNormalizedRequests.plus(
-    normalizedAmount
-  );
+  batch.totalNormalizedRequests =
+    batch.totalNormalizedRequests.plus(normalizedAmount);
+
+  if (statusCreation.wasCreated) {
+    lender.numPendingWithdrawalBatches = lender.numPendingWithdrawalBatches + 1;
+  }
+
   lender.save();
   status.save();
   market.save();

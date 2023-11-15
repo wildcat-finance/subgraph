@@ -2,20 +2,28 @@ import { BigInt } from "@graphprotocol/graph-ts";
 import {
   createLenderAuthorizationChange,
   createMarket,
+  createToken,
   generateLenderAuthorizationId,
+  generateMarketId,
+  generateTokenId,
   getController,
   getControllerFactory,
+  getMarket,
   getOrInitializeLenderAuthorization,
+  getOrInitializeToken,
 } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
   LenderAuthorized as LenderAuthorizedEvent,
   LenderDeauthorized as LenderDeauthorizedEvent,
   MarketDeployed as MarketDeployedEvent,
+  TemporaryExcessReserveRatioActivated,
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId } from "./utils";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
+import { Token } from "../generated/schema";
+import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
 
 export function handleLenderAuthorized(event: LenderAuthorizedEvent): void {
   let controller = getController(generateControllerId(event.address));
@@ -36,6 +44,7 @@ export function handleLenderAuthorized(event: LenderAuthorizedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    authorization: id,
   });
 }
 
@@ -58,6 +67,7 @@ export function handleLenderDeauthorized(event: LenderDeauthorizedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    authorization: id,
   });
 }
 
@@ -65,12 +75,25 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
   let controller = getController(event.address.toHex());
   let controllerFactory = getControllerFactory(controller.controllerFactory);
   let contract = WildcatMarket.bind(event.params.market);
+  let assetId = generateTokenId(event.params.asset);
+  if (Token.load(assetId) == null) {
+    let erc20 = IERC20.bind(event.params.asset);
+    let result = erc20.try_isMock();
+    // let isMock = !result.reverted && result.value;
+    createToken(assetId, {
+      address: event.params.asset,
+      name: erc20.name(),
+      symbol: erc20.symbol(),
+      decimals: erc20.decimals(),
+      isMock: true
+    });
+  }
   MarketTemplate.create(event.params.market);
 
   createMarket(event.params.market.toHex(), {
     name: event.params.name,
     symbol: event.params.symbol,
-    asset: event.params.asset,
+    asset: assetId,
     borrower: controller.borrower,
     controller: controller.id,
     annualInterestBips: event.params.annualInterestBips.toI32(),
@@ -88,4 +111,24 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     isRegistered: true,
     archController: controller.archController,
   });
+}
+
+export function handleTemporaryExcessReserveRatioActivated(
+  event: TemporaryExcessReserveRatioActivated
+): void {
+  let market = getMarket(generateMarketId(event.params.market))
+  market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
+  market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
+  market.temporaryReserveRatioActive = true;
+  market.save();
+}
+
+export function handleTemporaryExcessReserveRatioExpired(
+  event: TemporaryExcessReserveRatioActivated
+): void {
+  let market = getMarket(generateMarketId(event.params.market))
+  market.temporaryReserveRatioActive = false;
+  market.originalReserveRatioBips = 0;
+  market.temporaryReserveRatioExpiry = 0;
+  market.save();
 }

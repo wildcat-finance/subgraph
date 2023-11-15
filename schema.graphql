@@ -1,3 +1,6 @@
+# scalar Bytes
+# scalar BigInt
+
 # -------------------------------------------------------------------------- #
 #                            WildcatArchController                           #
 # -------------------------------------------------------------------------- #
@@ -103,6 +106,11 @@ type OwnershipTransferred @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
+# type GlobalAccount @entity {
+#   id: ID!
+#   authorizations: [LenderAuthorization!]! @derivedFrom(field: "account")
+# }
+
 # -------------------------------------------------------------------------- #
 #                       WildcatMarketControllerFactory                       #
 # -------------------------------------------------------------------------- #
@@ -200,6 +208,8 @@ type Controller @entity {
   controllerFactory: ControllerFactory! # address
   markets: [Market!]! @derivedFrom(field: "controller")
   authorizedLenders: [LenderAuthorization!]! @derivedFrom(field: "controller")
+  authorizationChanges: [LenderAuthorizationChange!]!
+    @derivedFrom(field: "controller")
 
   archController: ArchController!
   isRegistered: Boolean!
@@ -207,10 +217,13 @@ type Controller @entity {
 }
 
 type LenderAuthorization @entity {
-  id: ID!
+  id: ID! # AUTH-<controller>-<address>
   controller: Controller!
   lender: Bytes!
   authorized: Boolean!
+  marketAccounts: [LenderAccount!]!
+    @derivedFrom(field: "controllerAuthorization")
+  changes: [LenderAuthorizationChange!]! @derivedFrom(field: "authorization")
 }
 
 type LenderAuthorizationChange @entity(immutable: true) {
@@ -218,6 +231,7 @@ type LenderAuthorizationChange @entity(immutable: true) {
   controller: Controller!
   lender: Bytes! # address
   authorized: Boolean!
+  authorization: LenderAuthorization!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -235,7 +249,6 @@ type MarketDeployed @entity(immutable: true) {
 #                                WildcatMarket                               #
 # -------------------------------------------------------------------------- #
 
-
 type LenderAccount @entity {
   id: ID! # LENDER-<market>-<address>
   address: Bytes!
@@ -246,9 +259,13 @@ type LenderAccount @entity {
   lastScaleFactor: BigInt!
   lastUpdatedTimestamp: Int!
   totalInterestEarned: BigInt!
+  numPendingWithdrawalBatches: Int!
+
+  controllerAuthorization: LenderAuthorization!
   deposits: [Deposit!]! @derivedFrom(field: "account")
   withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "account")
-  interestAccrualRecords: [LenderInterestAccrued!]! @derivedFrom(field: "account")
+  interestAccrualRecords: [LenderInterestAccrued!]!
+    @derivedFrom(field: "account")
 }
 
 enum LenderStatus {
@@ -284,10 +301,13 @@ type WithdrawalBatch @entity {
   lastUpdatedTimestamp: Int!
   totalInterestEarned: BigInt!
 
+  requests: [WithdrawalRequest!]! @derivedFrom(field: "batch")
+  executions: [WithdrawalExecution!]! @derivedFrom(field: "batch")
   payments: [WithdrawalBatchPayment!]! @derivedFrom(field: "batch")
   withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "batch")
   interestAccrualRecords: [WithdrawalBatchInterestAccrued!]!
     @derivedFrom(field: "batch")
+  creation: WithdrawalBatchCreated! @derivedFrom(field: "batch")
 }
 
 type WithdrawalBatchInterestAccrued @entity(immutable: true) {
@@ -309,15 +329,18 @@ type LenderWithdrawalStatus @entity {
   scaledAmount: BigInt!
   normalizedAmountWithdrawn: BigInt!
   totalNormalizedRequests: BigInt! # sum of amounts originally requested
+  isCompleted: Boolean!
   requests: [WithdrawalRequest!]! @derivedFrom(field: "status")
   executions: [WithdrawalExecution!]! @derivedFrom(field: "status")
 }
 
-type Token @entity {
+type Token @entity(immutable: true) {
   id: ID!
+  address: Bytes!
   name: String!
   symbol: String!
   decimals: Int!
+  isMock: Boolean!
 }
 
 type Market @entity {
@@ -327,15 +350,16 @@ type Market @entity {
   # ---------------------------------- Config -------------------------------- #
   controller: Controller!
   borrower: Bytes!
+  sentinel: Bytes!
+  feeRecipient: Bytes!
+
   name: String!
   symbol: String!
   decimals: Int!
-  sentinel: Bytes!
-  feeRecipient: Bytes!
   protocolFeeBips: Int!
   delinquencyGracePeriod: Int!
   delinquencyFeeBips: Int!
-  asset: Bytes!
+  asset: Token!
   withdrawalBatchDuration: Int!
 
   # ---------------------------------- State --------------------------------- #
@@ -361,6 +385,10 @@ type Market @entity {
   # Ratio between internal balances and underlying token amounts
   scaleFactor: BigInt!
   lastInterestAccruedTimestamp: Int!
+
+  originalReserveRatioBips: Int!
+  temporaryReserveRatioExpiry: Int!
+  temporaryReserveRatioActive: Boolean!
 
   # -------------------------------- Metadata -------------------------------- #
   # all time borrows
@@ -606,6 +634,7 @@ type WithdrawalExecution @entity(immutable: true) {
 
 type WithdrawalRequest @entity(immutable: true) {
   id: ID! # WDREQ-<market>-<account>-<expiry>-<lender>-<request index>
+  requestIndex: Int!
   account: LenderAccount!
   status: LenderWithdrawalStatus!
   batch: WithdrawalBatch!
@@ -615,3 +644,248 @@ type WithdrawalRequest @entity(immutable: true) {
   blockTimestamp: Int!
   transactionHash: Bytes!
 }
+
+# -------------------------------------------------------------------------- #
+#                                   Queries                                  #
+# -------------------------------------------------------------------------- #
+
+# fragment LenderProperties on LenderAccount {
+#   id
+#   address
+#   scaledBalance
+#   role
+#   totalDeposited
+#   lastScaleFactor
+#   lastUpdatedTimestamp
+#   totalInterestEarned
+#   numPendingWithdrawalBatches
+# }
+
+# fragment MarketConfig on Market {
+#   controller {
+#     id
+#   }
+#   borrower
+#   sentinel
+#   feeRecipient
+#   name
+#   symbol
+#   decimals
+#   protocolFeeBips
+#   delinquencyGracePeriod
+#   delinquencyFeeBips
+#   asset
+#   withdrawalBatchDuration
+# }
+
+# fragment MarketState on Market {
+#   isClosed
+#   maxTotalSupply
+#   pendingProtocolFees
+#   normalizedUnclaimedWithdrawals
+#   scaledTotalSupply
+#   scaledPendingWithdrawals
+#   pendingWithdrawalExpiry
+#   isDelinquent
+#   timeDelinquent
+#   annualInterestBips
+#   reserveRatioBips
+#   scaleFactor
+#   lastInterestAccruedTimestamp
+# }
+
+# fragment MarketMetadata on Market {
+#   isRegistered
+#   totalBorrowed
+#   totalRepaid
+#   totalBaseInterestAccrued
+#   totalDelinquencyFeesAccrued
+#   totalProtocolFeesAccrued
+#   totalDeposited
+# }
+
+# fragment WithdrawalBatchPaymentProperties on WithdrawalBatchPayment {
+#   scaledAmountBurned
+#   normalizedAmountPaid
+#   blockNumber
+#   blockTimestamp
+#   transactionHash
+# }
+# fragment WithdrawalRequestProperties on WithdrawalRequest {
+#   scaledAmount
+#   normalizedAmount
+#   blockNumber
+#   blockTimestamp
+#   transactionHash
+# }
+# fragment WithdrawalExecutionProperties on WithdrawalExecution {
+#   normalizedAmount
+#   blockNumber
+#   blockTimestamp
+#   transactionHash
+# }
+
+# fragment LenderWithdrawalProperties on LenderWithdrawalStatus {
+#   id
+#   requestsCount
+#   executionsCount
+#   scaledAmount
+#   normalizedAmountWithdrawn
+#   totalNormalizedRequests
+#   isCompleted
+# }
+
+# fragment WithdrawalBatchProperties on WithdrawalBatch {
+#   id
+#   expiry
+#   scaledTotalAmount
+#   scaledAmountBurned
+#   normalizedAmountPaid
+#   normalizedAmountClaimed
+#   totalNormalizedRequests
+#   isExpired
+#   isClosed
+#   paymentsCount
+#   lastScaleFactor
+#   lastUpdatedTimestamp
+#   totalInterestEarned
+
+#   payments {
+#     ...WithdrawalBatchPaymentProperties
+#   }
+# }
+
+# query getLenderAccountForMarket($market: ID!, $lender: Bytes!) {
+#   market(id: $market) {
+#     lenders(where: { address: $lender }) {
+#       ...LenderProperties
+#       withdrawals(where: { isCompleted: false }) {
+#         ...LenderWithdrawalProperties
+
+#         batch {
+#           ...WithdrawalBatchProperties
+#         }
+#         requests {
+#           ...WithdrawalRequestProperties
+#         }
+#         executions {
+#           ...WithdrawalExecutionProperties
+#         }
+#       }
+#       market {
+#         scaleFactor
+#       }
+#     }
+#   }
+# }
+
+# query getAccountsWhereLenderAuthorized($lender: Bytes!) {
+#   lenderAuthorizations(where: { lender: $lender, authorized: true }) {
+#     controller {
+#       markets {
+#         lenders(where: { address: $lender }) {
+#           ...LenderProperties
+#           withdrawals(where: { isCompleted: false }) {
+#             ...LenderWithdrawalProperties
+#             batch {
+#               ...WithdrawalBatchProperties
+#             }
+#             requests {
+#               ...WithdrawalRequestProperties
+#             }
+#             executions {
+#               ...WithdrawalExecutionProperties
+#             }
+#           }
+#           market {
+#             ...MarketConfig
+#             ...MarketState
+#             ...MarketMetadata
+#           }
+#         }
+#       }
+#     }
+#   }
+# }
+
+# query getMarketsForBorrower($borrower: Bytes!) {
+#   controllers(where: { borrower: $borrower }) {
+#     markets {
+#       ...MarketConfig
+#       ...MarketState
+#       ...MarketMetadata
+#     }
+#   }
+# }
+
+# query getAllPendingWithdrawalBatchesForMarket($market: ID!) {
+#   market(id: $market) {
+#     withdrawalBatches(where: { isClosed: false }) {
+#       ...WithdrawalBatchProperties
+
+#       withdrawals {
+#         account {
+#           address
+#         }
+#         ...LenderWithdrawalProperties
+#       }
+#       requests {
+#         account {
+#           address
+#         }
+#         ...WithdrawalRequestProperties
+#       }
+#       executions {
+#         account {
+#           address
+#         }
+#         ...WithdrawalExecutionProperties
+#       }
+#     }
+#   }
+# }
+
+# query getAllMarkets {
+#   markets {
+#     ...MarketConfig
+#     ...MarketState
+#     ...MarketMetadata
+#   }
+# }
+
+# query getAuthorizedLendersByController($controller: ID!) {
+#   controller(id: $controller) {
+#     authorizedLenders(where: { authorized: true }) {
+#       lender
+#     }
+#   }
+# }
+
+# query getAuthorizedLendersByMarket($market: ID!) {
+#   market(id: $market) {
+#     controller {
+#       authorizedLenders(where: { authorized: true }) {
+#         lender
+#       }
+#     }
+#   }
+# }
+
+# query getAuthorizedLendersByBorrower($borrower: Bytes!) {
+#   controllers(where: { borrower: $borrower }) {
+#     authorizedLenders(where: { authorized: true }) {
+#       lender
+#     }
+#   }
+# }
+
+# query getLenderAuthorizationsForMarket($market: ID!, $lender: Bytes!) {
+#   market(id: $market) {
+#     controller {
+#       authorizedLenders(where: { lender: $lender }) {
+#         lender
+#         authorized
+#       }
+#     }
+#   }
+# }

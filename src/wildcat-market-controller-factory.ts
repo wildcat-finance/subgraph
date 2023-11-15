@@ -8,17 +8,15 @@ import {
   NewController as NewControllerEvent,
   UpdateProtocolFeeConfiguration as UpdateProtocolFeeConfigurationEvent,
 } from "../generated/templates/WildcatMarketControllerFactory/WildcatMarketControllerFactory";
-import { WildcatMarketController } from "../generated/templates";
+import { WildcatMarketController as WildcatMarketControllerTemplate } from "../generated/templates";
 
 export function handleNewController(event: NewControllerEvent): void {
   let controllerFactory = getControllerFactory(
     generateControllerFactoryId(event.address)
   );
-  // let controller = event.params.controller;
-  // let borrower = event.params.borrower;
-  let controller = event.params.borrower;
-  let borrower = event.params.controller;
-  WildcatMarketController.create(controller);
+  let controller = event.params.controller;
+  let borrower = event.params.borrower;
+  WildcatMarketControllerTemplate.create(controller);
   createController(generateControllerId(controller), {
     borrower: borrower,
     controllerFactory: generateControllerFactoryId(event.address),

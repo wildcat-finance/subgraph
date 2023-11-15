@@ -47,6 +47,7 @@ entitySettings:
       executionsCount: {}
       requestsCount: {}
       totalNormalizedRequests: {}
+      isCompleted: {}
     entityId:
       - type: constant
         value: "WDSTAT"
@@ -69,6 +70,7 @@ entitySettings:
       role: {}
       totalDeposited: {}
       totalInterestEarned: {}
+      numPendingWithdrawalBatches: {}
     entityId:
       - type: constant
         value: "LENDER"
@@ -125,6 +127,9 @@ entitySettings:
       totalDelinquencyFeesAccrued: {}
       totalProtocolFeesAccrued: {}
       totalDeposited: {}
+      temporaryReserveRatioActive: {}
+      originalReserveRatioBips: {}
+      temporaryReserveRatioExpiry: {}
     entityId:
       - name: id
         type: Bytes
@@ -160,6 +165,13 @@ entitySettings:
     useDefault: {}
     entityId:
       - name: controller
+        type: Bytes
+  Token:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: 'TKN'
+      - name: token
         type: Bytes
   LenderAuthorization:
     useDefault: {}

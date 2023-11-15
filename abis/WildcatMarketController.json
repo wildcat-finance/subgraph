@@ -163,11 +163,55 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "originalReserveRatioBips",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "temporaryReserveRatioBips",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "temporaryReserveRatioExpiry",
+        "type": "uint256"
+      }
+    ],
+    "name": "TemporaryExcessReserveRatioActivated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      }
+    ],
+    "name": "TemporaryExcessReserveRatioExpired",
+    "type": "event"
+  },
+  {
     "inputs": [],
     "name": "archController",
     "outputs": [
       {
-        "internalType": "contract IWildcatArchController",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -235,7 +279,7 @@
     "name": "controllerFactory",
     "outputs": [
       {
-        "internalType": "contract IWildcatMarketControllerFactory",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -560,6 +604,34 @@
         "internalType": "struct MarketParameterConstraints",
         "name": "constraints",
         "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getProtocolFeeConfiguration",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "feeRecipient",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "originationFeeAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint80",
+        "name": "originationFeeAmount",
+        "type": "uint80"
+      },
+      {
+        "internalType": "uint16",
+        "name": "protocolFeeBips",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
