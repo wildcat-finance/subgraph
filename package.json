@@ -2,7 +2,7 @@
   "name": "wildcat-finance",
   "license": "UNLICENSED",
   "scripts": {
-    "codegen": "graph codegen",
+    "codegen": "graph codegen -u",
     "build": "graph build",
     "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ wildcat-finance --version-label",
     "create-local": "graph create --node http://localhost:8020/ wildcat-finance",
