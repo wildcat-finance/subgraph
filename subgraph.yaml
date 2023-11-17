@@ -6,9 +6,9 @@ dataSources:
     name: WildcatArchController
     network: sepolia
     source:
-      address: "0x61C3F23157B6657847cBDdA7eD08F30BB247E943"
+      address: "0xe0b536e3b389b77B9Dc8d7e8E623cbeF69B4ED84"
       abi: WildcatArchController
-      startBlock: 4585936
+      startBlock: 4710147
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -63,9 +63,9 @@ dataSources:
     name: WildcatSanctionsSentinel
     network: sepolia
     source:
-      address: "0x4385E0888DAEa92E13A42BB74fC1D179C5E67fF3"
+      address: "0xf98daD3014aDF635E070799966c2376e21658F56"
       abi: WildcatSanctionsSentinel
-      startBlock: 4585936
+      startBlock: 4710147
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

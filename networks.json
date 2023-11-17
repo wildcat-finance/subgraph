@@ -1,12 +1,12 @@
 {
   "sepolia": {
     "WildcatArchController": {
-      "address": "0x61c3f23157b6657847cbdda7ed08f30bb247e943",
-      "startBlock": 4585936
+      "address": "0xe0b536e3b389b77B9Dc8d7e8E623cbeF69B4ED84",
+      "startBlock": 4710147
     },
     "WildcatSanctionsSentinel": {
-      "address": "0x4385E0888DAEa92E13A42BB74fC1D179C5E67fF3",
-      "startBlock": 4585936
+      "address": "0xf98daD3014aDF635E070799966c2376e21658F56",
+      "startBlock": 4710147
     }
   }
 }
