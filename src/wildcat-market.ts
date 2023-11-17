@@ -460,7 +460,7 @@ export function handleTransfer(event: TransferEvent): void {
     !(
       isNullAddress(fromAddress) ||
       isNullAddress(toAddress) ||
-      toAddress.notEqual(event.address)
+      toAddress.equals(event.address)
     )
   ) {
     let market = getMarket(generateMarketId(event.address));
