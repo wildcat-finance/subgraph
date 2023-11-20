@@ -139,6 +139,10 @@ templates:
           handler: handleMarketDeployed
         - event: TemporaryExcessReserveRatioActivated(indexed address,uint256,uint256,uint256)
           handler: handleTemporaryExcessReserveRatioActivated
+        - event: TemporaryExcessReserveRatioUpdated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioUpdated
+        - event: TemporaryExcessReserveRatioCanceled(indexed address)
+          handler: handleTemporaryExcessReserveRatioCanceled
         - event: TemporaryExcessReserveRatioExpired(indexed address)
           handler: handleTemporaryExcessReserveRatioExpired
       file: ./src/wildcat-market-controller.ts

@@ -18,6 +18,9 @@ import {
   LenderDeauthorized as LenderDeauthorizedEvent,
   MarketDeployed as MarketDeployedEvent,
   TemporaryExcessReserveRatioActivated,
+  TemporaryExcessReserveRatioCanceled,
+  TemporaryExcessReserveRatioExpired,
+  TemporaryExcessReserveRatioUpdated,
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId } from "./utils";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
@@ -117,16 +120,37 @@ export function handleTemporaryExcessReserveRatioActivated(
   event: TemporaryExcessReserveRatioActivated
 ): void {
   let market = getMarket(generateMarketId(event.params.market))
+  market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.temporaryReserveRatioActive = true;
   market.save();
 }
 
-export function handleTemporaryExcessReserveRatioExpired(
-  event: TemporaryExcessReserveRatioActivated
+export function handleTemporaryExcessReserveRatioUpdated(
+  event: TemporaryExcessReserveRatioUpdated
 ): void {
   let market = getMarket(generateMarketId(event.params.market))
+  market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
+  market.save();
+}
+
+export function handleTemporaryExcessReserveRatioExpired(
+  event: TemporaryExcessReserveRatioExpired
+): void {
+  let market = getMarket(generateMarketId(event.params.market))
+  market.originalAnnualInterestBips = 0;
+  market.temporaryReserveRatioActive = false;
+  market.originalReserveRatioBips = 0;
+  market.temporaryReserveRatioExpiry = 0;
+  market.save();
+}
+
+export function handleTemporaryExcessReserveRatioCanceled(
+  event: TemporaryExcessReserveRatioCanceled
+): void {
+  let market = getMarket(generateMarketId(event.params.market))
+  market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;

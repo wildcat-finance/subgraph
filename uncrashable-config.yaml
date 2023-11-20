@@ -127,6 +127,7 @@ entitySettings:
       totalDelinquencyFeesAccrued: {}
       totalProtocolFeesAccrued: {}
       totalDeposited: {}
+      originalAnnualInterestBips: {}
       temporaryReserveRatioActive: {}
       originalReserveRatioBips: {}
       temporaryReserveRatioExpiry: {}

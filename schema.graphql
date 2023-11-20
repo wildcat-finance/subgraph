@@ -386,6 +386,7 @@ type Market @entity {
   scaleFactor: BigInt!
   lastInterestAccruedTimestamp: Int!
 
+  originalAnnualInterestBips: Int!
   originalReserveRatioBips: Int!
   temporaryReserveRatioExpiry: Int!
   temporaryReserveRatioActive: Boolean!

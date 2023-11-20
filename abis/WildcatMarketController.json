@@ -16,12 +16,22 @@
   },
   {
     "inputs": [],
+    "name": "AprChangeOnClosedMarket",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "CallerNotBorrower",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "CallerNotBorrowerOrControllerFactory",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CapacityChangeOnClosedMarket",
     "type": "error"
   },
   {
@@ -42,6 +52,11 @@
   {
     "inputs": [],
     "name": "ExcessReserveRatioStillActive",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MarketAlreadyClosed",
     "type": "error"
   },
   {
@@ -203,7 +218,51 @@
         "type": "address"
       }
     ],
+    "name": "TemporaryExcessReserveRatioCanceled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      }
+    ],
     "name": "TemporaryExcessReserveRatioExpired",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "originalReserveRatioBips",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "temporaryReserveRatioBips",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "temporaryReserveRatioExpiry",
+        "type": "uint256"
+      }
+    ],
+    "name": "TemporaryExcessReserveRatioUpdated",
     "type": "event"
   },
   {
@@ -243,6 +302,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      }
+    ],
+    "name": "closeMarket",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -749,6 +821,24 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxTotalSupply",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMaxTotalSupply",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
@@ -756,14 +846,19 @@
     "name": "temporaryExcessReserveRatio",
     "outputs": [
       {
-        "internalType": "uint128",
-        "name": "reserveRatioBips",
-        "type": "uint128"
+        "internalType": "uint16",
+        "name": "originalAnnualInterestBips",
+        "type": "uint16"
       },
       {
-        "internalType": "uint128",
+        "internalType": "uint16",
+        "name": "originalReserveRatioBips",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint32",
         "name": "expiry",
-        "type": "uint128"
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
