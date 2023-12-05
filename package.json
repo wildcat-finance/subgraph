@@ -1,14 +1,24 @@
 {
   "name": "wildcat-finance",
+  "version": "0.0.23",
   "license": "UNLICENSED",
+  "main": "index.js",
+  "repository": "git@github.com:wildcat-finance/subgraph",
+  "author": "d1ll0n <dillon@wildcat.finance>",
   "scripts": {
     "codegen": "graph codegen -u",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ wildcat-finance --version-label",
+    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/",
     "create-local": "graph create --node http://localhost:8020/ wildcat-finance",
     "remove-local": "graph remove --node http://localhost:8020/ wildcat-finance",
     "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 wildcat-finance",
-    "test": "graph test"
+    "test": "graph test",
+    "netconfig": "node ./scripts/set-addresses",
+    "postnetconfig": "yarn codegen",
+    "deploy:sepolia": "yarn netconfig sepolia; yarn build; yarn deploy wildcat-finance --version-label $(node next-version)",
+    "deploy:mainnet": "yarn netconfig mainnet; yarn build; yarn deploy wildcat-finance-mainnet --version-label $(node next-version)",
+    "deploy:both": "yarn deploy:mainnet",
+    "postdeploy:both": "echo 'Updated sepolia and mainnet deployments to' $(node ./scripts/next-version --update)"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",
@@ -16,9 +26,5 @@
   },
   "devDependencies": {
     "matchstick-as": "0.5.0"
-  },
-  "version": "0.0.18",
-  "main": "index.js",
-  "repository": "git@github.com:wildcat-finance/subgraph",
-  "author": "d1ll0n <dillon@indexed.finance>"
+  }
 }
