@@ -287,6 +287,7 @@ type LenderInterestAccrued @entity(immutable: true) {
 
 type WithdrawalBatch @entity {
   id: ID! # WDBATCH-<market>-<expiry>
+  # batchIndex: Int!
   market: Market!
   expiry: BigInt!
   scaledTotalAmount: BigInt!
@@ -404,13 +405,16 @@ type Market @entity {
   totalProtocolFeesAccrued: BigInt!
   # all time deposits
   totalDeposited: BigInt!
+  # withdrawalBatchesCount: Int!
 
   # ------------------------------- Dependents ------------------------------- #
   withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
 
+  createdAt: Int!
+
   # --------------------------------- Events --------------------------------- #
-  deployedEvent: MarketDeployed! @derivedFrom(field: "market")
+  deployedEvent: MarketDeployed!
   removal: MarketRemoved @derivedFrom(field: "market")
   interestAccrualRecords: [MarketInterestAccrued!]!
     @derivedFrom(field: "market")

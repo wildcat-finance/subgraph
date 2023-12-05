@@ -2,6 +2,7 @@ import { BigInt } from "@graphprotocol/graph-ts";
 import {
   createLenderAuthorizationChange,
   createMarket,
+  createMarketDeployed,
   createToken,
   generateLenderAuthorizationId,
   generateMarketId,
@@ -92,6 +93,13 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     });
   }
   MarketTemplate.create(event.params.market);
+  const marketDeployedId = generateEventId(event);
+  createMarketDeployed(marketDeployedId, {
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    market: event.params.market.toHex(),
+  })
 
   createMarket(event.params.market.toHex(), {
     name: event.params.name,
@@ -113,6 +121,8 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     withdrawalBatchDuration: event.params.withdrawalBatchDuration.toI32(),
     isRegistered: true,
     archController: controller.archController,
+    deployedEvent: marketDeployedId,
+    createdAt: event.block.timestamp.toI32(),
   });
 }
 
