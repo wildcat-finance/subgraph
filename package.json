@@ -6,6 +6,7 @@
   "repository": "git@github.com:wildcat-finance/subgraph",
   "author": "d1ll0n <dillon@wildcat.finance>",
   "scripts": {
+    "auth": "graph auth --studio",
     "codegen": "graph codegen -u",
     "build": "graph build",
     "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/",
@@ -15,8 +16,8 @@
     "test": "graph test",
     "netconfig": "node ./scripts/set-addresses",
     "postnetconfig": "yarn codegen",
-    "deploy:sepolia": "yarn netconfig sepolia; yarn build; yarn deploy wildcat-finance --version-label $(node next-version)",
-    "deploy:mainnet": "yarn netconfig mainnet; yarn build; yarn deploy wildcat-finance-mainnet --version-label $(node next-version)",
+    "deploy:sepolia": "yarn netconfig sepolia; yarn build; yarn deploy wildcat-finance --version-label $(node scripts/next-version)",
+    "deploy:mainnet": "yarn netconfig mainnet; yarn build; yarn deploy wildcat-finance-mainnet --version-label $(node scripts/next-version)",
     "deploy:both": "yarn deploy:mainnet",
     "postdeploy:both": "echo 'Updated sepolia and mainnet deployments to' $(node ./scripts/next-version --update)"
   },
