@@ -1,6 +1,6 @@
 {
   "name": "wildcat-finance",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "license": "UNLICENSED",
   "main": "index.js",
   "repository": "git@github.com:wildcat-finance/subgraph",
@@ -19,7 +19,8 @@
     "deploy:sepolia": "yarn netconfig sepolia; yarn build; yarn deploy wildcat-finance --version-label $(node scripts/next-version)",
     "deploy:mainnet": "yarn netconfig mainnet; yarn build; yarn deploy wildcat-finance-mainnet --version-label $(node scripts/next-version)",
     "deploy:both": "yarn deploy:mainnet",
-    "postdeploy:both": "echo 'Updated sepolia and mainnet deployments to' $(node ./scripts/next-version --update)"
+    "postdeploy:both": "echo 'Updated sepolia and mainnet deployments to' $(node ./scripts/next-version --update)",
+    "help1": "graph deploy --help"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",
