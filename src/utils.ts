@@ -8,6 +8,10 @@ export function generateEventId(event: ethereum.Event): string {
     .concat(event.logIndex.toString());
 }
 
+export function generateMarketEventId(market: Market): string {
+  return "RECORD" + "-" + market.id + "-" + market.eventIndex.toString()
+}
+
 export function rayDiv(a: BigInt, b: BigInt): BigInt {
   let halfB = b.div(BigInt.fromI32(2));
   let numerator = a.times(BigInt.fromI32(10).pow(27)).plus(halfB);

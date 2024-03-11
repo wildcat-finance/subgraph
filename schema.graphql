@@ -405,7 +405,16 @@ type Market @entity {
   totalProtocolFeesAccrued: BigInt!
   # all time deposits
   totalDeposited: BigInt!
-  # withdrawalBatchesCount: Int!
+
+  eventIndex: Int!
+  delinquencyStatusChangedIndex: Int!
+  borrowIndex: Int!
+  depositIndex: Int!
+  feesCollectedIndex: Int!
+  debtRepaidIndex: Int!
+  maxTotalSupplyUpdatedIndex: Int!
+  annualInterestBipsUpdatedIndex: Int!
+  withdrawalRequestsIndex: Int!
 
   # ------------------------------- Dependents ------------------------------- #
   withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
@@ -415,6 +424,7 @@ type Market @entity {
 
   # --------------------------------- Events --------------------------------- #
   deployedEvent: MarketDeployed!
+  marketClosedEvent: MarketClosed @derivedFrom(field: "market")
   removal: MarketRemoved @derivedFrom(field: "market")
   interestAccrualRecords: [MarketInterestAccrued!]!
     @derivedFrom(field: "market")
@@ -423,6 +433,13 @@ type Market @entity {
   depositRecords: [Deposit!]! @derivedFrom(field: "market")
   feeCollectionRecords: [FeesCollected!]! @derivedFrom(field: "market")
   repaymentRecords: [DebtRepaid!]! @derivedFrom(field: "market")
+  reserveRatioBipsUpdatedRecords: [ReserveRatioBipsUpdated!]!
+    @derivedFrom(field: "market")
+  annualInterestBipsUpdatedRecords: [AnnualInterestBipsUpdated!]!
+    @derivedFrom(field: "market")
+  maxTotalSupplyUpdatedRecords: [MaxTotalSupplyUpdated!]!
+    @derivedFrom(field: "market")
+  withdrawalRequestRecords: [WithdrawalRequest!]! @derivedFrom(field: "market")
 }
 
 type MarketInterestAccrued @entity(immutable: true) {
@@ -442,7 +459,9 @@ type MarketInterestAccrued @entity(immutable: true) {
 }
 
 type DelinquencyStatusChanged @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  delinquencyStatusChangedIndex: Int!
+  eventIndex: Int!
   market: Market! # address
   isDelinquent: Boolean! # bool
   liquidityCoverageRequired: BigInt! # uint256
@@ -452,13 +471,17 @@ type DelinquencyStatusChanged @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
-# type AnnualInterestBipsUpdated @entity(immutable: true) {
-#   id: ID!
-#   annualInterestBipsUpdated: BigInt! # uint256
-#   blockNumber: Int!
-#   blockTimestamp: Int!
-#   transactionHash: Bytes!
-# }
+type AnnualInterestBipsUpdated @entity(immutable: true) {
+  id: ID! # RECORD-<market>-<eventIndex>
+  market: Market!
+  annualInterestBipsUpdatedIndex: Int!
+  eventIndex: Int!
+  oldAnnualInterestBips: Int! # uint256
+  newAnnualInterestBips: Int! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
 
 type Approval @entity(immutable: true) {
   id: ID!
@@ -480,7 +503,9 @@ type Approval @entity(immutable: true) {
 # }
 
 type Borrow @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  borrowIndex: Int!
+  eventIndex: Int!
   market: Market!
   assetAmount: BigInt! # uint256
   blockNumber: Int!
@@ -489,7 +514,9 @@ type Borrow @entity(immutable: true) {
 }
 
 type DebtRepaid @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  debtRepaidIndex: Int!
+  eventIndex: Int!
   from: Bytes! # address
   market: Market!
   assetAmount: BigInt! # uint256
@@ -499,7 +526,9 @@ type DebtRepaid @entity(immutable: true) {
 }
 
 type Deposit @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  depositIndex: Int!
+  eventIndex: Int!
   account: LenderAccount! # address
   market: Market! # address
   assetAmount: BigInt! # uint256
@@ -510,7 +539,9 @@ type Deposit @entity(immutable: true) {
 }
 
 type FeesCollected @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  feesCollectedIndex: Int!
+  eventIndex: Int!
   market: Market! # address
   feesCollected: BigInt! # uint256
   blockNumber: Int!
@@ -519,7 +550,8 @@ type FeesCollected @entity(immutable: true) {
 }
 
 type MarketClosed @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  eventIndex: Int!
   market: Market! # address
   timestamp: Int! # uint256
   blockNumber: Int!
@@ -528,7 +560,9 @@ type MarketClosed @entity(immutable: true) {
 }
 
 type MaxTotalSupplyUpdated @entity(immutable: true) {
-  id: ID!
+  id: ID! # RECORD-<market>-<eventIndex>
+  maxTotalSupplyUpdatedIndex: Int!
+  eventIndex: Int!
   market: Market! # address
   oldMaxTotalSupply: BigInt! # uint256
   newMaxTotalSupply: BigInt! # uint256
@@ -638,11 +672,14 @@ type WithdrawalExecution @entity(immutable: true) {
 }
 
 type WithdrawalRequest @entity(immutable: true) {
-  id: ID! # WDREQ-<market>-<account>-<expiry>-<lender>-<request index>
+  id: ID! # RECORD-<market>-<eventIndex>
+  withdrawalRequestsIndex: Int!
+  eventIndex: Int!
   requestIndex: Int!
   account: LenderAccount!
   status: LenderWithdrawalStatus!
   batch: WithdrawalBatch!
+  market: Market!
   scaledAmount: BigInt! # uint256
   normalizedAmount: BigInt! # uint256
   blockNumber: Int!

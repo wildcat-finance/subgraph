@@ -131,6 +131,16 @@ entitySettings:
       temporaryReserveRatioActive: {}
       originalReserveRatioBips: {}
       temporaryReserveRatioExpiry: {}
+      eventIndex: {}
+      interestAccruedIndex: {}
+      delinquencyStatusChangedIndex: {}
+      borrowIndex: {}
+      depositIndex: {}
+      feesCollectedIndex: {}
+      debtRepaidIndex: {}
+      maxTotalSupplyUpdatedIndex: {}
+      annualInterestBipsUpdatedIndex: {}
+      withdrawalRequestsIndex: {}
     entityId:
       - name: id
         type: Bytes
@@ -171,7 +181,7 @@ entitySettings:
     useDefault: {}
     entityId:
       - type: constant
-        value: 'TKN'
+        value: "TKN"
       - name: token
         type: Bytes
   LenderAuthorization:
@@ -206,3 +216,66 @@ entitySettings:
         type: Bytes
   MarketInterestAccrued:
     useDefault: {}
+  DelinquencyStatusChanged:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "DLNQ"
+      - name: market
+        type: Bytes
+      - name: delinquencyStatusChangedIndex
+        type: Int
+  Borrow:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "BORROW"
+      - name: market
+        type: Bytes
+      - name: borrowIndex
+        type: Int
+  Deposit:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "DPST"
+      - name: market
+        type: Bytes
+      - name: depositIndex
+        type: Int
+  FeesCollected:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "FEES"
+      - name: market
+        type: Bytes
+      - name: feesCollectedIndex
+        type: Int
+  DebtRepaid:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "REPAY"
+      - name: market
+        type: Bytes
+      - name: debtRepaidIndex
+        type: Int
+  MaxTotalSupplyUpdated:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "MTSU"
+      - name: market
+        type: Bytes
+      - name: maxTotalSupplyUpdatedIndex
+        type: Int
+  AnnualInterestBipsUpdated:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "AIU"
+      - name: market
+        type: Bytes
+      - name: annualInterestBipsUpdatedIndex
+        type: Int

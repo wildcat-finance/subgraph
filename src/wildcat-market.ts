@@ -24,6 +24,7 @@ import {
 import { IERC20 } from "../generated/templates/WildcatMarket/IERC20";
 import {
   GetOrCreateReturn,
+  createAnnualInterestBipsUpdated,
   createBorrow,
   createDebtRepaid,
   createDelinquencyStatusChanged,
@@ -42,10 +43,16 @@ import {
   createWithdrawalBatchPayment,
   createWithdrawalExecution,
   createWithdrawalRequest,
+  generateAnnualInterestBipsUpdatedId,
+  generateBorrowId,
+  generateDebtRepaidId,
+  generateDepositId,
+  generateFeesCollectedId,
   generateLenderAccountId,
   generateLenderAuthorizationId,
   generateLenderWithdrawalStatusId,
   generateMarketId,
+  generateMaxTotalSupplyUpdatedId,
   generateWithdrawalBatchId,
   generateWithdrawalBatchPaymentId,
   generateWithdrawalExecutionId,
@@ -73,6 +80,7 @@ import {
   calculateInterestEarned,
   calculateLiquidityRequired,
   generateEventId,
+  generateMarketEventId,
   isNullAddress,
   rayDiv,
   rayMul,
@@ -111,9 +119,23 @@ function getOrCreateLenderAccount(
 export function handleAnnualInterestBipsUpdated(
   event: AnnualInterestBipsUpdatedEvent
 ): void {
-  setAnnualInterestBips(generateMarketId(event.address), {
-    annualInterestBips: event.params.annualInterestBipsUpdated.toI32(),
+  let newAnnualInterestBips = event.params.annualInterestBipsUpdated.toI32();
+  let market = getMarket(generateMarketId(event.address));
+  createAnnualInterestBipsUpdated(generateMarketEventId(market), {
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    oldAnnualInterestBips: market.annualInterestBips,
+    newAnnualInterestBips: newAnnualInterestBips,
+    transactionHash: event.transaction.hash,
+    annualInterestBipsUpdatedIndex: market.annualInterestBipsUpdatedIndex,
+    eventIndex: market.eventIndex,
+    market: market.id,
   });
+  market.annualInterestBips = newAnnualInterestBips;
+  market.annualInterestBipsUpdatedIndex =
+    market.annualInterestBipsUpdatedIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
+  market.save();
 }
 
 export function handleApproval(event: ApprovalEvent): void {
@@ -145,27 +167,36 @@ export function handleAuthorizationStatusUpdated(
 
 export function handleBorrow(event: BorrowEvent): void {
   let market = getMarket(generateMarketId(event.address));
-  createBorrow(generateEventId(event), {
+
+  createBorrow(generateMarketEventId(market), {
     assetAmount: event.params.assetAmount,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
     market: market.id,
+    borrowIndex: market.borrowIndex,
+    eventIndex: market.eventIndex,
   });
+  market.borrowIndex = market.borrowIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
   market.totalBorrowed = market.totalBorrowed.plus(event.params.assetAmount);
   market.save();
 }
 
 export function handleDebtRepaid(event: DebtRepaidEvent): void {
   let market = getMarket(generateMarketId(event.address));
-  createDebtRepaid(generateEventId(event), {
+  createDebtRepaid(generateMarketEventId(market), {
     assetAmount: event.params.assetAmount,
     from: event.params.from,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
     market: market.id,
+    debtRepaidIndex: market.debtRepaidIndex,
+    eventIndex: market.eventIndex,
   });
+  market.debtRepaidIndex = market.debtRepaidIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
   market.totalRepaid = market.totalRepaid.plus(event.params.assetAmount);
   market.save();
 }
@@ -178,8 +209,9 @@ function processLenderInterestAccrued(
   if (lender.lastScaleFactor.notEqual(market.scaleFactor)) {
     let interestEarned = calculateInterestEarned(lender, market);
     lender.lastScaleFactor = market.scaleFactor;
-    lender.totalInterestEarned =
-      lender.totalInterestEarned.plus(interestEarned);
+    lender.totalInterestEarned = lender.totalInterestEarned.plus(
+      interestEarned
+    );
     createLenderInterestAccrued(generateEventId(event), {
       account: lender.id,
       interestEarned,
@@ -225,7 +257,7 @@ export function handleDeposit(event: DepositEvent): void {
     event.params.account
   ).entity;
 
-  createDeposit(generateEventId(event), {
+  createDeposit(generateMarketEventId(market), {
     account: lender.id,
     scaledAmount: event.params.scaledAmount,
     assetAmount: event.params.assetAmount,
@@ -233,7 +265,11 @@ export function handleDeposit(event: DepositEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    depositIndex: market.depositIndex,
+    eventIndex: market.eventIndex,
   });
+  market.depositIndex = market.depositIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
 
   processLenderInterestAccrued(event, lender, market);
   lender.totalDeposited = lender.totalDeposited.plus(event.params.assetAmount);
@@ -253,40 +289,52 @@ export function handleFeesCollected(event: FeesCollectedEvent): void {
   market.pendingProtocolFees = market.pendingProtocolFees.minus(
     event.params.assets
   );
-  market.save();
-  createFeesCollected(generateEventId(event), {
+  createFeesCollected(generateMarketEventId(market), {
     market: market.id,
     feesCollected: event.params.assets,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    feesCollectedIndex: market.feesCollectedIndex,
+    eventIndex: market.eventIndex,
   });
+  market.feesCollectedIndex = market.feesCollectedIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
+
+  market.save();
 }
 
 export function handleMarketClosed(event: MarketClosedEvent): void {
-  let marketId = generateMarketId(event.address);
-  setMarketIsClosed(marketId, { isClosed: true });
-  createMarketClosed(generateEventId(event), {
-    market: marketId,
+  let market = getMarket(generateMarketId(event.address));
+  market.isClosed = true;
+  createMarketClosed(generateMarketEventId(market), {
+    market: market.id,
     timestamp: event.params.timestamp.toI32(),
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    eventIndex: market.eventIndex,
   });
+  market.eventIndex = market.eventIndex + 1;
+  market.save();
 }
 
 export function handleMaxTotalSupplyUpdated(
   event: MaxTotalSupplyUpdatedEvent
 ): void {
   let market = getMarket(generateMarketId(event.address));
-  createMaxTotalSupplyUpdated(generateEventId(event), {
+  createMaxTotalSupplyUpdated(generateMarketEventId(market), {
     market: market.id,
     oldMaxTotalSupply: market.maxTotalSupply,
     newMaxTotalSupply: event.params.assets,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    maxTotalSupplyUpdatedIndex: market.maxTotalSupplyUpdatedIndex,
+    eventIndex: market.eventIndex,
   });
+  market.maxTotalSupplyUpdatedIndex = market.maxTotalSupplyUpdatedIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
   market.maxTotalSupply = event.params.assets;
   market.save();
 }
@@ -400,8 +448,9 @@ export function handleInterestAndFeesAccrued(
   market.totalDelinquencyFeesAccrued = market.totalDelinquencyFeesAccrued.plus(
     delinquencyFeesAccrued
   );
-  market.totalBaseInterestAccrued =
-    market.totalBaseInterestAccrued.plus(baseInterestAccrued);
+  market.totalBaseInterestAccrued = market.totalBaseInterestAccrued.plus(
+    baseInterestAccrued
+  );
   let timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(
     market,
     toTimestamp.minus(fromTimestamp)
@@ -421,8 +470,9 @@ export function handleInterestAndFeesAccrued(
     timeWithPenalties: timeWithPenalties.toI32(),
   });
   market.scaleFactor = scaleFactor;
-  market.totalProtocolFeesAccrued =
-    market.totalProtocolFeesAccrued.plus(protocolFee);
+  market.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued.plus(
+    protocolFee
+  );
   market.pendingProtocolFees = market.pendingProtocolFees.plus(protocolFee);
   market.lastInterestAccruedTimestamp = toTimestamp.toI32();
   market.save();
@@ -434,13 +484,12 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
   let market = getMarket(marketId);
   if (market.isDelinquent != isDelinquent) {
     market.isDelinquent = isDelinquent;
-    market.save();
     let assetAddress = market.asset.slice(market.asset.indexOf(`0x`));
     let totalAssets = IERC20.bind(
       Address.fromBytes(Bytes.fromHexString(assetAddress))
     ).balanceOf(event.address);
     let liquidityRequired = calculateLiquidityRequired(market);
-    createDelinquencyStatusChanged(generateEventId(event), {
+    createDelinquencyStatusChanged(generateMarketEventId(market), {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
@@ -448,8 +497,14 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
       totalAssets: totalAssets,
       liquidityCoverageRequired: liquidityRequired,
       market: market.id,
+      delinquencyStatusChangedIndex: market.delinquencyStatusChangedIndex,
+      eventIndex: market.eventIndex,
     });
+    market.delinquencyStatusChangedIndex =
+      market.delinquencyStatusChangedIndex + 1;
+    market.eventIndex = market.eventIndex + 1;
   }
+  market.save();
 }
 
 export function handleTransfer(event: TransferEvent): void {
@@ -464,11 +519,8 @@ export function handleTransfer(event: TransferEvent): void {
     )
   ) {
     let market = getMarket(generateMarketId(event.address));
-    let from = getOrCreateLenderAccount(
-      market,
-      event.address,
-      fromAddress
-    ).entity;
+    let from = getOrCreateLenderAccount(market, event.address, fromAddress)
+      .entity;
     let to = getOrCreateLenderAccount(market, event.address, toAddress).entity;
     processLenderInterestAccrued(event, from, market);
     processLenderInterestAccrued(event, to, market);
@@ -576,14 +628,17 @@ export function handleWithdrawalBatchPayment(
   });
   batch.paymentsCount = batch.paymentsCount + 1;
   batch.scaledAmountBurned = batch.scaledAmountBurned.plus(scaledAmountBurned);
-  batch.normalizedAmountPaid =
-    batch.normalizedAmountPaid.plus(normalizedAmountPaid);
+  batch.normalizedAmountPaid = batch.normalizedAmountPaid.plus(
+    normalizedAmountPaid
+  );
   batch.save();
 
-  market.scaledPendingWithdrawals =
-    market.scaledPendingWithdrawals.minus(scaledAmountBurned);
-  market.normalizedUnclaimedWithdrawals =
-    market.normalizedUnclaimedWithdrawals.plus(normalizedAmountPaid);
+  market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.minus(
+    scaledAmountBurned
+  );
+  market.normalizedUnclaimedWithdrawals = market.normalizedUnclaimedWithdrawals.plus(
+    normalizedAmountPaid
+  );
   // Withdrawal batch payment burns market tokens
   market.scaledTotalSupply = market.scaledTotalSupply.minus(scaledAmountBurned);
   market.save();
@@ -619,12 +674,15 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       transactionHash: event.transaction.hash,
     }
   );
-  status.normalizedAmountWithdrawn =
-    status.normalizedAmountWithdrawn.plus(normalizedAmount);
-  batch.normalizedAmountClaimed =
-    batch.normalizedAmountClaimed.plus(normalizedAmount);
-  market.normalizedUnclaimedWithdrawals =
-    market.normalizedUnclaimedWithdrawals.minus(normalizedAmount);
+  status.normalizedAmountWithdrawn = status.normalizedAmountWithdrawn.plus(
+    normalizedAmount
+  );
+  batch.normalizedAmountClaimed = batch.normalizedAmountClaimed.plus(
+    normalizedAmount
+  );
+  market.normalizedUnclaimedWithdrawals = market.normalizedUnclaimedWithdrawals.minus(
+    normalizedAmount
+  );
   if (batch.isClosed) {
     status.isCompleted = true;
     let lender = getLenderAccount(
@@ -660,36 +718,36 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   );
   let status = statusCreation.entity;
   processWithdrawalBatchInterestAccrued(event, batch, market);
-  createWithdrawalRequest(
-    generateWithdrawalRequestId(
-      event.address,
-      expiry,
-      account,
-      status.requestsCount
-    ),
-    {
-      requestIndex: status.requestsCount,
-      batch: status.batch,
-      status: status.id,
-      account: status.account,
-      scaledAmount,
-      normalizedAmount,
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-    }
-  );
+  createWithdrawalRequest(generateMarketEventId(market), {
+    requestIndex: status.requestsCount,
+    batch: status.batch,
+    status: status.id,
+    account: status.account,
+    scaledAmount,
+    normalizedAmount,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    withdrawalRequestsIndex: market.withdrawalRequestsIndex,
+    eventIndex: market.eventIndex,
+    market: market.id,
+  });
+  market.withdrawalRequestsIndex = market.withdrawalRequestsIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
   status.requestsCount = status.requestsCount + 1;
   status.scaledAmount = status.scaledAmount.plus(scaledAmount);
-  status.totalNormalizedRequests =
-    status.totalNormalizedRequests.plus(normalizedAmount);
+  status.totalNormalizedRequests = status.totalNormalizedRequests.plus(
+    normalizedAmount
+  );
   processLenderInterestAccrued(event, lender, market);
   lender.scaledBalance = lender.scaledBalance.minus(scaledAmount);
-  market.scaledPendingWithdrawals =
-    market.scaledPendingWithdrawals.plus(scaledAmount);
+  market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.plus(
+    scaledAmount
+  );
   batch.scaledTotalAmount = batch.scaledTotalAmount.plus(scaledAmount);
-  batch.totalNormalizedRequests =
-    batch.totalNormalizedRequests.plus(normalizedAmount);
+  batch.totalNormalizedRequests = batch.totalNormalizedRequests.plus(
+    normalizedAmount
+  );
 
   if (statusCreation.wasCreated) {
     lender.numPendingWithdrawalBatches = lender.numPendingWithdrawalBatches + 1;

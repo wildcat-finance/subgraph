@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: WildcatArchController
-    network: mainnet
+    network: sepolia
     source:
-      address: "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4"
+      address: "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
       abi: WildcatArchController
-      startBlock: 18686645
+      startBlock: 4796511
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -61,11 +61,11 @@ dataSources:
       file: ./src/wildcat-arch-controller.ts
   - kind: ethereum
     name: WildcatSanctionsSentinel
-    network: mainnet
+    network: sepolia
     source:
-      address: "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A"
+      address: "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B"
       abi: WildcatSanctionsSentinel
-      startBlock: 18686645
+      startBlock: 4796511
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -88,7 +88,7 @@ dataSources:
 templates:
   - kind: ethereum
     name: WildcatMarketControllerFactory
-    network: mainnet
+    network: sepolia
     source:
       abi: WildcatMarketControllerFactory
     mapping:
@@ -111,7 +111,7 @@ templates:
       file: ./src/wildcat-market-controller-factory.ts
   - kind: ethereum
     name: WildcatMarketController
-    network: mainnet
+    network: sepolia
     source:
       abi: WildcatMarketController
     mapping:
@@ -148,7 +148,7 @@ templates:
       file: ./src/wildcat-market-controller.ts
   - kind: ethereum
     name: WildcatMarket
-    network: mainnet
+    network: sepolia
     source:
       abi: WildcatMarket
     mapping:
