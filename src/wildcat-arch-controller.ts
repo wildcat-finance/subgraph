@@ -103,40 +103,43 @@ export function handleControllerFactoryAdded(
   event: ControllerFactoryAddedEvent
 ): void {
   getOrInitializeArchController(event.address.toHex(), {});
-  ControllerFactoryTemplate.create(event.params.controllerFactory);
   let controllerFactory = event.params.controllerFactory;
   let factoryContract = WildcatMarketControllerFactory.bind(controllerFactory);
-  let constraintsResult = factoryContract.getParameterConstraints();
-  let constraints = createParameterConstraints(
-    generateParameterConstraintsId(controllerFactory),
-    {
-      minimumDelinquencyGracePeriod: constraintsResult.minimumDelinquencyGracePeriod.toI32(),
-      maximumDelinquencyGracePeriod: constraintsResult.maximumDelinquencyGracePeriod.toI32(),
-      minimumReserveRatioBips: constraintsResult.minimumReserveRatioBips,
-      maximumReserveRatioBips: constraintsResult.maximumReserveRatioBips,
-      minimumDelinquencyFeeBips: constraintsResult.minimumDelinquencyFeeBips,
-      maximumDelinquencyFeeBips: constraintsResult.maximumDelinquencyFeeBips,
-      minimumWithdrawalBatchDuration: constraintsResult.minimumWithdrawalBatchDuration.toI32(),
-      maximumWithdrawalBatchDuration: constraintsResult.maximumWithdrawalBatchDuration.toI32(),
-      minimumAnnualInterestBips: constraintsResult.minimumAnnualInterestBips,
-      maximumAnnualInterestBips: constraintsResult.maximumAnnualInterestBips,
-    }
-  );
-
-  createControllerFactory(generateControllerFactoryId(controllerFactory), {
-    constraints: constraints.id,
-    sentinel: factoryContract.sentinel(),
-    isRegistered: true,
-    archController: event.address.toHex(),
-  });
-  createControllerFactoryAdded(generateEventId(event), {
-    controllerFactory: generateControllerFactoryId(
-      event.params.controllerFactory
-    ),
-    blockNumber: event.block.number.toI32(),
-    blockTimestamp: event.block.timestamp.toI32(),
-    transactionHash: event.transaction.hash,
-  });
+  let constraintsResult = factoryContract.try_getParameterConstraints();
+  if (!constraintsResult.reverted) {
+    let constraintsValue = constraintsResult.value;
+    ControllerFactoryTemplate.create(event.params.controllerFactory);
+    let constraints = createParameterConstraints(
+      generateParameterConstraintsId(controllerFactory),
+      {
+        minimumDelinquencyGracePeriod: constraintsValue.minimumDelinquencyGracePeriod.toI32(),
+        maximumDelinquencyGracePeriod: constraintsValue.maximumDelinquencyGracePeriod.toI32(),
+        minimumReserveRatioBips: constraintsValue.minimumReserveRatioBips,
+        maximumReserveRatioBips: constraintsValue.maximumReserveRatioBips,
+        minimumDelinquencyFeeBips: constraintsValue.minimumDelinquencyFeeBips,
+        maximumDelinquencyFeeBips: constraintsValue.maximumDelinquencyFeeBips,
+        minimumWithdrawalBatchDuration: constraintsValue.minimumWithdrawalBatchDuration.toI32(),
+        maximumWithdrawalBatchDuration: constraintsValue.maximumWithdrawalBatchDuration.toI32(),
+        minimumAnnualInterestBips: constraintsValue.minimumAnnualInterestBips,
+        maximumAnnualInterestBips: constraintsValue.maximumAnnualInterestBips,
+      }
+    );
+  
+    createControllerFactory(generateControllerFactoryId(controllerFactory), {
+      constraints: constraints.id,
+      sentinel: factoryContract.sentinel(),
+      isRegistered: true,
+      archController: event.address.toHex(),
+    });
+    createControllerFactoryAdded(generateEventId(event), {
+      controllerFactory: generateControllerFactoryId(
+        event.params.controllerFactory
+      ),
+      blockNumber: event.block.number.toI32(),
+      blockTimestamp: event.block.timestamp.toI32(),
+      transactionHash: event.transaction.hash,
+    });
+  }
 }
 
 export function handleControllerFactoryRemoved(
