@@ -294,9 +294,12 @@ type WithdrawalBatch @entity {
   scaledAmountBurned: BigInt!
   normalizedAmountPaid: BigInt!
   normalizedAmountClaimed: BigInt!
+  lenderWithdrawalsCount: Int! # number of individual lenders with requests
+  completedWithdrawalsCount: Int! # number of individual lenders with completed withdrawals
   totalNormalizedRequests: BigInt! # sum of amounts originally requested
   isExpired: Boolean!
-  isClosed: Boolean!
+  isClosed: Boolean! # indicates whether the batch is fully paid
+  isCompleted: Boolean! # indicates whether all requests have been executed
   paymentsCount: Int!
   lastScaleFactor: BigInt!
   lastUpdatedTimestamp: Int!

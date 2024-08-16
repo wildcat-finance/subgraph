@@ -690,6 +690,13 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
     );
     lender.numPendingWithdrawalBatches = lender.numPendingWithdrawalBatches - 1;
     lender.save();
+    batch.completedWithdrawalsCount = batch.completedWithdrawalsCount + 1;
+    // Track whether batch is complete by counting the number of lenders who have
+    // completed their withdrawals. Tracking it by the claimed vs unclaimed
+    // amount can be inaccurate due to rounding errors.
+    if (batch.lenderWithdrawalsCount == batch.completedWithdrawalsCount) {
+      batch.isCompleted = true;
+    }
   }
   batch.save();
   status.save();
@@ -751,6 +758,7 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
 
   if (statusCreation.wasCreated) {
     lender.numPendingWithdrawalBatches = lender.numPendingWithdrawalBatches + 1;
+    batch.lenderWithdrawalsCount = batch.lenderWithdrawalsCount + 1;
   }
 
   lender.save();

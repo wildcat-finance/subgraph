@@ -8,6 +8,9 @@ entitySettings:
     useDefault:
       scaledAmountBurned: {}
       normalizedAmountPaid: {}
+      lenderWithdrawalsCount: {}
+      completedWithdrawalsCount: {}
+      isCompleted: {}
       scaledTotalAmount: {}
       isExpired: {}
       isClosed: {}
