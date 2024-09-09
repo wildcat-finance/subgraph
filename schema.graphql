@@ -1,5 +1,7 @@
-# scalar Bytes
-# scalar BigInt
+enum MarketVersion {
+  V1
+  V2
+}
 
 # -------------------------------------------------------------------------- #
 #                            WildcatArchController                           #
@@ -12,6 +14,7 @@ type ArchController @entity {
   controllers: [Controller!]! @derivedFrom(field: "archController")
   markets: [Market!]! @derivedFrom(field: "archController")
   borrowers: [RegisteredBorrower!]! @derivedFrom(field: "archController")
+  hooksFactory: HooksFactory @derivedFrom(field: "archController")
 }
 
 type RegisteredBorrower @entity {
@@ -199,6 +202,269 @@ type SanctionOverrideRemoved @entity(immutable: true) {
 }
 
 # -------------------------------------------------------------------------- #
+#                              AccessControlHooks                            #
+# -------------------------------------------------------------------------- #
+
+type LenderHooksAccess @entity {
+  id: ID! # LenderHooksAccess-hooksAddress-lenderAddress
+  lender: Bytes! # address
+  isBlockedFromDeposits: Boolean!
+  lastProvider: AccessControlHooksProvider # address
+  canRefresh: Boolean!
+  lastApprovalTimestamp: Int
+  hooks: AccessControlHooks! # address
+  knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "lenderStatus")
+}
+
+type AccessControlHooks @entity {
+  id: ID! # address
+  borrower: Bytes! # address
+  hooksTemplate: HooksTemplate! # address
+  markets: [Market!]! @derivedFrom(field: "hooks")
+  providers: [AccessControlHooksProvider!]! @derivedFrom(field: "hooks")
+  hooksFactory: HooksFactory!
+  eventIndex: Int!
+}
+
+type KnownLenderStatus @entity {
+  id: ID! #KNOWNLENDER-marketAddress-lenderAddress
+  lenderStatus: LenderHooksAccess! # address
+  market: Market! # address
+}
+
+type AccessControlHooksProvider @entity {
+  id: ID! # PROVIDER-hooksAddress-providerAddress
+  providerAddress: Bytes! # address
+  hooks: AccessControlHooks! # address
+  # version: String!
+  timeToLive: Int!
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  isApproved: Boolean!
+}
+
+type HooksConfig @entity(immutable: true) {
+  id: ID! # HOOKSCONFIG-marketAddress
+  market: Market!
+  hooks: AccessControlHooks!
+  useOnDeposit: Boolean!
+  useOnQueueWithdrawal: Boolean!
+  useOnExecuteWithdrawal: Boolean!
+  useOnTransfer: Boolean!
+  useOnBorrow: Boolean!
+  useOnRepay: Boolean!
+  useOnCloseMarket: Boolean!
+  useOnNukeFromOrbit: Boolean!
+  useOnSetMaxTotalSupply: Boolean!
+  useOnSetAnnualInterestAndReserveRatioBips: Boolean!
+  useOnSetProtocolFeeBips: Boolean!
+  depositRequiresAccess: Boolean
+  queueWithdrawalRequiresAccess: Boolean
+  transferRequiresAccess: Boolean
+}
+
+# event RoleProviderUpdated(
+#   address indexed providerAddress,
+#   uint32 timeToLive,
+#   uint24 pullProviderIndex
+# );
+type RoleProviderUpdated @entity(immutable: true) {
+  id: ID! # PROVIDERUPDATE-hooksAddress-providerAddress-eventIndex
+  hooks: AccessControlHooks! # address
+  provider: AccessControlHooksProvider! # PROVIDER-hooksAddress-providerAddress
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  timeToLive: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event RoleProviderAdded(
+#   address indexed providerAddress,
+#   uint32 timeToLive,
+#   uint24 pullProviderIndex
+# );
+type RoleProviderAdded @entity(immutable: true) {
+  id: ID! # PROVIDERADD-hooksAddress-providerAddress-eventIndex
+  hooks: AccessControlHooks! # address
+  provider: AccessControlHooksProvider! # PROVIDER-hooksAddress-providerAddress
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  timeToLive: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event RoleProviderRemoved(address indexed providerAddress, uint24 pullProviderIndex);
+type RoleProviderRemoved @entity(immutable: true) {
+  id: ID! # PROVIDERREMOVE-hooksAddress-providerAddress-eventIndex
+  hooks: AccessControlHooks! # address
+  provider: AccessControlHooksProvider! # PROVIDER-hooksAddress-providerAddress
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event AccountBlockedFromDeposits(address indexed accountAddress);
+type AccountBlockedFromDeposits @entity(immutable: true) {
+  id: ID! # ACCOUNTBLOCKED-hooksAddress-accountAddress-eventIndex
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event AccountUnblockedFromDeposits(address indexed accountAddress);
+type AccountUnblockedFromDeposits @entity(immutable: true) {
+  id: ID! # ACCOUNTUNBLOCKED-hooksAddress-accountAddress-eventIndex
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event AccountMadeFirstDeposit(address indexed accountAddress);
+type AccountMadeFirstDeposit @entity(immutable: true) {
+  id: ID! # ACCOUNTFIRSTDEPOSIT-marketAddress-accountAddress-eventIndex
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+type MinimumDepositUpdated @entity (immutable: true) {
+  id: ID! #MINIMUMDEPOSITUPDATE-marketAddress-eventIndex
+  market: Market!
+  hooks: AccessControlHooks!
+  oldMinimumDeposit: BigInt
+  newMinimumDeposit: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event AccountAccessGranted(
+#   address indexed providerAddress,
+#   address indexed accountAddress,
+#   uint32 credentialTimestamp
+# );
+type AccountAccessGranted @entity(immutable: true) {
+  id: ID! # ACCOUNTACCESSGRANTED-hooksAddress-accountAddress-eventIndex
+  provider: AccessControlHooksProvider! # PROVIDER-hooksAddress-providerAddress
+  account: LenderHooksAccess! # address
+  credentialTimestamp: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event AccountAccessRevoked(address indexed accountAddress);
+type AccountAccessRevoked @entity(immutable: true) {
+  id: ID! # ACCOUNTACCESSREVOKED-hooksAddress-accountAddress-eventIndex
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# -------------------------------------------------------------------------- #
+#                                 HooksFactory                               #
+# -------------------------------------------------------------------------- #
+
+type HooksFactory @entity {
+  id: ID!
+  hooksTemplates: [HooksTemplate!]! @derivedFrom(field: "hooksFactory")
+  hooksInstances: [AccessControlHooks!]! @derivedFrom(field: "hooksFactory")
+  archController: ArchController!
+  isRegistered: Boolean!
+  eventIndex: Int!
+}
+
+
+# @todo This is brittle. It will break if any other template is used than AccessControlHooks.
+# Current workaround is to only bind a hooks instance if it is an AccessControlHooks instance.
+type HooksTemplate @entity {
+  id: ID! # address
+  name: String!
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Bytes! # address
+  originationFeeAmount: BigInt!
+  deployedInstances: [HooksInstanceDeployed!]! @derivedFrom(field: "hooksTemplate")
+  hooksFactory: HooksFactory!
+  disabled: Boolean!
+}
+
+# event HooksInstanceDeployed(address hooksInstance, address hooksTemplate);
+type HooksInstanceDeployed @entity(immutable: true) {
+  id: ID!
+  hooksTemplate: HooksTemplate!
+  hooks: AccessControlHooks! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# event HooksTemplateAdded(
+#   address hooksTemplate,
+#   string name,
+#   address feeRecipient,
+#   address originationFeeAsset,
+#   uint80 originationFeeAmount,
+#   uint16 protocolFeeBips
+# );
+type HooksTemplateAdded @entity(immutable: true) {
+  id: ID! # TEMPLATEADD-template-eventIndex
+  hooksTemplate: HooksTemplate! # address
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Bytes! # address
+  originationFeeAmount: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# event HooksTemplateDisabled(address hooksTemplate);
+type HooksTemplateDisabled @entity(immutable: true) {
+  id: ID! # TEMPLATEDISABLE-template-eventIndex
+  hooksTemplate: HooksTemplate! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# event HooksTemplateFeesUpdated(
+#   address hooksTemplate,
+#   address feeRecipient,
+#   address originationFeeAsset,
+#   uint80 originationFeeAmount,
+#   uint16 protocolFeeBips
+# );
+type HooksTemplateFeesUpdated @entity(immutable: true) {
+  id: ID! # TEMPLATEFEEUPDATE-template-eventIndex
+  hooksTemplate: HooksTemplate! # address
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Bytes! # address
+  originationFeeAmount: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+# -------------------------------------------------------------------------- #
 #                           WildcatMarketController                          #
 # -------------------------------------------------------------------------- #
 
@@ -351,8 +617,13 @@ type Market @entity {
   id: ID!
   archController: ArchController!
   isRegistered: Boolean!
+  version: MarketVersion!
   # ---------------------------------- Config -------------------------------- #
-  controller: Controller!
+  controller: Controller
+  hooksFactory: HooksFactory
+  hooksConfig: HooksConfig  @derivedFrom(field: "market")
+  hooks: AccessControlHooks # address
+
   borrower: Bytes!
   sentinel: Bytes!
   feeRecipient: Bytes!
@@ -365,6 +636,7 @@ type Market @entity {
   delinquencyFeeBips: Int!
   asset: Token!
   withdrawalBatchDuration: Int!
+  minimumDeposit: BigInt
 
   # ---------------------------------- State --------------------------------- #
   isClosed: Boolean!

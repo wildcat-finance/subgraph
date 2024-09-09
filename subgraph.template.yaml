@@ -3,6 +3,61 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
+    name: HooksFactory
+    network: {{NetworkName}}
+    source:
+      address: "{{HooksFactoryAddress}}"
+      abi: HooksFactory
+      startBlock: {{HooksFactoryStartBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LenderHooksAccess
+        - AccessControlHooks
+        - AccessControlHooksProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - HooksFactory
+        - HooksTemplate
+        - HooksInstanceDeployed
+        - HooksTemplateAdded
+        - HooksTemplateDisabled
+        - HooksTemplateFeesUpdated
+      abis:
+        - name: HooksFactory
+          file: ./abis/HooksFactory.json
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+        - name: AccessControlHooks
+          file: ./abis/AccessControlHooks.json
+      eventHandlers:
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
+        - event: HooksInstanceDeployed(address,address)
+          handler: handleHooksInstanceDeployed
+        - event: HooksTemplateAdded(address,string,address,address,uint80,uint16)
+          handler: handleHooksTemplateAdded
+        - event: HooksTemplateDisabled(address)
+          handler: handleHooksTemplateDisabled
+        - event: HooksTemplateFeesUpdated(address,address,address,uint80,uint16)
+          handler: handleHooksTemplateFeesUpdated
+        - event: MarketDeployed(indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleMarketDeployed
+      file: ./src/hooks-factory.ts
+  - kind: ethereum
     name: WildcatArchController
     network: {{NetworkName}}
     source:
@@ -23,6 +78,7 @@ dataSources:
         - ControllerFactory
         - ControllerFactoryAdded
         - ControllerFactoryRemoved
+        - HooksFactory
         - Market
         - MarketAdded
         - MarketRemoved
@@ -35,6 +91,10 @@ dataSources:
           file: ./abis/WildcatArchController.json
         - name: WildcatMarketControllerFactory
           file: ./abis/WildcatMarketControllerFactory.json
+        - name: HooksFactory
+          file: ./abis/HooksFactory.json
+        - name: AccessControlHooks
+          file: ./abis/AccessControlHooks.json
       eventHandlers:
         - event: BorrowerAdded(address)
           handler: handleBorrowerAdded
@@ -86,6 +146,60 @@ dataSources:
           handler: handleSanctionOverrideRemoved
       file: ./src/wildcat-sanctions-sentinel.ts
 templates:
+  - kind: ethereum
+    name: AccessControlHooks
+    network: {{NetworkName}}
+    source:
+      abi: AccessControlHooks
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AccessControlHooks
+        - LenderHooksAccess
+        - AccessControlHooks
+        - AccessControlHooksProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+      abis:
+        - name: AccessControlHooks
+          file: ./abis/AccessControlHooks.json
+      eventHandlers:
+        - event: AccountAccessGranted(indexed address,indexed address,uint32)
+          handler: handleAccountAccessGranted
+        - event: AccountAccessRevoked(indexed address)
+          handler: handleAccountAccessRevoked
+        - event: AccountBlockedFromDeposits(indexed address)
+          handler: handleAccountBlockedFromDeposits
+        - event: AccountMadeFirstDeposit(indexed address,indexed address)
+          handler: handleAccountMadeFirstDeposit
+        - event: AccountUnblockedFromDeposits(indexed address)
+          handler: handleAccountUnblockedFromDeposits
+        - event: MinimumDepositUpdated(address,uint128)
+          handler: handleMinimumDepositUpdated
+        - event: RoleProviderAdded(indexed address,uint32,uint24)
+          handler: handleRoleProviderAdded
+        - event: RoleProviderRemoved(indexed address,uint24)
+          handler: handleRoleProviderRemoved
+        - event: RoleProviderUpdated(indexed address,uint32,uint24)
+          handler: handleRoleProviderUpdated
+        - event: TemporaryExcessReserveRatioActivated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioActivated
+        - event: TemporaryExcessReserveRatioCanceled(indexed address)
+          handler: handleTemporaryExcessReserveRatioCanceled
+        - event: TemporaryExcessReserveRatioExpired(indexed address)
+          handler: handleTemporaryExcessReserveRatioExpired
+        - event: TemporaryExcessReserveRatioUpdated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioUpdated
+      file: ./src/access-control-hooks.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
     network: {{NetworkName}}
@@ -184,6 +298,23 @@ templates:
         - WithdrawalBatchPayment
         - WithdrawalExecution
         - WithdrawalRequest
+        - LenderHooksAccess
+        - AccessControlHooks
+        - AccessControlHooksProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - HooksTemplate
+        - HooksInstanceDeployed
+        - HooksTemplateAdded
+        - HooksTemplateDisabled
+        - HooksTemplateFeesUpdated
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json

@@ -17,6 +17,10 @@
     "WildcatSanctionsSentinel": {
       "address": "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B",
       "startBlock": 4796511
+    },
+    "HooksFactory": {
+      "address": "0x6Cb3512b541733d340Aa520b63105586588BD600",
+      "startBlock": 6443857
     }
   }
 }

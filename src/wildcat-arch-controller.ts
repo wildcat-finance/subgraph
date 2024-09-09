@@ -105,6 +105,7 @@ export function handleControllerFactoryAdded(
   getOrInitializeArchController(event.address.toHex(), {});
   let controllerFactory = event.params.controllerFactory;
   let factoryContract = WildcatMarketControllerFactory.bind(controllerFactory);
+
   let constraintsResult = factoryContract.try_getParameterConstraints();
   if (!constraintsResult.reverted) {
     let constraintsValue = constraintsResult.value;
@@ -139,6 +140,8 @@ export function handleControllerFactoryAdded(
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
     });
+  } else {
+    
   }
 }
 

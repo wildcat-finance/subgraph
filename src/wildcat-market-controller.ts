@@ -89,19 +89,20 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
-      isMock: true
+      isMock: true,
     });
   }
+  const marketId = generateMarketId(event.params.market);
   MarketTemplate.create(event.params.market);
   const marketDeployedId = generateEventId(event);
   createMarketDeployed(marketDeployedId, {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
-    market: event.params.market.toHex(),
-  })
+    market: marketId,
+  });
 
-  createMarket(event.params.market.toHex(), {
+  createMarket(marketId, {
     name: event.params.name,
     symbol: event.params.symbol,
     asset: assetId,
@@ -123,13 +124,17 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     archController: controller.archController,
     deployedEvent: marketDeployedId,
     createdAt: event.block.timestamp.toI32(),
+    hooks: null,
+    hooksFactory: null,
+    minimumDeposit: null,
+    version: "",
   });
 }
 
 export function handleTemporaryExcessReserveRatioActivated(
   event: TemporaryExcessReserveRatioActivated
 ): void {
-  let market = getMarket(generateMarketId(event.params.market))
+  let market = getMarket(generateMarketId(event.params.market));
   market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
@@ -140,7 +145,7 @@ export function handleTemporaryExcessReserveRatioActivated(
 export function handleTemporaryExcessReserveRatioUpdated(
   event: TemporaryExcessReserveRatioUpdated
 ): void {
-  let market = getMarket(generateMarketId(event.params.market))
+  let market = getMarket(generateMarketId(event.params.market));
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.save();
 }
@@ -148,7 +153,7 @@ export function handleTemporaryExcessReserveRatioUpdated(
 export function handleTemporaryExcessReserveRatioExpired(
   event: TemporaryExcessReserveRatioExpired
 ): void {
-  let market = getMarket(generateMarketId(event.params.market))
+  let market = getMarket(generateMarketId(event.params.market));
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
@@ -159,7 +164,7 @@ export function handleTemporaryExcessReserveRatioExpired(
 export function handleTemporaryExcessReserveRatioCanceled(
   event: TemporaryExcessReserveRatioCanceled
 ): void {
-  let market = getMarket(generateMarketId(event.params.market))
+  let market = getMarket(generateMarketId(event.params.market));
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;

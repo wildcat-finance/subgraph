@@ -93,6 +93,7 @@ function getOrCreateLenderAccount(
   marketAddress: Address,
   lenderAddress: Address
 ): GetOrCreateReturn<LenderAccount> {
+  if (!market.controller) throw new Error('')
   let authorization = getOrInitializeLenderAuthorization(
     generateLenderAuthorizationId(
       Bytes.fromHexString(market.controller),
