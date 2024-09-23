@@ -18,7 +18,7 @@ import {
   getMarket,
   getOrInitializeArchController,
   getRegisteredBorrower,
-  getOrInitializeRegisteredBorrower
+  getOrInitializeRegisteredBorrower,
 } from "../generated/UncrashableEntityHelpers";
 import {
   BorrowerAdded as BorrowerAddedEvent,
@@ -35,6 +35,7 @@ import {
 } from "../generated/WildcatArchController/WildcatArchController";
 import { WildcatMarketControllerFactory } from "../generated/WildcatArchController/WildcatMarketControllerFactory";
 import {
+  ControllerFactory,
   OwnershipHandoverCanceled,
   OwnershipHandoverRequested,
   OwnershipTransferred,
@@ -88,15 +89,18 @@ export function handleBorrowerRemoved(event: BorrowerRemovedEvent): void {
 }
 
 export function handleControllerAdded(event: ControllerAddedEvent): void {
-  createControllerAdded(generateEventId(event), {
-    controllerFactory: generateControllerFactoryId(
-      event.params.controllerFactory
-    ),
-    controller: generateControllerId(event.params.controller),
-    blockNumber: event.block.number.toI32(),
-    blockTimestamp: event.block.timestamp.toI32(),
-    transactionHash: event.transaction.hash,
-  });
+  const controllerFactoryId = generateControllerFactoryId(
+    event.params.controllerFactory
+  );
+  if (ControllerFactory.load(controllerFactoryId) != null) {
+    createControllerAdded(generateEventId(event), {
+      controllerFactory: controllerFactoryId,
+      controller: generateControllerId(event.params.controller),
+      blockNumber: event.block.number.toI32(),
+      blockTimestamp: event.block.timestamp.toI32(),
+      transactionHash: event.transaction.hash,
+    });
+  }
 }
 
 export function handleControllerFactoryAdded(
@@ -125,7 +129,7 @@ export function handleControllerFactoryAdded(
         maximumAnnualInterestBips: constraintsValue.maximumAnnualInterestBips,
       }
     );
-  
+
     createControllerFactory(generateControllerFactoryId(controllerFactory), {
       constraints: constraints.id,
       sentinel: factoryContract.sentinel(),
@@ -141,7 +145,6 @@ export function handleControllerFactoryAdded(
       transactionHash: event.transaction.hash,
     });
   } else {
-    
   }
 }
 

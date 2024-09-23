@@ -8,7 +8,9 @@ import {
   MarketDeployed as MarketDeployedEvent,
 } from "../generated/HooksFactory/HooksFactory";
 import {
+  createAccessControlHooks,
   createHooksConfig,
+  createHooksFactory,
   createHooksInstanceDeployed,
   createHooksTemplate,
   createHooksTemplateAdded,
@@ -27,15 +29,33 @@ import {
   generateMarketId,
   generateTokenId,
   getHooksTemplate,
-  getOrInitializeHooksFactory,
-  getOrInitializeHooksInstanceDeployed,
 } from "../generated/UncrashableEntityHelpers";
 import { IERC20 } from "../generated/HooksFactory/IERC20";
+import { HooksFactory as HooksFactoryContract } from "../generated/HooksFactory/HooksFactory";
 import { AccessControlHooks as IAccessControlHooks } from "../generated/HooksFactory/AccessControlHooks";
-import { Token } from "../generated/schema";
+import {
+  AccessControlHooks,
+  HooksConfig,
+  HooksFactory,
+  HooksTemplate,
+  Token,
+} from "../generated/schema";
 import { generateEventId } from "./utils";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, log } from "@graphprotocol/graph-ts";
+
+function getOrCreateHooksFactory(address: Address): HooksFactory {
+  let hooksFactory = HooksFactory.load(address.toHex());
+  if (hooksFactory == null) {
+    const hooksFactoryContract = HooksFactoryContract.bind(address);
+    return createHooksFactory(address.toHex(), {
+      isRegistered: true,
+      sentinel: hooksFactoryContract.sanctionsSentinel(),
+      archController: hooksFactoryContract.archController().toHex(),
+    });
+  }
+  return hooksFactory;
+}
 
 export function handleChangedSpherexEngineAddress(
   event: ChangedSpherexEngineAddressEvent
@@ -46,18 +66,28 @@ export function handleChangedSpherexOperator(
 export function handleHooksInstanceDeployed(
   event: HooksInstanceDeployedEvent
 ): void {
-  const hooksFactory = getOrInitializeHooksFactory(event.address.toHex(), {
-    isRegistered: true,
-  });
+  const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksInstance = event.params.hooksInstance;
-  const hooksTemplate = event.params.hooksTemplate;
-  const hooksTemplateId = generateHooksTemplateId(hooksTemplate);
+  const hooksTemplateId = generateHooksTemplateId(event.params.hooksTemplate);
   const hooksInstanceId = generateAccessControlHooksId(hooksInstance);
+  const hooksTemplate = getHooksTemplate(hooksTemplateId);
+  log.warning("Hooks Template: {}", [hooksTemplateId]);
+  log.warning("Hooks Instance: {}", [hooksInstanceId]);
+  log.warning("Hooks name: {}", [hooksTemplate.name]);
+  log.warning("Hooks name is ACH: {}", [
+    hooksTemplate.name == "SingleBorrowerAccessControlHooks" ? "true" : "false",
+  ]);
+  if (hooksTemplate.name == "SingleBorrowerAccessControlHooks") {
+    const hooksContract = IAccessControlHooks.bind(hooksInstance);
+    createAccessControlHooks(hooksInstanceId, {
+      borrower: hooksContract.borrower(),
+      hooksFactory: hooksFactory.id,
+      hooksTemplate: hooksTemplateId,
+    });
+  }
+
   createHooksInstanceDeployed(
-    generateHooksInstanceDeployedId(
-      hooksInstance,
-      hooksFactory.entity.eventIndex
-    ),
+    generateHooksInstanceDeployedId(hooksInstance, hooksFactory.eventIndex),
     {
       hooks: hooksInstanceId,
       hooksTemplate: hooksTemplateId,
@@ -66,17 +96,15 @@ export function handleHooksInstanceDeployed(
       transactionHash: event.transaction.hash,
     }
   );
-  hooksFactory.entity.eventIndex = hooksFactory.entity.eventIndex + 1;
-  hooksFactory.entity.save();
+  hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
+  hooksFactory.save();
 }
 export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
-  const hooksFactory = getOrInitializeHooksFactory(event.address.toHex(), {
-    isRegistered: true,
-  });
+  const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksTemplate = event.params.hooksTemplate;
   const hooksTemplateId = generateHooksTemplateId(hooksTemplate);
   createHooksTemplateAdded(
-    generateHooksTemplateAddedId(hooksTemplate, hooksFactory.entity.eventIndex),
+    generateHooksTemplateAddedId(hooksTemplate, hooksFactory.eventIndex),
     {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
@@ -94,25 +122,20 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
     originationFeeAmount: event.params.originationFeeAmount,
     originationFeeAsset: event.params.originationFeeAsset,
     protocolFeeBips: event.params.protocolFeeBips,
-    hooksFactory: hooksFactory.entity.id,
+    hooksFactory: hooksFactory.id,
     name: event.params.name,
   });
-  hooksFactory.entity.eventIndex = hooksFactory.entity.eventIndex + 1;
-  hooksFactory.entity.save();
+  hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
+  hooksFactory.save();
 }
 export function handleHooksTemplateDisabled(
   event: HooksTemplateDisabledEvent
 ): void {
-  const hooksFactory = getOrInitializeHooksFactory(event.address.toHex(), {
-    isRegistered: true,
-  });
+  const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksTemplate = event.params.hooksTemplate;
   const hooksTemplateId = generateHooksTemplateId(hooksTemplate);
   createHooksTemplateDisabled(
-    generateHooksTemplateDisabledId(
-      hooksTemplate,
-      hooksFactory.entity.eventIndex
-    ),
+    generateHooksTemplateDisabledId(hooksTemplate, hooksFactory.eventIndex),
     {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
@@ -120,8 +143,8 @@ export function handleHooksTemplateDisabled(
       hooksTemplate: hooksTemplateId,
     }
   );
-  hooksFactory.entity.eventIndex = hooksFactory.entity.eventIndex + 1;
-  hooksFactory.entity.save();
+  hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
+  hooksFactory.save();
   const hooksTemplateEntity = getHooksTemplate(hooksTemplateId);
   hooksTemplateEntity.disabled = true;
   hooksTemplateEntity.save();
@@ -129,17 +152,12 @@ export function handleHooksTemplateDisabled(
 export function handleHooksTemplateFeesUpdated(
   event: HooksTemplateFeesUpdatedEvent
 ): void {
-  const hooksFactory = getOrInitializeHooksFactory(event.address.toHex(), {
-    isRegistered: true,
-  });
+  const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksTemplate = event.params.hooksTemplate;
   const hooksTemplateId = generateHooksTemplateId(hooksTemplate);
   const hooksTemplateEntity = getHooksTemplate(hooksTemplateId);
   createHooksTemplateFeesUpdated(
-    generateHooksTemplateFeesUpdatedId(
-      hooksTemplate,
-      hooksFactory.entity.eventIndex
-    ),
+    generateHooksTemplateFeesUpdatedId(hooksTemplate, hooksFactory.eventIndex),
     {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
@@ -156,38 +174,50 @@ export function handleHooksTemplateFeesUpdated(
   hooksTemplateEntity.originationFeeAsset = event.params.originationFeeAsset;
   hooksTemplateEntity.protocolFeeBips = event.params.protocolFeeBips;
   hooksTemplateEntity.save();
-  hooksFactory.entity.eventIndex = hooksFactory.entity.eventIndex + 1;
-  hooksFactory.entity.save();
+  hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
+  hooksFactory.save();
 }
 
 function decodeAndCreateHooksConfig(
   market: Bytes,
   marketId: string,
   hooksConfig: BigInt
-) {
+): HooksConfig {
   const hooksConfigBytes = hooksConfig
     .toHex()
     .replace("0x", "")
-    .padStart(64, "0");
-  const hooksAddress = Bytes.fromHexString(hooksConfigBytes.slice(0, 40));
-  const useOnDeposit = hooksConfigBytes.slice(40, 42) == "00";
-  const useOnQueueWithdrawal = hooksConfigBytes.slice(42, 44) == "00";
-  const useOnExecuteWithdrawal = hooksConfigBytes.slice(44, 46) == "00";
-  const useOnTransfer = hooksConfigBytes.slice(46, 48) == "00";
-  const useOnBorrow = hooksConfigBytes.slice(48, 50) == "00";
-  const useOnRepay = hooksConfigBytes.slice(50, 52) == "00";
-  const useOnCloseMarket = hooksConfigBytes.slice(52, 54) == "00";
-  const useOnNukeFromOrbit = hooksConfigBytes.slice(54, 56) == "00";
-  const useOnSetMaxTotalSupply = hooksConfigBytes.slice(56, 58) == "00";
-  const useOnSetAnnualInterestAndReserveRatioBips =
-    hooksConfigBytes.slice(58, 60) == "00";
-  const useOnSetProtocolFeeBips = hooksConfigBytes.slice(60, 62) == "00";
-  const accessControlHooks = IAccessControlHooks.bind(hooksAddress);
-  const hookedMarket = accessControlHooks.getHookedMarket(market)
+    .padEnd(64, "0");
 
-  createHooksConfig(generateHooksConfigId(market), {
+  const hooksAddress = Bytes.fromHexString(hooksConfigBytes.slice(0, 40));
+  const flagBytes = Bytes.fromHexString(hooksConfigBytes.slice(40, 64));
+  const firstByte = flagBytes[0];
+  const useOnDeposit = ((firstByte >> 7) & 1) == 1;
+  const useOnQueueWithdrawal = ((firstByte >> 6) & 1) == 1;
+  const useOnExecuteWithdrawal = ((firstByte >> 5) & 1) == 1;
+  const useOnTransfer = ((firstByte >> 4) & 1) == 1;
+  const useOnBorrow = ((firstByte >> 3) & 1) == 1;
+  const useOnRepay = ((firstByte >> 2) & 1) == 1;
+  const useOnCloseMarket = ((firstByte >> 1) & 1) == 1;
+  const useOnNukeFromOrbit = (firstByte & 1) == 1;
+  const secondByte = flagBytes[1];
+  const useOnSetMaxTotalSupply = ((secondByte >> 7) & 1) == 1;
+  const useOnSetAnnualInterestAndReserveRatioBips =
+    ((secondByte >> 6) & 1) == 1;
+  const useOnSetProtocolFeeBips = ((secondByte >> 5) & 1) == 1;
+  const accessControlHooks = IAccessControlHooks.bind(
+    Address.fromBytes(hooksAddress)
+  );
+  log.warning("Hooks Config: {}", [hooksConfigBytes]);
+  log.warning("Hooks Address: {}", [hooksAddress.toHex()]);
+  log.warning("Market: {}", [market.toHex()]);
+
+  const hookedMarket = accessControlHooks.getHookedMarket(
+    Address.fromBytes(market)
+  );
+
+  return createHooksConfig(generateHooksConfigId(market), {
     depositRequiresAccess: hookedMarket.depositRequiresAccess,
-    queueWithdrawalRequiresAccess: null,
+    queueWithdrawalRequiresAccess: true,
     transferRequiresAccess: hookedMarket.transferRequiresAccess,
     hooks: hooksAddress.toHex(),
     market: marketId,
@@ -205,23 +235,29 @@ function decodeAndCreateHooksConfig(
   });
 }
 
-export function handleMarketDeployed(event: MarketDeployedEvent): void {
-  const hooksConfig = event.params.hooks;
-  let assetId = generateTokenId(event.params.asset);
-  if (Token.load(assetId) == null) {
-    let erc20 = IERC20.bind(event.params.asset);
+function createTokenIfNotExists(asset: Address): Token {
+  let assetId = generateTokenId(asset);
+  let token = Token.load(assetId);
+  if (token == null) {
+    let erc20 = IERC20.bind(asset);
     let result = erc20.try_isMock();
-    // let isMock = !result.reverted && result.value;
-    createToken(assetId, {
-      address: event.params.asset,
+    let isMock = !result.reverted && result.value;
+    return createToken(assetId, {
+      address: asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
-      isMock: true,
+      isMock: isMock,
     });
   }
-  const marketId = generateMarketId(event.params.market);
-  MarketTemplate.create(event.params.market);
+  return token;
+}
+
+export function handleMarketDeployed(event: MarketDeployedEvent): void {
+  const params = event.params;
+  let asset = createTokenIfNotExists(params.asset);
+  const marketId = generateMarketId(params.market);
+  MarketTemplate.create(params.market);
   const marketDeployedId = generateEventId(event);
   createMarketDeployed(marketDeployedId, {
     blockNumber: event.block.number.toI32(),
@@ -229,33 +265,48 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     transactionHash: event.transaction.hash,
     market: marketId,
   });
+  const hooksConfig = decodeAndCreateHooksConfig(
+    params.market,
+    marketId,
+    params.hooks
+  );
+  const hooks = AccessControlHooks.load(hooksConfig.hooks);
+  if (hooks == null) {
+    return;
+  }
+
+  const hooksTemplate = HooksTemplate.load(hooks.hooksTemplate);
+  if (hooksTemplate == null) {
+    return;
+  }
+  const hooksFactory = getOrCreateHooksFactory(event.address);
+  const version = "V2";
 
   createMarket(marketId, {
-    name: event.params.name,
-    symbol: event.params.symbol,
-    asset: assetId,
-    borrower: event.params.borrower,
-    controller: controller.id,
-    annualInterestBips: event.params.annualInterestBips.toI32(),
-    decimals: contract.decimals(),
-    delinquencyGracePeriod: event.params.delinquencyGracePeriod.toI32(),
-    delinquencyFeeBips: event.params.delinquencyFeeBips.toI32(),
-    feeRecipient: controllerFactory.feeRecipient,
-    protocolFeeBips: controllerFactory.protocolFeeBips,
-    sentinel: controllerFactory.sentinel,
+    name: params.name,
+    symbol: params.symbol,
+    asset: asset.id,
+    borrower: hooks.borrower,
+    controller: null,
+    annualInterestBips: params.annualInterestBips.toI32(),
+    decimals: asset.decimals,
+    delinquencyGracePeriod: params.delinquencyGracePeriod.toI32(),
+    delinquencyFeeBips: params.delinquencyFeeBips.toI32(),
+    feeRecipient: hooksTemplate.feeRecipient,
+    protocolFeeBips: hooksTemplate.protocolFeeBips,
+    sentinel: hooksFactory.sentinel,
     scaleFactor: BigInt.fromI32(10).pow(27),
-    maxTotalSupply: event.params.maxTotalSupply,
+    maxTotalSupply: params.maxTotalSupply,
     lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
-    reserveRatioBips: event.params.reserveRatioBips.toI32(),
-    withdrawalBatchDuration: event.params.withdrawalBatchDuration.toI32(),
+    reserveRatioBips: params.reserveRatioBips.toI32(),
+    withdrawalBatchDuration: params.withdrawalBatchDuration.toI32(),
     isRegistered: true,
-    archController: controller.archController,
+    archController: hooksFactory.archController,
     deployedEvent: marketDeployedId,
     createdAt: event.block.timestamp.toI32(),
-    hooks: null,
-    hooksConfig: null,
-    hooksFactory: null,
+    hooks: hooks.id,
+    hooksFactory: hooksFactory.id,
     minimumDeposit: null,
-    version: "",
+    version: version,
   });
 }

@@ -211,7 +211,7 @@ type LenderHooksAccess @entity {
   isBlockedFromDeposits: Boolean!
   lastProvider: AccessControlHooksProvider # address
   canRefresh: Boolean!
-  lastApprovalTimestamp: Int
+  lastApprovalTimestamp: Int!
   hooks: AccessControlHooks! # address
   knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "lenderStatus")
 }
@@ -258,9 +258,9 @@ type HooksConfig @entity(immutable: true) {
   useOnSetMaxTotalSupply: Boolean!
   useOnSetAnnualInterestAndReserveRatioBips: Boolean!
   useOnSetProtocolFeeBips: Boolean!
-  depositRequiresAccess: Boolean
-  queueWithdrawalRequiresAccess: Boolean
-  transferRequiresAccess: Boolean
+  depositRequiresAccess: Boolean!
+  queueWithdrawalRequiresAccess: Boolean!
+  transferRequiresAccess: Boolean!
 }
 
 # event RoleProviderUpdated(
@@ -389,6 +389,7 @@ type HooksFactory @entity {
   archController: ArchController!
   isRegistered: Boolean!
   eventIndex: Int!
+  sentinel: Bytes! # address
 }
 
 
@@ -527,7 +528,9 @@ type LenderAccount @entity {
   totalInterestEarned: BigInt!
   numPendingWithdrawalBatches: Int!
 
-  controllerAuthorization: LenderAuthorization!
+  controllerAuthorization: LenderAuthorization
+  hooksAccess: LenderHooksAccess
+
   deposits: [Deposit!]! @derivedFrom(field: "account")
   withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "account")
   interestAccrualRecords: [LenderInterestAccrued!]!
@@ -856,6 +859,16 @@ type ReserveRatioBipsUpdated @entity(immutable: true) {
   transactionHash: Bytes!
 }
 
+type SanctionedAccountAssetsQueuedForWithdrawal @entity(immutable: true) {
+  id: ID!
+  account: Bytes! # address
+  scaledAmount: BigInt! # uint256
+  normalizedAmount: BigInt! # uint256
+  amount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
 type SanctionedAccountAssetsSentToEscrow @entity(immutable: true) {
   id: ID!
   account: Bytes! # address

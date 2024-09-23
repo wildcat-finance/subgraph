@@ -1,26 +1,32 @@
 {
   "mainnet": {
-    "WildcatArchController": {
-      "address": "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4",
-      "startBlock": 18686645
-    },
-    "WildcatSanctionsSentinel": {
-      "address": "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A",
-      "startBlock": 18686645
+    "name": "mainnet",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4",
+        "startBlock": 18686645
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A",
+        "startBlock": 18686645
+      }
     }
   },
   "sepolia": {
-    "WildcatArchController": {
-      "address": "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f",
-      "startBlock": 4796511
-    },
-    "WildcatSanctionsSentinel": {
-      "address": "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B",
-      "startBlock": 4796511
-    },
-    "HooksFactory": {
-      "address": "0x6Cb3512b541733d340Aa520b63105586588BD600",
-      "startBlock": 6443857
+    "name": "sepolia",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f",
+        "startBlock": 4796511
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B",
+        "startBlock": 4796511
+      },
+      "HooksFactory": {
+        "address": "0xE1d14E8176d27415c204A4F9Ef58E107964CA12C",
+        "startBlock": 6746262
+      }
     }
   }
 }

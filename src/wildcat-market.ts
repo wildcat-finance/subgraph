@@ -3,6 +3,8 @@ import {
   Approval as ApprovalEvent,
   AuthorizationStatusUpdated as AuthorizationStatusUpdatedEvent,
   Borrow as BorrowEvent,
+  ChangedSpherexEngineAddress as ChangedSpherexEngineAddressEvent,
+  ChangedSpherexOperator as ChangedSpherexOperatorEvent,
   DebtRepaid as DebtRepaidEvent,
   Deposit as DepositEvent,
   FeesCollected as FeesCollectedEvent,
@@ -10,6 +12,7 @@ import {
   MaxTotalSupplyUpdated as MaxTotalSupplyUpdatedEvent,
   ReserveRatioBipsUpdated as ReserveRatioBipsUpdatedEvent,
   SanctionedAccountAssetsSentToEscrow as SanctionedAccountAssetsSentToEscrowEvent,
+  SanctionedAccountAssetsQueuedForWithdrawal as SanctionedAccountAssetsQueuedForWithdrawalEvent,
   SanctionedAccountWithdrawalSentToEscrow as SanctionedAccountWithdrawalSentToEscrowEvent,
   InterestAndFeesAccrued as InterestAndFeesAccruedEvent,
   StateUpdated as StateUpdatedEvent,
@@ -50,6 +53,7 @@ import {
   generateFeesCollectedId,
   generateLenderAccountId,
   generateLenderAuthorizationId,
+  generateLenderHooksAccessId,
   generateLenderWithdrawalStatusId,
   generateMarketId,
   generateMaxTotalSupplyUpdatedId,
@@ -74,6 +78,7 @@ import {
   LenderAccount,
   Market,
   WithdrawalBatch,
+  LenderHooksAccess,
 } from "../generated/schema";
 import {
   calculateBatchInterestEarned,
@@ -93,28 +98,48 @@ function getOrCreateLenderAccount(
   marketAddress: Address,
   lenderAddress: Address
 ): GetOrCreateReturn<LenderAccount> {
-  if (!market.controller) throw new Error('')
-  let authorization = getOrInitializeLenderAuthorization(
-    generateLenderAuthorizationId(
-      Bytes.fromHexString(market.controller),
+  let lenderAccountId = generateLenderAccountId(marketAddress, lenderAddress);
+  let _lenderAccount = LenderAccount.load(lenderAccountId);
+  if (_lenderAccount != null) {
+    return new GetOrCreateReturn<LenderAccount>(_lenderAccount, false);
+  }
+  const _controller = market.controller;
+  const _hooks = market.hooks;
+  let authorization_id: string | null = null;
+  let hooks_access_id: string | null = null;
+  if (_controller != null) {
+    const controller = _controller as string;
+    let authorization = getOrInitializeLenderAuthorization(
+      generateLenderAuthorizationId(
+        Bytes.fromHexString(controller),
+        lenderAddress
+      ),
+      {
+        authorized: false,
+        controller: controller,
+        lender: lenderAddress,
+      }
+    ).entity;
+    authorization_id = authorization.id;
+  }
+  if (_hooks != null) {
+    const hooks = _hooks as string;
+    let access_id = generateLenderHooksAccessId(
+      Bytes.fromHexString(hooks),
       lenderAddress
-    ),
-    {
-      authorized: false,
-      controller: market.controller,
-      lender: lenderAddress,
+    );
+    if (LenderHooksAccess.load(access_id) != null) {
+      hooks_access_id = access_id;
     }
-  ).entity;
-  return getOrInitializeLenderAccount(
-    generateLenderAccountId(marketAddress, lenderAddress),
-    {
-      address: lenderAddress,
-      lastScaleFactor: market.scaleFactor,
-      lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
-      market: market.id,
-      controllerAuthorization: authorization.id,
-    }
-  );
+  }
+  return getOrInitializeLenderAccount(lenderAccountId, {
+    address: lenderAddress,
+    lastScaleFactor: market.scaleFactor,
+    lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
+    market: market.id,
+    controllerAuthorization: authorization_id,
+    hooksAccess: hooks_access_id,
+  });
 }
 
 export function handleAnnualInterestBipsUpdated(
@@ -767,3 +792,11 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   market.save();
   batch.save();
 }
+
+export function handleChangedSpherexEngineAddress(
+  event: ChangedSpherexEngineAddressEvent
+): void {}
+
+export function handleChangedSpherexOperator(
+  event: ChangedSpherexOperatorEvent
+): void {}

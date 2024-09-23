@@ -102,6 +102,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     market: marketId,
   });
 
+  const version = "V1";
   createMarket(marketId, {
     name: event.params.name,
     symbol: event.params.symbol,
@@ -127,7 +128,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     hooks: null,
     hooksFactory: null,
     minimumDeposit: null,
-    version: "",
+    version: version,
   });
 }
 

@@ -288,7 +288,6 @@ entitySettings:
   HooksFactory:
     useDefault:
       eventIndex: {}
-      archController: "{{WildcatArchControllerAddress}}"
     entityId:
       - name: factory
         type: Bytes

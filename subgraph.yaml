@@ -6,9 +6,9 @@ dataSources:
     name: HooksFactory
     network: sepolia
     source:
-      address: "0x6Cb3512b541733d340Aa520b63105586588BD600"
+      address: "0x3B18FD683c704815f6f9536665F7668702C40707"
       abi: HooksFactory
-      startBlock: 6443857
+      startBlock: 6728332
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -41,6 +41,7 @@ dataSources:
           file: ./abis/IERC20.json
         - name: AccessControlHooks
           file: ./abis/AccessControlHooks.json
+          
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -54,16 +55,16 @@ dataSources:
           handler: handleHooksTemplateDisabled
         - event: HooksTemplateFeesUpdated(address,address,address,uint80,uint16)
           handler: handleHooksTemplateFeesUpdated
-        - event: MarketDeployed(indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+        - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
       file: ./src/hooks-factory.ts
   - kind: ethereum
     name: WildcatArchController
     network: sepolia
     source:
-      address: "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+      address: "0x5A43121030E79bf18dAc6d0D3532727F23A55253"
       abi: WildcatArchController
-      startBlock: 4796511
+      startBlock: 6728309
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -123,9 +124,9 @@ dataSources:
     name: WildcatSanctionsSentinel
     network: sepolia
     source:
-      address: "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B"
+      address: "0xdebA0c30167E2D78338Fe521AF07AE7761745E3d"
       abi: WildcatSanctionsSentinel
-      startBlock: 4796511
+      startBlock: 6728309
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -329,6 +330,10 @@ templates:
           handler: handleAuthorizationStatusUpdated
         - event: Borrow(uint256)
           handler: handleBorrow
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
         - event: DebtRepaid(indexed address,uint256)
           handler: handleDebtRepaid
         - event: Deposit(indexed address,uint256,uint256)
@@ -343,6 +348,8 @@ templates:
           handler: handleReserveRatioBipsUpdated
         - event: SanctionedAccountAssetsSentToEscrow(indexed address,address,uint256)
           handler: handleSanctionedAccountAssetsSentToEscrow
+        - event: SanctionedAccountAssetsQueuedForWithdrawal(indexed address,uint256,uint256,uint256)
+          handler: handleSanctionedAccountAssetsQueuedForWithdrawal
         - event: SanctionedAccountWithdrawalSentToEscrow(indexed address,address,uint32,uint256)
           handler: handleSanctionedAccountWithdrawalSentToEscrow
         - event: InterestAndFeesAccrued(uint256,uint256,uint256,uint256,uint256,uint256)
@@ -351,8 +358,6 @@ templates:
           handler: handleStateUpdated
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
-        - event: Withdrawal(indexed address,uint256,uint256)
-          handler: handleWithdrawal
         - event: WithdrawalBatchClosed(indexed uint256)
           handler: handleWithdrawalBatchClosed
         - event: WithdrawalBatchCreated(indexed uint256)
