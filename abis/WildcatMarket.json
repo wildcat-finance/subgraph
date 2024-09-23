@@ -70,6 +70,44 @@
     "type": "event"
   },
   {
+    "type": "event",
+    "name": "ChangedSpherexEngineAddress",
+    "inputs": [
+      {
+        "name": "oldEngineAddress",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newEngineAddress",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ChangedSpherexOperator",
+    "inputs": [
+      {
+        "name": "oldSphereXAdmin",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newSphereXAdmin",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -207,6 +245,37 @@
     ],
     "name": "ReserveRatioBipsUpdated",
     "type": "event"
+  },
+  {
+    "type": "event",
+    "name": "SanctionedAccountAssetsQueuedForWithdrawal",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "expiry",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "scaledAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "normalizedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "anonymous": false,

@@ -823,6 +823,12 @@
     "name": "MarketDeployed",
     "inputs": [
       {
+        "name": "hooksTemplate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
         "name": "market",
         "type": "address",
         "indexed": true,
