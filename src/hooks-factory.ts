@@ -41,7 +41,10 @@ import {
   Token,
 } from "../generated/schema";
 import { generateEventId } from "./utils";
-import { WildcatMarket as MarketTemplate } from "../generated/templates";
+import {
+  AccessControlHooks as AccessControlHooksTemplate,
+  WildcatMarket as MarketTemplate,
+} from "../generated/templates";
 import { Address, BigInt, Bytes, log } from "@graphprotocol/graph-ts";
 
 function getOrCreateHooksFactory(address: Address): HooksFactory {
@@ -98,7 +101,9 @@ export function handleHooksInstanceDeployed(
   );
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
+  AccessControlHooksTemplate.create(hooksInstance);
 }
+
 export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
   const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksTemplate = event.params.hooksTemplate;
@@ -217,7 +222,7 @@ function decodeAndCreateHooksConfig(
 
   return createHooksConfig(generateHooksConfigId(market), {
     depositRequiresAccess: hookedMarket.depositRequiresAccess,
-    queueWithdrawalRequiresAccess: true,
+    queueWithdrawalRequiresAccess: useOnQueueWithdrawal,
     transferRequiresAccess: hookedMarket.transferRequiresAccess,
     hooks: hooksAddress.toHex(),
     market: marketId,
