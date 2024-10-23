@@ -6,9 +6,9 @@ dataSources:
     name: HooksFactory
     network: sepolia
     source:
-      address: "0x3B18FD683c704815f6f9536665F7668702C40707"
+      address: "0xE1d14E8176d27415c204A4F9Ef58E107964CA12C"
       abi: HooksFactory
-      startBlock: 6728332
+      startBlock: 6746262
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -41,7 +41,6 @@ dataSources:
           file: ./abis/IERC20.json
         - name: AccessControlHooks
           file: ./abis/AccessControlHooks.json
-          
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -62,9 +61,9 @@ dataSources:
     name: WildcatArchController
     network: sepolia
     source:
-      address: "0x5A43121030E79bf18dAc6d0D3532727F23A55253"
+      address: "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
       abi: WildcatArchController
-      startBlock: 6728309
+      startBlock: 4796511
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -124,9 +123,9 @@ dataSources:
     name: WildcatSanctionsSentinel
     network: sepolia
     source:
-      address: "0xdebA0c30167E2D78338Fe521AF07AE7761745E3d"
+      address: "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B"
       abi: WildcatSanctionsSentinel
-      startBlock: 6728309
+      startBlock: 4796511
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
