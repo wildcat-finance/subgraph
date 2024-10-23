@@ -17,6 +17,7 @@ import {
   generateAccountMadeFirstDepositId,
   generateAccountUnblockedFromDepositsId,
   generateKnownLenderStatusId,
+  generateLenderAccountId,
   generateLenderHooksAccessId,
   generateMarketId,
   generateMinimumDepositUpdatedId,
@@ -169,6 +170,10 @@ export function handleAccountMadeFirstDeposit(
     event.address,
     event.params.accountAddress
   );
+  const lenderAccountId = generateLenderAccountId(
+    event.params.market,
+    event.params.accountAddress
+  );
   createKnownLenderStatus(
     generateKnownLenderStatusId(
       event.params.market,
@@ -177,6 +182,7 @@ export function handleAccountMadeFirstDeposit(
     {
       lenderStatus: lenderStatusId,
       market: generateMarketId(event.params.market),
+      lenderAccount: lenderAccountId,
     }
   );
   createAccountMadeFirstDeposit(
@@ -382,7 +388,6 @@ export function handleTemporaryExcessReserveRatioActivated(
 export function handleTemporaryExcessReserveRatioCanceled(
   event: TemporaryExcessReserveRatioCanceledEvent
 ): void {
-
   let market = getMarket(generateMarketId(event.params.market));
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
@@ -394,7 +399,6 @@ export function handleTemporaryExcessReserveRatioCanceled(
 export function handleTemporaryExcessReserveRatioExpired(
   event: TemporaryExcessReserveRatioExpiredEvent
 ): void {
-
   let market = getMarket(generateMarketId(event.params.market));
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
@@ -406,7 +410,6 @@ export function handleTemporaryExcessReserveRatioExpired(
 export function handleTemporaryExcessReserveRatioUpdated(
   event: TemporaryExcessReserveRatioUpdatedEvent
 ): void {
-
   let market = getMarket(generateMarketId(event.params.market));
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.save();
