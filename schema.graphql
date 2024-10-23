@@ -214,6 +214,7 @@ type LenderHooksAccess @entity {
   lastApprovalTimestamp: Int!
   hooks: AccessControlHooks! # address
   knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "lenderStatus")
+  marketAccounts: [LenderAccount!]! @derivedFrom(field: "hooksAccess")
 }
 
 type AccessControlHooks @entity {
@@ -230,6 +231,7 @@ type KnownLenderStatus @entity {
   id: ID! #KNOWNLENDER-marketAddress-lenderAddress
   lenderStatus: LenderHooksAccess! # address
   market: Market! # address
+  lenderAccount: LenderAccount # address
 }
 
 type AccessControlHooksProvider @entity {
@@ -530,6 +532,7 @@ type LenderAccount @entity {
 
   controllerAuthorization: LenderAuthorization
   hooksAccess: LenderHooksAccess
+  knownLenderStatus: KnownLenderStatus @derivedFrom(field: "lenderAccount")
 
   deposits: [Deposit!]! @derivedFrom(field: "account")
   withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "account")
