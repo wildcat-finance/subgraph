@@ -1,3 +1,4 @@
+import { Bytes } from "@graphprotocol/graph-ts";
 import {
   createBorrowerRegistrationChange,
   createControllerAdded,
@@ -135,6 +136,7 @@ export function handleControllerFactoryAdded(
       sentinel: factoryContract.sentinel(),
       isRegistered: true,
       archController: event.address.toHex(),
+      originationFeeAsset: null
     });
     createControllerFactoryAdded(generateEventId(event), {
       controllerFactory: generateControllerFactoryId(

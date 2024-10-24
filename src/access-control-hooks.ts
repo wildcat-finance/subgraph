@@ -1,5 +1,4 @@
 import {
-  createAccessControlHooksProvider,
   createAccountAccessGranted,
   createAccountAccessRevoked,
   createAccountBlockedFromDeposits,
@@ -10,7 +9,7 @@ import {
   createRoleProviderAdded,
   createRoleProviderRemoved,
   createRoleProviderUpdated,
-  generateAccessControlHooksProviderId,
+  generateRoleProviderId,
   generateAccountAccessGrantedId,
   generateAccountAccessRevokedId,
   generateAccountBlockedFromDepositsId,
@@ -24,12 +23,15 @@ import {
   generateRoleProviderAddedId,
   generateRoleProviderRemovedId,
   generateRoleProviderUpdatedId,
-  getAccessControlHooks,
-  getAccessControlHooksProvider,
+  getHooksInstance,
+  getRoleProvider,
   getLenderHooksAccess,
   getMarket,
-  getOrInitializeAccessControlHooksProvider,
+  getOrInitializeRoleProvider,
   getOrInitializeLenderHooksAccess,
+  createFixedTermUpdated,
+  generateHooksConfigId,
+  getHooksConfig,
 } from "../generated/UncrashableEntityHelpers";
 import {
   AccountAccessGranted as AccountAccessGrantedEvent,
@@ -45,17 +47,16 @@ import {
   TemporaryExcessReserveRatioCanceled as TemporaryExcessReserveRatioCanceledEvent,
   TemporaryExcessReserveRatioExpired as TemporaryExcessReserveRatioExpiredEvent,
   TemporaryExcessReserveRatioUpdated as TemporaryExcessReserveRatioUpdatedEvent,
+  FixedTermUpdated as FixedTermUpdatedEvent,
 } from "../generated/templates/AccessControlHooks/AccessControlHooks";
+import { generateMarketEventId } from "./utils";
 
 export function handleAccountAccessGranted(
   event: AccountAccessGrantedEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
-  const provider = getAccessControlHooksProvider(
-    generateAccessControlHooksProviderId(
-      event.address,
-      event.params.providerAddress
-    )
+  const hooks = getHooksInstance(event.address.toHex());
+  const provider = getRoleProvider(
+    generateRoleProviderId(event.address, event.params.providerAddress)
   );
   const lenderHooksAccess = getOrInitializeLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress),
@@ -96,7 +97,7 @@ export function handleAccountAccessGranted(
 export function handleAccountAccessRevoked(
   event: AccountAccessRevokedEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
+  const hooks = getHooksInstance(event.address.toHex());
 
   const lenderHooksAccess = getLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress)
@@ -125,7 +126,7 @@ export function handleAccountAccessRevoked(
 export function handleAccountBlockedFromDeposits(
   event: AccountBlockedFromDepositsEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
+  const hooks = getHooksInstance(event.address.toHex());
   const lenderHooksAccess = getOrInitializeLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress),
     {
@@ -165,7 +166,7 @@ export function handleAccountBlockedFromDeposits(
 export function handleAccountMadeFirstDeposit(
   event: AccountMadeFirstDepositEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
+  const hooks = getHooksInstance(event.address.toHex());
   const lenderStatusId = generateLenderHooksAccessId(
     event.address,
     event.params.accountAddress
@@ -206,7 +207,7 @@ export function handleAccountMadeFirstDeposit(
 export function handleAccountUnblockedFromDeposits(
   event: AccountUnblockedFromDepositsEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
+  const hooks = getHooksInstance(event.address.toHex());
   const lenderStatusId = generateLenderHooksAccessId(
     event.address,
     event.params.accountAddress
@@ -235,34 +236,58 @@ export function handleAccountUnblockedFromDeposits(
 export function handleMinimumDepositUpdated(
   event: MinimumDepositUpdatedEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
+  const hooks = getHooksInstance(event.address.toHex());
   const market = getMarket(generateMarketId(event.params.market));
-  createMinimumDepositUpdated(
-    generateMinimumDepositUpdatedId(event.params.market, hooks.eventIndex),
-    {
-      hooks: hooks.id,
-      market: market.id,
-      newMinimumDeposit: event.params.newMinimumDeposit,
-      oldMinimumDeposit: market.minimumDeposit,
-      blockNumber: event.block.number.toI32(),
-      transactionHash: event.transaction.hash,
-      blockTimestamp: event.block.timestamp.toI32(),
-      eventIndex: hooks.eventIndex,
-    }
+  const hooksConfig = getHooksConfig(
+    generateHooksConfigId(event.params.market)
   );
-  market.minimumDeposit = event.params.newMinimumDeposit;
-  hooks.eventIndex = hooks.eventIndex + 1;
+
+  createMinimumDepositUpdated(generateMarketEventId(market), {
+    hooks: hooks.id,
+    market: market.id,
+    newMinimumDeposit: event.params.newMinimumDeposit,
+    oldMinimumDeposit: hooksConfig.minimumDeposit,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    marketEventIndex: market.eventIndex,
+    minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
+  });
+  hooksConfig.minimumDeposit = event.params.newMinimumDeposit;
+  market.eventIndex = market.eventIndex + 1;
+  market.minimumDepositUpdatedIndex = market.minimumDepositUpdatedIndex + 1;
   hooks.save();
+  hooksConfig.save();
   market.save();
 }
 
+export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
+  const market = getMarket(generateMarketId(event.params.market));
+  const hooksConfig = getHooksConfig(
+    generateHooksConfigId(event.params.market)
+  );
+  createFixedTermUpdated(generateMarketEventId(market), {
+    hooks: event.address.toHex(),
+    market: market.id,
+    newFixedTermEndTime: event.params.fixedTermEndTime.toI32(),
+    oldFixedTermEndTime: hooksConfig.fixedTermEndTime,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    marketEventIndex: market.eventIndex,
+    fixedTermUpdatedIndex: market.fixedTermUpdatedIndex,
+  });
+  hooksConfig.fixedTermEndTime = event.params.fixedTermEndTime.toI32();
+  market.eventIndex = market.eventIndex + 1;
+  market.fixedTermUpdatedIndex = market.fixedTermUpdatedIndex + 1;
+  market.save();
+  hooksConfig.save();
+}
+
 export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
-  const roleProvider = getOrInitializeAccessControlHooksProvider(
-    generateAccessControlHooksProviderId(
-      event.address,
-      event.params.providerAddress
-    ),
+  const hooks = getHooksInstance(event.address.toHex());
+  const roleProvider = getOrInitializeRoleProvider(
+    generateRoleProviderId(event.address, event.params.providerAddress),
     {
       hooks: hooks.id,
       timeToLive: event.params.timeToLive.toI32(),
@@ -304,12 +329,9 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
 export function handleRoleProviderRemoved(
   event: RoleProviderRemovedEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
-  const roleProvider = getAccessControlHooksProvider(
-    generateAccessControlHooksProviderId(
-      event.address,
-      event.params.providerAddress
-    )
+  const hooks = getHooksInstance(event.address.toHex());
+  const roleProvider = getRoleProvider(
+    generateRoleProviderId(event.address, event.params.providerAddress)
   );
 
   createRoleProviderRemoved(
@@ -340,12 +362,9 @@ export function handleRoleProviderRemoved(
 export function handleRoleProviderUpdated(
   event: RoleProviderUpdatedEvent
 ): void {
-  const hooks = getAccessControlHooks(event.address.toHex());
-  const roleProvider = getAccessControlHooksProvider(
-    generateAccessControlHooksProviderId(
-      event.address,
-      event.params.providerAddress
-    )
+  const hooks = getHooksInstance(event.address.toHex());
+  const roleProvider = getRoleProvider(
+    generateRoleProviderId(event.address, event.params.providerAddress)
   );
   roleProvider.pullProviderIndex = event.params.pullProviderIndex;
   roleProvider.timeToLive = event.params.timeToLive.toI32();

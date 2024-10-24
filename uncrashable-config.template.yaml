@@ -144,6 +144,10 @@ entitySettings:
       maxTotalSupplyUpdatedIndex: {}
       annualInterestBipsUpdatedIndex: {}
       withdrawalRequestsIndex: {}
+      protocolFeeBipsUpdatedIndex: {}
+      fixedTermUpdatedIndex: {}
+      minimumDepositUpdatedIndex: {}
+      forceBuyBackIndex: {}
     entityId:
       - name: id
         type: Bytes
@@ -170,7 +174,6 @@ entitySettings:
     useDefault:
       feeRecipient: {}
       protocolFeeBips: {}
-      originationFeeAsset: {}
       originationFeeAmount: {}
     entityId:
       - name: factory
@@ -246,6 +249,8 @@ entitySettings:
         type: Bytes
       - name: depositIndex
         type: Int
+  FixedTermUpdated:
+    useDefault: {}
   FeesCollected:
     useDefault: {}
     entityId:
@@ -282,9 +287,27 @@ entitySettings:
         type: Bytes
       - name: annualInterestBipsUpdatedIndex
         type: Int
-# ============================================================================ #
-#                                 Hooks Factory                                #
-# ============================================================================ #
+  ProtocolFeeBipsUpdated:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "PFU"
+      - name: market
+        type: Bytes
+      - name: protocolFeeBipsUpdatedIndex
+        type: Int
+  ForceBuyBack:
+    useDefault: {}
+    entityId:
+      - type: constant
+        value: "FBB"
+      - name: market
+        type: Bytes
+      - name: forceBuyBackIndex
+        type: Int
+  # ============================================================================ #
+  #                                 Hooks Factory                                #
+  # ============================================================================ #
   HooksFactory:
     useDefault:
       eventIndex: {}
@@ -331,7 +354,7 @@ entitySettings:
         type: Bytes
       - name: eventIndex
         type: Int
-  
+
   LenderHooksAccess:
     useDefault:
       isBlockedFromDeposits: {}
@@ -351,13 +374,13 @@ entitySettings:
         type: Bytes
       - name: lenderAddress
         type: Bytes
-  AccessControlHooks:
+  HooksInstance:
     useDefault:
       eventIndex: {}
     entityId:
       - name: hooksAddress
         type: Bytes
-  AccessControlHooksProvider:
+  RoleProvider:
     useDefault: {}
     entityId: # PROVIDER-hooksAddress-providerAddress
       - type: constant

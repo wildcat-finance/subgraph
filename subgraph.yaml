@@ -15,8 +15,8 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - LenderHooksAccess
-        - AccessControlHooks
-        - AccessControlHooksProvider
+        - HooksInstance
+        - RoleProvider
         - HooksConfig
         - RoleProviderUpdated
         - RoleProviderAdded
@@ -41,6 +41,8 @@ dataSources:
           file: ./abis/IERC20.json
         - name: AccessControlHooks
           file: ./abis/AccessControlHooks.json
+        - name: FixedTermLoanHooks
+          file: ./abis/FixedTermLoanHooks.json
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -156,10 +158,9 @@ templates:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - AccessControlHooks
         - LenderHooksAccess
-        - AccessControlHooks
-        - AccessControlHooksProvider
+        - HooksInstance
+        - RoleProvider
         - HooksConfig
         - RoleProviderUpdated
         - RoleProviderAdded
@@ -169,6 +170,7 @@ templates:
         - AccountMadeFirstDeposit
         - AccountAccessGranted
         - AccountAccessRevoked
+        - Token
       abis:
         - name: AccessControlHooks
           file: ./abis/AccessControlHooks.json
@@ -199,6 +201,8 @@ templates:
           handler: handleTemporaryExcessReserveRatioExpired
         - event: TemporaryExcessReserveRatioUpdated(indexed address,uint256,uint256,uint256)
           handler: handleTemporaryExcessReserveRatioUpdated
+        - event: FixedTermUpdated(address,uint32)
+          handler: handleFixedTermUpdated
       file: ./src/access-control-hooks.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
@@ -214,9 +218,12 @@ templates:
         - ControllerFactory
         - NewController
         - UpdateProtocolFeeConfiguration
+        - Token
       abis:
         - name: WildcatMarketControllerFactory
           file: ./abis/WildcatMarketControllerFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
       eventHandlers:
         - event: NewController(address,address)
           handler: handleNewController
@@ -299,8 +306,8 @@ templates:
         - WithdrawalExecution
         - WithdrawalRequest
         - LenderHooksAccess
-        - AccessControlHooks
-        - AccessControlHooksProvider
+        - HooksInstance
+        - RoleProvider
         - HooksConfig
         - RoleProviderUpdated
         - RoleProviderAdded
@@ -369,4 +376,8 @@ templates:
           handler: handleWithdrawalExecuted
         - event: WithdrawalQueued(indexed uint256,indexed address,uint256,uint256)
           handler: handleWithdrawalQueued
+        - event: ProtocolFeeBipsUpdated(uint256)
+          handler: handleProtocolFeeBipsUpdated
+        - event: ForceBuyBack(indexed address,uint256,uint256)
+          handler: handleForceBuyBack
       file: ./src/wildcat-market.ts

@@ -127,7 +127,6 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     createdAt: event.block.timestamp.toI32(),
     hooks: null,
     hooksFactory: null,
-    minimumDeposit: null,
     version: version,
   });
 }

@@ -1,19 +1,406 @@
 [
   {
-    "type": "constructor",
+    "type": "event",
+    "name": "AccountAccessGranted",
     "inputs": [
       {
-        "name": "_deployer",
+        "name": "providerAddress",
         "type": "address",
+        "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "",
-        "type": "bytes",
-        "internalType": "bytes"
+        "name": "accountAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "credentialTimestamp",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
       }
     ],
-    "stateMutability": "nonpayable"
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AccountAccessRevoked",
+    "inputs": [
+      {
+        "name": "accountAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AccountBlockedFromDeposits",
+    "inputs": [
+      {
+        "name": "accountAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AccountMadeFirstDeposit",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "accountAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AccountUnblockedFromDeposits",
+    "inputs": [
+      {
+        "name": "accountAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FixedTermUpdated",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "fixedTermEndTime",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MinimumDepositUpdated",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newMinimumDeposit",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleProviderAdded",
+    "inputs": [
+      {
+        "name": "providerAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "timeToLive",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "pullProviderIndex",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleProviderRemoved",
+    "inputs": [
+      {
+        "name": "providerAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "pullProviderIndex",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleProviderUpdated",
+    "inputs": [
+      {
+        "name": "providerAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "timeToLive",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "pullProviderIndex",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TemporaryExcessReserveRatioActivated",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "originalReserveRatioBips",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "temporaryReserveRatioBips",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "temporaryReserveRatioExpiry",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TemporaryExcessReserveRatioCanceled",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TemporaryExcessReserveRatioExpired",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TemporaryExcessReserveRatioUpdated",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "originalReserveRatioBips",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "temporaryReserveRatioBips",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "temporaryReserveRatioExpiry",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AnnualInterestBipsOutOfBounds",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CallerNotBorrower",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CallerNotFactory",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ClosureDisabledBeforeTerm",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DelinquencyFeeBipsOutOfBounds",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DelinquencyGracePeriodOutOfBounds",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DepositBelowMinimum",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FixedTermNotProvided",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ForceBuyBacksDisabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "GrantedCredentialExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "IncreaseFixedTerm",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidArrayLength",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCredentialReturned",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFixedTerm",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoReducingAprBeforeTermEnd",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotApprovedLender",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotHookedMarket",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProviderCanNotReplaceCredential",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProviderCanNotRevokeCredential",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProviderNotFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReserveRatioBipsOutOfBounds",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TermReductionDisabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TransfersDisabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WithdrawalBatchDurationOutOfBounds",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WithdrawBeforeTermEnd",
+    "inputs": []
   },
   {
     "type": "function",
@@ -117,9 +504,19 @@
             "internalType": "bool"
           },
           {
+            "name": "withdrawalRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
             "name": "minimumDeposit",
             "type": "uint128",
             "internalType": "uint128"
+          },
+          {
+            "name": "fixedTermEndTime",
+            "type": "uint32",
+            "internalType": "uint32"
           },
           {
             "name": "transfersDisabled",
@@ -127,7 +524,78 @@
             "internalType": "bool"
           },
           {
-            "name": "allowForceBuyBacks",
+            "name": "allowClosureBeforeTerm",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "allowTermReduction",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHookedMarkets",
+    "inputs": [
+      {
+        "name": "marketAddresses",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "hookedMarkets",
+        "type": "tuple[]",
+        "internalType": "struct HookedMarket[]",
+        "components": [
+          {
+            "name": "isHooked",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "transferRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "depositRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "withdrawalRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "minimumDeposit",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "fixedTermEndTime",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transfersDisabled",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "allowClosureBeforeTerm",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "allowTermReduction",
             "type": "bool",
             "internalType": "bool"
           }
@@ -371,6 +839,19 @@
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MaximumLoanTerm",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
       }
     ],
     "stateMutability": "view"
@@ -839,6 +1320,106 @@
       },
       {
         "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "onForceBuyBack",
+    "inputs": [
+      {
+        "name": "lender",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "scaledAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "intermediateState",
+        "type": "tuple",
+        "internalType": "struct MarketState",
+        "components": [
+          {
+            "name": "isClosed",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "accruedProtocolFees",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "normalizedUnclaimedWithdrawals",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "scaledTotalSupply",
+            "type": "uint104",
+            "internalType": "uint104"
+          },
+          {
+            "name": "scaledPendingWithdrawals",
+            "type": "uint104",
+            "internalType": "uint104"
+          },
+          {
+            "name": "pendingWithdrawalExpiry",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "isDelinquent",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "timeDelinquent",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "protocolFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "scaleFactor",
+            "type": "uint112",
+            "internalType": "uint112"
+          },
+          {
+            "name": "lastInterestAccruedTimestamp",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      },
+      {
+        "name": "extraData",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -1580,6 +2161,24 @@
   },
   {
     "type": "function",
+    "name": "setFixedTermEndTime",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "newFixedTermEndTime",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setMinimumDeposit",
     "inputs": [
       {
@@ -1650,363 +2249,5 @@
       }
     ],
     "stateMutability": "pure"
-  },
-  {
-    "type": "event",
-    "name": "AccountAccessGranted",
-    "inputs": [
-      {
-        "name": "providerAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "accountAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "credentialTimestamp",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "AccountAccessRevoked",
-    "inputs": [
-      {
-        "name": "accountAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "AccountBlockedFromDeposits",
-    "inputs": [
-      {
-        "name": "accountAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "AccountMadeFirstDeposit",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "accountAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "AccountUnblockedFromDeposits",
-    "inputs": [
-      {
-        "name": "accountAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "MinimumDepositUpdated",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "newMinimumDeposit",
-        "type": "uint128",
-        "indexed": false,
-        "internalType": "uint128"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleProviderAdded",
-    "inputs": [
-      {
-        "name": "providerAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "timeToLive",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      },
-      {
-        "name": "pullProviderIndex",
-        "type": "uint24",
-        "indexed": false,
-        "internalType": "uint24"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleProviderRemoved",
-    "inputs": [
-      {
-        "name": "providerAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "pullProviderIndex",
-        "type": "uint24",
-        "indexed": false,
-        "internalType": "uint24"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleProviderUpdated",
-    "inputs": [
-      {
-        "name": "providerAddress",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "timeToLive",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      },
-      {
-        "name": "pullProviderIndex",
-        "type": "uint24",
-        "indexed": false,
-        "internalType": "uint24"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "TemporaryExcessReserveRatioActivated",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "originalReserveRatioBips",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "temporaryReserveRatioBips",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "temporaryReserveRatioExpiry",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "TemporaryExcessReserveRatioCanceled",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "TemporaryExcessReserveRatioExpired",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "FixedTermUpdated",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "fixedTermEndTime",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "TemporaryExcessReserveRatioUpdated",
-    "inputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "originalReserveRatioBips",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "temporaryReserveRatioBips",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "temporaryReserveRatioExpiry",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "error",
-    "name": "AnnualInterestBipsOutOfBounds",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "CallerNotBorrower",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "CallerNotFactory",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "DelinquencyFeeBipsOutOfBounds",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "DelinquencyGracePeriodOutOfBounds",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "DepositBelowMinimum",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "GrantedCredentialExpired",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidArrayLength",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidCredentialReturned",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotApprovedLender",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotHookedMarket",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ProviderCanNotReplaceCredential",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ProviderCanNotRevokeCredential",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ProviderNotFound",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ReserveRatioBipsOutOfBounds",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "WithdrawalBatchDurationOutOfBounds",
-    "inputs": []
   }
 ]

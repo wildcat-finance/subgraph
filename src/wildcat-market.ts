@@ -23,6 +23,8 @@ import {
   WithdrawalBatchPayment as WithdrawalBatchPaymentEvent,
   WithdrawalExecuted as WithdrawalExecutedEvent,
   WithdrawalQueued as WithdrawalQueuedEvent,
+  ProtocolFeeBipsUpdated as ProtocolFeeBipsUpdatedEvent,
+  ForceBuyBack as ForceBuyBackEvent,
 } from "../generated/templates/WildcatMarket/WildcatMarket";
 import { IERC20 } from "../generated/templates/WildcatMarket/IERC20";
 import {
@@ -33,10 +35,12 @@ import {
   createDelinquencyStatusChanged,
   createDeposit,
   createFeesCollected,
+  createForceBuyBack,
   createLenderInterestAccrued,
   createMarketClosed,
   createMarketInterestAccrued,
   createMaxTotalSupplyUpdated,
+  createProtocolFeeBipsUpdated,
   createReserveRatioBipsUpdated,
   createTransfer,
   createWithdrawalBatch,
@@ -800,3 +804,42 @@ export function handleChangedSpherexEngineAddress(
 export function handleChangedSpherexOperator(
   event: ChangedSpherexOperatorEvent
 ): void {}
+
+export function handleProtocolFeeBipsUpdated(
+  event: ProtocolFeeBipsUpdatedEvent
+): void {
+  let newProtocolFeeBips = event.params.protocolFeeBips.toI32();
+  let market = getMarket(generateMarketId(event.address));
+  createProtocolFeeBipsUpdated(generateMarketEventId(market), {
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    oldProtocolFeeBips: market.protocolFeeBips,
+    newProtocolFeeBips: newProtocolFeeBips,
+    transactionHash: event.transaction.hash,
+    protocolFeeBipsUpdatedIndex: market.protocolFeeBipsUpdatedIndex,
+    eventIndex: market.eventIndex,
+    market: market.id,
+  });
+  market.protocolFeeBips = newProtocolFeeBips;
+  market.protocolFeeBipsUpdatedIndex = market.protocolFeeBipsUpdatedIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
+  market.save();
+}
+
+export function handleForceBuyBack(event: ForceBuyBackEvent): void {
+  let market = getMarket(generateMarketId(event.address));
+  createForceBuyBack(generateMarketEventId(market), {
+    account: generateLenderAccountId(event.address, event.params.lender),
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    eventIndex: market.eventIndex,
+    forceBuyBackIndex: market.forceBuyBackIndex,
+    market: market.id,
+    normalizedAmount: event.params.normalizedAmount,
+    scaledAmount: event.params.scaledAmount,
+  });
+  market.forceBuyBackIndex = market.forceBuyBackIndex + 1;
+  market.eventIndex = market.eventIndex + 1;
+  market.save();
+}

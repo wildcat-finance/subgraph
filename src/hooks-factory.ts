@@ -8,7 +8,7 @@ import {
   MarketDeployed as MarketDeployedEvent,
 } from "../generated/HooksFactory/HooksFactory";
 import {
-  createAccessControlHooks,
+  createHooksInstance,
   createHooksConfig,
   createHooksFactory,
   createHooksInstanceDeployed,
@@ -19,7 +19,7 @@ import {
   createMarket,
   createMarketDeployed,
   createToken,
-  generateAccessControlHooksId,
+  generateHooksInstanceId,
   generateHooksConfigId,
   generateHooksInstanceDeployedId,
   generateHooksTemplateAddedId,
@@ -33,14 +33,15 @@ import {
 import { IERC20 } from "../generated/HooksFactory/IERC20";
 import { HooksFactory as HooksFactoryContract } from "../generated/HooksFactory/HooksFactory";
 import { AccessControlHooks as IAccessControlHooks } from "../generated/HooksFactory/AccessControlHooks";
+import { FixedTermLoanHooks as IFixedTermLoanHooks } from "../generated/HooksFactory/FixedTermLoanHooks";
 import {
-  AccessControlHooks,
+  HooksInstance,
   HooksConfig,
   HooksFactory,
   HooksTemplate,
   Token,
 } from "../generated/schema";
-import { generateEventId } from "./utils";
+import { generateEventId, isNullAddress } from "./utils";
 import {
   AccessControlHooks as AccessControlHooksTemplate,
   WildcatMarket as MarketTemplate,
@@ -72,7 +73,7 @@ export function handleHooksInstanceDeployed(
   const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksInstance = event.params.hooksInstance;
   const hooksTemplateId = generateHooksTemplateId(event.params.hooksTemplate);
-  const hooksInstanceId = generateAccessControlHooksId(hooksInstance);
+  const hooksInstanceId = generateHooksInstanceId(hooksInstance);
   const hooksTemplate = getHooksTemplate(hooksTemplateId);
   log.warning("Hooks Template: {}", [hooksTemplateId]);
   log.warning("Hooks Instance: {}", [hooksInstanceId]);
@@ -82,10 +83,11 @@ export function handleHooksInstanceDeployed(
   ]);
   if (hooksTemplate.name == "SingleBorrowerAccessControlHooks") {
     const hooksContract = IAccessControlHooks.bind(hooksInstance);
-    createAccessControlHooks(hooksInstanceId, {
+    createHooksInstance(hooksInstanceId, {
       borrower: hooksContract.borrower(),
       hooksFactory: hooksFactory.id,
       hooksTemplate: hooksTemplateId,
+      kind: "AccessControl",
     });
   }
 
@@ -104,6 +106,31 @@ export function handleHooksInstanceDeployed(
   AccessControlHooksTemplate.create(hooksInstance);
 }
 
+function createTokenIfNotExists(asset: Address): Token {
+  let assetId = generateTokenId(asset);
+  let token = Token.load(assetId);
+  if (token == null) {
+    let erc20 = IERC20.bind(asset);
+    let result = erc20.try_isMock();
+    let isMock = !result.reverted && result.value;
+    return createToken(assetId, {
+      address: asset,
+      name: erc20.name(),
+      symbol: erc20.symbol(),
+      decimals: erc20.decimals(),
+      isMock: isMock,
+    });
+  }
+  return token;
+}
+
+function getOrCreateTokenId(asset: Address): string | null {
+  if (isNullAddress(asset)) {
+    return null;
+  }
+  return createTokenIfNotExists(asset).id;
+}
+
 export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
   const hooksFactory = getOrCreateHooksFactory(event.address);
   const hooksTemplate = event.params.hooksTemplate;
@@ -117,7 +144,7 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
       hooksTemplate: hooksTemplateId,
       feeRecipient: event.params.feeRecipient,
       originationFeeAmount: event.params.originationFeeAmount,
-      originationFeeAsset: event.params.originationFeeAsset,
+      originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
       protocolFeeBips: event.params.protocolFeeBips,
     }
   );
@@ -125,7 +152,7 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
   createHooksTemplate(hooksTemplateId, {
     feeRecipient: event.params.feeRecipient,
     originationFeeAmount: event.params.originationFeeAmount,
-    originationFeeAsset: event.params.originationFeeAsset,
+    originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
     protocolFeeBips: event.params.protocolFeeBips,
     hooksFactory: hooksFactory.id,
     name: event.params.name,
@@ -170,13 +197,15 @@ export function handleHooksTemplateFeesUpdated(
       hooksTemplate: hooksTemplateId,
       feeRecipient: event.params.feeRecipient,
       originationFeeAmount: event.params.originationFeeAmount,
-      originationFeeAsset: event.params.originationFeeAsset,
+      originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
       protocolFeeBips: event.params.protocolFeeBips,
     }
   );
   hooksTemplateEntity.feeRecipient = event.params.feeRecipient;
   hooksTemplateEntity.originationFeeAmount = event.params.originationFeeAmount;
-  hooksTemplateEntity.originationFeeAsset = event.params.originationFeeAsset;
+  hooksTemplateEntity.originationFeeAsset = getOrCreateTokenId(
+    event.params.originationFeeAsset
+  );
   hooksTemplateEntity.protocolFeeBips = event.params.protocolFeeBips;
   hooksTemplateEntity.save();
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
@@ -215,15 +244,43 @@ function decodeAndCreateHooksConfig(
   log.warning("Hooks Config: {}", [hooksConfigBytes]);
   log.warning("Hooks Address: {}", [hooksAddress.toHex()]);
   log.warning("Market: {}", [market.toHex()]);
-
-  const hookedMarket = accessControlHooks.getHookedMarket(
-    Address.fromBytes(market)
-  );
+  const versionString = accessControlHooks.version();
+  let depositRequiresAccess: boolean = false;
+  let transferRequiresAccess: boolean = false;
+  let queueWithdrawalRequiresAccess: boolean = false;
+  let transfersDisabled: boolean = false;
+  let allowClosureBeforeTerm: boolean = false;
+  let allowForceBuyBacks: boolean = false;
+  let allowTermReduction: boolean = false;
+  let fixedTermEndTime: i32 = 0;
+  let minimumDeposit: BigInt | null = null;
+  if (versionString == "SingleBorrowerAccessControlHooks") {
+    const hookedMarket = accessControlHooks.getHookedMarket(
+      Address.fromBytes(market)
+    );
+    depositRequiresAccess = hookedMarket.depositRequiresAccess;
+    transferRequiresAccess = hookedMarket.transferRequiresAccess;
+    transfersDisabled = hookedMarket.transfersDisabled;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
+    minimumDeposit = hookedMarket.minimumDeposit;
+  } else {
+    const fixedTermHooksContract = IFixedTermLoanHooks.bind(
+      Address.fromBytes(hooksAddress)
+    );
+    const hookedMarket = fixedTermHooksContract.getHookedMarket(
+      Address.fromBytes(market)
+    );
+    depositRequiresAccess = hookedMarket.depositRequiresAccess;
+    transferRequiresAccess = hookedMarket.transferRequiresAccess;
+    queueWithdrawalRequiresAccess = hookedMarket.withdrawalRequiresAccess;
+    transfersDisabled = hookedMarket.transfersDisabled;
+    allowClosureBeforeTerm = hookedMarket.allowClosureBeforeTerm;
+    allowTermReduction = hookedMarket.allowTermReduction;
+    fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
+    minimumDeposit = hookedMarket.minimumDeposit;
+  }
 
   return createHooksConfig(generateHooksConfigId(market), {
-    depositRequiresAccess: hookedMarket.depositRequiresAccess,
-    queueWithdrawalRequiresAccess: useOnQueueWithdrawal,
-    transferRequiresAccess: hookedMarket.transferRequiresAccess,
     hooks: hooksAddress.toHex(),
     market: marketId,
     useOnDeposit: useOnDeposit,
@@ -237,25 +294,16 @@ function decodeAndCreateHooksConfig(
     useOnSetMaxTotalSupply: useOnSetMaxTotalSupply,
     useOnSetAnnualInterestAndReserveRatioBips: useOnSetAnnualInterestAndReserveRatioBips,
     useOnSetProtocolFeeBips: useOnSetProtocolFeeBips,
+    depositRequiresAccess: depositRequiresAccess,
+    transferRequiresAccess: transferRequiresAccess,
+    queueWithdrawalRequiresAccess: queueWithdrawalRequiresAccess,
+    transfersDisabled: transfersDisabled,
+    allowClosureBeforeTerm: allowClosureBeforeTerm,
+    allowForceBuyBacks: allowForceBuyBacks,
+    allowTermReduction: allowTermReduction,
+    fixedTermEndTime: fixedTermEndTime,
+    minimumDeposit: minimumDeposit,
   });
-}
-
-function createTokenIfNotExists(asset: Address): Token {
-  let assetId = generateTokenId(asset);
-  let token = Token.load(assetId);
-  if (token == null) {
-    let erc20 = IERC20.bind(asset);
-    let result = erc20.try_isMock();
-    let isMock = !result.reverted && result.value;
-    return createToken(assetId, {
-      address: asset,
-      name: erc20.name(),
-      symbol: erc20.symbol(),
-      decimals: erc20.decimals(),
-      isMock: isMock,
-    });
-  }
-  return token;
 }
 
 export function handleMarketDeployed(event: MarketDeployedEvent): void {
@@ -275,7 +323,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     marketId,
     params.hooks
   );
-  const hooks = AccessControlHooks.load(hooksConfig.hooks);
+  const hooks = HooksInstance.load(hooksConfig.hooks);
   if (hooks == null) {
     return;
   }
@@ -311,7 +359,6 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     createdAt: event.block.timestamp.toI32(),
     hooks: hooks.id,
     hooksFactory: hooksFactory.id,
-    minimumDeposit: null,
     version: version,
   });
 }
