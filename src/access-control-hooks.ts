@@ -10,19 +10,10 @@ import {
   createRoleProviderRemoved,
   createRoleProviderUpdated,
   generateRoleProviderId,
-  generateAccountAccessGrantedId,
-  generateAccountAccessRevokedId,
-  generateAccountBlockedFromDepositsId,
-  generateAccountMadeFirstDepositId,
-  generateAccountUnblockedFromDepositsId,
   generateKnownLenderStatusId,
   generateLenderAccountId,
   generateLenderHooksAccessId,
   generateMarketId,
-  generateMinimumDepositUpdatedId,
-  generateRoleProviderAddedId,
-  generateRoleProviderRemovedId,
-  generateRoleProviderUpdatedId,
   getHooksInstance,
   getRoleProvider,
   getLenderHooksAccess,
@@ -32,7 +23,11 @@ import {
   createFixedTermUpdated,
   generateHooksConfigId,
   getHooksConfig,
+  createHooksNameUpdated,
+  generateHooksInstanceId,
+  createDisabledForceBuyBacks,
 } from "../generated/UncrashableEntityHelpers";
+import { HooksInstance } from "../generated/schema";
 import {
   AccountAccessGranted as AccountAccessGrantedEvent,
   AccountAccessRevoked as AccountAccessRevokedEvent,
@@ -47,14 +42,20 @@ import {
   TemporaryExcessReserveRatioCanceled as TemporaryExcessReserveRatioCanceledEvent,
   TemporaryExcessReserveRatioExpired as TemporaryExcessReserveRatioExpiredEvent,
   TemporaryExcessReserveRatioUpdated as TemporaryExcessReserveRatioUpdatedEvent,
+  DisabledForceBuyBacks as DisabledForceBuyBacksEvent,
   FixedTermUpdated as FixedTermUpdatedEvent,
-} from "../generated/templates/AccessControlHooks/AccessControlHooks";
+  NameUpdated as NameUpdatedEvent,
+} from "../generated/templates/CombinedHooks/CombinedHooks";
 import { generateMarketEventId } from "./utils";
+
+function generateHooksInstanceEventId(hooks: HooksInstance): string {
+  return "RECORD" + "-" + hooks.id + "-" + hooks.eventIndex.toString();
+}
 
 export function handleAccountAccessGranted(
   event: AccountAccessGrantedEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
   const provider = getRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
@@ -62,7 +63,7 @@ export function handleAccountAccessGranted(
     generateLenderHooksAccessId(event.address, event.params.accountAddress),
     {
       canRefresh: provider.isPullProvider,
-      hooks: event.address.toHex(),
+      hooks: hooks.id,
       lastApprovalTimestamp: event.params.credentialTimestamp.toI32(),
       lastProvider: provider.id,
       lender: event.params.accountAddress,
@@ -74,22 +75,15 @@ export function handleAccountAccessGranted(
     lenderHooksAccess.entity.lastProvider = provider.id;
     lenderHooksAccess.entity.save();
   }
-  createAccountAccessGranted(
-    generateAccountAccessGrantedId(
-      event.address,
-      event.params.accountAddress,
-      hooks.eventIndex
-    ),
-    {
-      account: lenderHooksAccess.entity.id,
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-      credentialTimestamp: event.params.credentialTimestamp.toI32(),
-      provider: provider.id,
-      eventIndex: hooks.eventIndex,
-    }
-  );
+  createAccountAccessGranted(generateHooksInstanceEventId(hooks), {
+    account: lenderHooksAccess.entity.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    credentialTimestamp: event.params.credentialTimestamp.toI32(),
+    provider: provider.id,
+    eventIndex: hooks.eventIndex,
+  });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -97,41 +91,36 @@ export function handleAccountAccessGranted(
 export function handleAccountAccessRevoked(
   event: AccountAccessRevokedEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
 
   const lenderHooksAccess = getLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress)
   );
-  createAccountAccessRevoked(
-    generateAccountAccessRevokedId(
-      event.address,
-      event.params.accountAddress,
-      hooks.eventIndex
-    ),
-    {
-      account: lenderHooksAccess.id,
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-      eventIndex: hooks.eventIndex,
-    }
-  );
+  createAccountAccessRevoked(generateHooksInstanceEventId(hooks), {
+    account: lenderHooksAccess.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    eventIndex: hooks.eventIndex,
+  });
   lenderHooksAccess.canRefresh = false;
   lenderHooksAccess.lastProvider = null;
   lenderHooksAccess.lastApprovalTimestamp = 0;
 
   lenderHooksAccess.save();
+  hooks.eventIndex = hooks.eventIndex + 1;
+  hooks.save();
 }
 
 export function handleAccountBlockedFromDeposits(
   event: AccountBlockedFromDepositsEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
   const lenderHooksAccess = getOrInitializeLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress),
     {
       canRefresh: false,
-      hooks: event.address.toHex(),
+      hooks: hooks.id,
       lastApprovalTimestamp: 0,
       lastProvider: null,
       lender: event.params.accountAddress,
@@ -145,20 +134,13 @@ export function handleAccountBlockedFromDeposits(
   lenderHooksAccess.entity.isBlockedFromDeposits = true;
   lenderHooksAccess.entity.save();
 
-  createAccountBlockedFromDeposits(
-    generateAccountBlockedFromDepositsId(
-      event.address,
-      event.params.accountAddress,
-      hooks.eventIndex
-    ),
-    {
-      account: lenderHooksAccess.entity.id,
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-      eventIndex: hooks.eventIndex,
-    }
-  );
+  createAccountBlockedFromDeposits(generateHooksInstanceEventId(hooks), {
+    account: lenderHooksAccess.entity.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    eventIndex: hooks.eventIndex,
+  });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -166,48 +148,44 @@ export function handleAccountBlockedFromDeposits(
 export function handleAccountMadeFirstDeposit(
   event: AccountMadeFirstDepositEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  // const hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  const accountAddress = event.params.accountAddress;
+  const marketAddress = event.params.market;
+  const market = getMarket(generateMarketId(marketAddress));
   const lenderStatusId = generateLenderHooksAccessId(
     event.address,
-    event.params.accountAddress
+    accountAddress
   );
   const lenderAccountId = generateLenderAccountId(
-    event.params.market,
-    event.params.accountAddress
+    marketAddress,
+    accountAddress
   );
   createKnownLenderStatus(
-    generateKnownLenderStatusId(
-      event.params.market,
-      event.params.accountAddress
-    ),
+    generateKnownLenderStatusId(marketAddress, accountAddress),
     {
-      lenderStatus: lenderStatusId,
-      market: generateMarketId(event.params.market),
+      hooksAccess: lenderStatusId,
+      market: market.id,
       lenderAccount: lenderAccountId,
     }
   );
-  createAccountMadeFirstDeposit(
-    generateAccountMadeFirstDepositId(
-      event.params.market,
-      event.params.accountAddress,
-      hooks.eventIndex
-    ),
-    {
-      account: lenderStatusId,
-      blockNumber: event.block.number.toI32(),
-      transactionHash: event.transaction.hash,
-      blockTimestamp: event.block.timestamp.toI32(),
-      eventIndex: hooks.eventIndex,
-    }
-  );
-  hooks.eventIndex = hooks.eventIndex + 1;
-  hooks.save();
+  createAccountMadeFirstDeposit(generateMarketEventId(market), {
+    // account: lenderStatusId,
+    lenderAccount: lenderAccountId,
+    hooks: generateHooksInstanceId(event.address),
+    market: market.id,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    eventIndex: market.eventIndex,
+  });
+  market.eventIndex = market.eventIndex + 1;
+  market.save();
 }
 
 export function handleAccountUnblockedFromDeposits(
   event: AccountUnblockedFromDepositsEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
   const lenderStatusId = generateLenderHooksAccessId(
     event.address,
     event.params.accountAddress
@@ -215,20 +193,13 @@ export function handleAccountUnblockedFromDeposits(
   const access = getLenderHooksAccess(lenderStatusId);
   access.isBlockedFromDeposits = false;
   access.save();
-  createAccountUnblockedFromDeposits(
-    generateAccountUnblockedFromDepositsId(
-      event.address,
-      event.params.accountAddress,
-      hooks.eventIndex
-    ),
-    {
-      account: lenderStatusId,
-      blockNumber: event.block.number.toI32(),
-      transactionHash: event.transaction.hash,
-      blockTimestamp: event.block.timestamp.toI32(),
-      eventIndex: hooks.eventIndex,
-    }
-  );
+  createAccountUnblockedFromDeposits(generateHooksInstanceEventId(hooks), {
+    account: lenderStatusId,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    eventIndex: hooks.eventIndex,
+  });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -236,7 +207,7 @@ export function handleAccountUnblockedFromDeposits(
 export function handleMinimumDepositUpdated(
   event: MinimumDepositUpdatedEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
   const market = getMarket(generateMarketId(event.params.market));
   const hooksConfig = getHooksConfig(
     generateHooksConfigId(event.params.market)
@@ -250,7 +221,8 @@ export function handleMinimumDepositUpdated(
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
     blockTimestamp: event.block.timestamp.toI32(),
-    marketEventIndex: market.eventIndex,
+    // marketEventIndex: market.eventIndex,
+    eventIndex: hooks.eventIndex,
     minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
   });
   hooksConfig.minimumDeposit = event.params.newMinimumDeposit;
@@ -267,14 +239,14 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
     generateHooksConfigId(event.params.market)
   );
   createFixedTermUpdated(generateMarketEventId(market), {
-    hooks: event.address.toHex(),
+    hooks: generateHooksInstanceId(event.address),
     market: market.id,
     newFixedTermEndTime: event.params.fixedTermEndTime.toI32(),
     oldFixedTermEndTime: hooksConfig.fixedTermEndTime,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
     blockTimestamp: event.block.timestamp.toI32(),
-    marketEventIndex: market.eventIndex,
+    eventIndex: market.eventIndex,
     fixedTermUpdatedIndex: market.fixedTermUpdatedIndex,
   });
   hooksConfig.fixedTermEndTime = event.params.fixedTermEndTime.toI32();
@@ -285,43 +257,45 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
 }
 
 export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  const nullProviderIndex = 2 ** 24 - 1;
   const roleProvider = getOrInitializeRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress),
     {
       hooks: hooks.id,
       timeToLive: event.params.timeToLive.toI32(),
-      isPullProvider: event.params.pullProviderIndex != 0,
+      isPullProvider: event.params.pullProviderIndex != nullProviderIndex,
       pullProviderIndex: event.params.pullProviderIndex,
       providerAddress: event.params.providerAddress,
+      isPushProvider: event.params.pushProviderIndex != nullProviderIndex,
+      pushProviderIndex: event.params.pushProviderIndex,
       isApproved: true,
     }
   );
   if (!roleProvider.wasCreated) {
     roleProvider.entity.timeToLive = event.params.timeToLive.toI32();
-    roleProvider.entity.isPullProvider = event.params.pullProviderIndex != 0;
+    roleProvider.entity.isPullProvider =
+      event.params.pullProviderIndex != nullProviderIndex;
     roleProvider.entity.pullProviderIndex = event.params.pullProviderIndex;
+    roleProvider.entity.isPushProvider =
+      event.params.pushProviderIndex != nullProviderIndex;
+    roleProvider.entity.pushProviderIndex = event.params.pushProviderIndex;
     roleProvider.entity.isApproved = true;
     roleProvider.entity.save();
   }
-  createRoleProviderAdded(
-    generateRoleProviderAddedId(
-      event.address,
-      event.params.providerAddress,
-      hooks.eventIndex
-    ),
-    {
-      hooks: hooks.id,
-      isPullProvider: roleProvider.entity.isPullProvider,
-      pullProviderIndex: roleProvider.entity.pullProviderIndex,
-      provider: roleProvider.entity.id,
-      blockNumber: event.block.number.toI32(),
-      transactionHash: event.transaction.hash,
-      blockTimestamp: event.block.timestamp.toI32(),
-      eventIndex: hooks.eventIndex,
-      timeToLive: roleProvider.entity.timeToLive,
-    }
-  );
+  createRoleProviderAdded(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
+    isPullProvider: roleProvider.entity.isPullProvider,
+    pullProviderIndex: roleProvider.entity.pullProviderIndex,
+    isPushProvider: roleProvider.entity.isPushProvider,
+    pushProviderIndex: roleProvider.entity.pushProviderIndex,
+    provider: roleProvider.entity.id,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    eventIndex: hooks.eventIndex,
+    timeToLive: roleProvider.entity.timeToLive,
+  });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -329,26 +303,19 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
 export function handleRoleProviderRemoved(
   event: RoleProviderRemovedEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
   const roleProvider = getRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
 
-  createRoleProviderRemoved(
-    generateRoleProviderRemovedId(
-      event.address,
-      event.params.providerAddress,
-      hooks.eventIndex
-    ),
-    {
-      hooks: hooks.id,
-      provider: roleProvider.id,
-      blockNumber: event.block.number.toI32(),
-      transactionHash: event.transaction.hash,
-      blockTimestamp: event.block.timestamp.toI32(),
-      eventIndex: hooks.eventIndex,
-    }
-  );
+  createRoleProviderRemoved(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
+    provider: roleProvider.id,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    eventIndex: hooks.eventIndex,
+  });
 
   roleProvider.isApproved = false;
   roleProvider.isPullProvider = false;
@@ -362,33 +329,34 @@ export function handleRoleProviderRemoved(
 export function handleRoleProviderUpdated(
   event: RoleProviderUpdatedEvent
 ): void {
-  const hooks = getHooksInstance(event.address.toHex());
+  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
   const roleProvider = getRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
+
+  const nullProviderIndex = 2 ** 24 - 1;
   roleProvider.pullProviderIndex = event.params.pullProviderIndex;
+  roleProvider.pushProviderIndex = event.params.pushProviderIndex;
   roleProvider.timeToLive = event.params.timeToLive.toI32();
-  roleProvider.isPullProvider = roleProvider.pullProviderIndex != 0;
+  roleProvider.isPullProvider =
+    roleProvider.pullProviderIndex != nullProviderIndex;
+  roleProvider.isPushProvider =
+    roleProvider.pushProviderIndex != nullProviderIndex;
   roleProvider.save();
 
-  createRoleProviderUpdated(
-    generateRoleProviderUpdatedId(
-      event.address,
-      event.params.providerAddress,
-      hooks.eventIndex
-    ),
-    {
-      hooks: hooks.id,
-      provider: roleProvider.id,
-      blockNumber: event.block.number.toI32(),
-      transactionHash: event.transaction.hash,
-      blockTimestamp: event.block.timestamp.toI32(),
-      eventIndex: hooks.eventIndex,
-      isPullProvider: roleProvider.isPullProvider,
-      pullProviderIndex: roleProvider.pullProviderIndex,
-      timeToLive: roleProvider.timeToLive,
-    }
-  );
+  createRoleProviderUpdated(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
+    provider: roleProvider.id,
+    blockNumber: event.block.number.toI32(),
+    transactionHash: event.transaction.hash,
+    blockTimestamp: event.block.timestamp.toI32(),
+    eventIndex: hooks.eventIndex,
+    isPullProvider: roleProvider.isPullProvider,
+    pullProviderIndex: roleProvider.pullProviderIndex,
+    isPushProvider: roleProvider.isPushProvider,
+    pushProviderIndex: roleProvider.pushProviderIndex,
+    timeToLive: roleProvider.timeToLive,
+  });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -432,4 +400,42 @@ export function handleTemporaryExcessReserveRatioUpdated(
   let market = getMarket(generateMarketId(event.params.market));
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.save();
+}
+
+export function handleNameUpdated(event: NameUpdatedEvent): void {
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  createHooksNameUpdated(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
+    newName: event.params.name,
+    oldName: hooks.name,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    eventIndex: hooks.eventIndex,
+  });
+  hooks.eventIndex = hooks.eventIndex + 1;
+  hooks.name = event.params.name;
+  hooks.save();
+}
+
+export function handleDisabledForceBuyBacks(
+  event: DisabledForceBuyBacksEvent
+): void {
+  const hooksId = event.address.toHex();
+  const market = getMarket(generateMarketId(event.params.market));
+  createDisabledForceBuyBacks(generateMarketEventId(market), {
+    hooks: hooksId,
+    market: market.id,
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    transactionHash: event.transaction.hash,
+    eventIndex: market.eventIndex,
+  });
+  const hooksConfig = getHooksConfig(
+    generateHooksConfigId(event.params.market)
+  );
+  market.eventIndex = market.eventIndex + 1;
+  hooksConfig.allowForceBuyBacks = false;
+  market.save();
+  hooksConfig.save();
 }

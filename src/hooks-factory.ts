@@ -29,24 +29,37 @@ import {
   generateMarketId,
   generateTokenId,
   getHooksTemplate,
+  createRoleProviderAdded,
+  generateRoleProviderId,
+  createRoleProvider,
 } from "../generated/UncrashableEntityHelpers";
 import { IERC20 } from "../generated/HooksFactory/IERC20";
 import { HooksFactory as HooksFactoryContract } from "../generated/HooksFactory/HooksFactory";
-import { AccessControlHooks as IAccessControlHooks } from "../generated/HooksFactory/AccessControlHooks";
-import { FixedTermLoanHooks as IFixedTermLoanHooks } from "../generated/HooksFactory/FixedTermLoanHooks";
+import { OpenTermHooks as IOpenTermHooks } from "../generated/HooksFactory/OpenTermHooks";
+import { FixedTermHooks as IFixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
+import { CombinedHooks as ICombinedHooks } from "../generated/HooksFactory/CombinedHooks";
 import {
   HooksInstance,
   HooksConfig,
   HooksFactory,
   HooksTemplate,
   Token,
+  RoleProvider,
 } from "../generated/schema";
 import { generateEventId, isNullAddress } from "./utils";
 import {
-  AccessControlHooks as AccessControlHooksTemplate,
+  CombinedHooks,
   WildcatMarket as MarketTemplate,
 } from "../generated/templates";
-import { Address, BigInt, Bytes, log } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
+
+function generateHooksInstanceEventId(hooks: HooksInstance): string {
+  return "RECORD" + "-" + hooks.id + "-" + hooks.eventIndex.toString();
+}
+
+function generateRecordId(id: string, eventIndex: number): string {
+  return "RECORD" + "-" + id + "-" + eventIndex.toString();
+}
 
 function getOrCreateHooksFactory(address: Address): HooksFactory {
   let hooksFactory = HooksFactory.load(address.toHex());
@@ -79,16 +92,67 @@ export function handleHooksInstanceDeployed(
   log.warning("Hooks Instance: {}", [hooksInstanceId]);
   log.warning("Hooks name: {}", [hooksTemplate.name]);
   log.warning("Hooks name is ACH: {}", [
-    hooksTemplate.name == "SingleBorrowerAccessControlHooks" ? "true" : "false",
+    hooksTemplate.name == "OpenTermHooks" ? "true" : "false",
   ]);
-  if (hooksTemplate.name == "SingleBorrowerAccessControlHooks") {
-    const hooksContract = IAccessControlHooks.bind(hooksInstance);
-    createHooksInstance(hooksInstanceId, {
-      borrower: hooksContract.borrower(),
+  const hooksContract = ICombinedHooks.bind(hooksInstance);
+  const borrower = hooksContract.borrower();
+  const name = hooksContract.name();
+  let hooksWithProvider: HooksInstance | null = null;
+
+  if (hooksTemplate.name == "OpenTermHooks") {
+    hooksWithProvider = createHooksInstance(hooksInstanceId, {
+      borrower: borrower,
+      name: name,
       hooksFactory: hooksFactory.id,
       hooksTemplate: hooksTemplateId,
-      kind: "AccessControl",
+      kind: "OpenTerm",
     });
+  } else if (hooksTemplate.name === "FixedTermHooks") {
+    hooksWithProvider = createHooksInstance(hooksInstanceId, {
+      borrower: borrower,
+      name: name,
+      hooksFactory: hooksFactory.id,
+      hooksTemplate: hooksTemplateId,
+      kind: "FixedTerm",
+    });
+  } else {
+    createHooksInstance(hooksInstanceId, {
+      borrower: borrower,
+      name: name,
+      hooksFactory: hooksFactory.id,
+      hooksTemplate: hooksTemplateId,
+      kind: "Unknown",
+    });
+  }
+
+  if (hooksWithProvider != null) {
+    let eventIndex = 0;
+    const pullProviders = hooksContract.getPullProviders();
+    const pushProviders = hooksContract.getPushProviders();
+    for (let i = 0; i < pullProviders.length; i++) {
+      const pullProvider = pullProviders[i];
+      decodeAndCreateRoleProvider(
+        event,
+        hooksInstance,
+        hooksInstanceId,
+        eventIndex,
+        pullProvider
+      );
+      eventIndex = eventIndex + 1;
+    }
+    for (let i = 0; i < pushProviders.length; i++) {
+      const pushProvider = pushProviders[i];
+      decodeAndCreateRoleProvider(
+        event,
+        hooksInstance,
+        hooksInstanceId,
+        eventIndex,
+        pushProvider
+      );
+      eventIndex = eventIndex + 1;
+    }
+    hooksWithProvider.eventIndex = eventIndex;
+    hooksWithProvider.save();
   }
 
   createHooksInstanceDeployed(
@@ -103,7 +167,7 @@ export function handleHooksInstanceDeployed(
   );
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
-  AccessControlHooksTemplate.create(hooksInstance);
+  CombinedHooks.create(hooksInstance);
 }
 
 function createTokenIfNotExists(asset: Address): Token {
@@ -211,6 +275,57 @@ export function handleHooksTemplateFeesUpdated(
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
 }
+function decodeAndCreateRoleProvider(
+  event: ethereum.Event,
+  hooksAddress: Bytes,
+  hooksInstanceId: string,
+  eventIndex: number,
+  encodedRoleProvider: BigInt
+): RoleProvider {
+  const nullProviderIndex = 2 ** 24 - 1;
+  const hooksConfigBytes = encodedRoleProvider
+    .toHex()
+    .replace("0x", "")
+    .padStart(64, "0");
+  /*       _timeToLive := shr(0xe0, provider)
+      _providerAddress := shr(0x60, shl(0x20, provider))
+      _pullProviderIndex := shr(0xe8, shl(0xc0, provider))
+      _pushProviderIndex := shr(0xe8, shl(0xd8, provider)) */
+  const timeToLive = Bytes.fromHexString(hooksConfigBytes.slice(0, 8)).toI32();
+  const providerAddress = Bytes.fromHexString(hooksConfigBytes.slice(8, 48));
+  const pullProviderIndex = Bytes.fromHexString(
+    hooksConfigBytes.slice(48, 54)
+  ).toI32();
+  const pushProviderIndex = Bytes.fromHexString(
+    hooksConfigBytes.slice(54, 60)
+  ).toI32();
+  const isPullProvider = pullProviderIndex !== nullProviderIndex;
+  const isPushProvider = pushProviderIndex !== nullProviderIndex;
+  const providerId = generateRoleProviderId(hooksAddress, providerAddress);
+  createRoleProviderAdded(generateRecordId(hooksInstanceId, eventIndex), {
+    blockNumber: event.block.number.toI32(),
+    blockTimestamp: event.block.timestamp.toI32(),
+    eventIndex: eventIndex,
+    isPullProvider: isPullProvider,
+    isPushProvider: isPushProvider,
+    provider: providerId,
+    hooks: hooksInstanceId,
+    pullProviderIndex: pullProviderIndex,
+    pushProviderIndex: pushProviderIndex,
+    timeToLive: timeToLive,
+    transactionHash: event.transaction.hash,
+  });
+  return createRoleProvider(providerId, {
+    isApproved: true,
+    isPullProvider: isPullProvider,
+    isPushProvider: isPushProvider,
+    hooks: hooksInstanceId,
+    pullProviderIndex: pullProviderIndex,
+    pushProviderIndex: pushProviderIndex,
+    timeToLive: timeToLive,
+    providerAddress: providerAddress,
+  });
+}
 
 function decodeAndCreateHooksConfig(
   market: Bytes,
@@ -238,13 +353,11 @@ function decodeAndCreateHooksConfig(
   const useOnSetAnnualInterestAndReserveRatioBips =
     ((secondByte >> 6) & 1) == 1;
   const useOnSetProtocolFeeBips = ((secondByte >> 5) & 1) == 1;
-  const accessControlHooks = IAccessControlHooks.bind(
-    Address.fromBytes(hooksAddress)
-  );
+  const hooksContract = ICombinedHooks.bind(Address.fromBytes(hooksAddress));
   log.warning("Hooks Config: {}", [hooksConfigBytes]);
   log.warning("Hooks Address: {}", [hooksAddress.toHex()]);
   log.warning("Market: {}", [market.toHex()]);
-  const versionString = accessControlHooks.version();
+  const versionString = hooksContract.version();
   let depositRequiresAccess: boolean = false;
   let transferRequiresAccess: boolean = false;
   let queueWithdrawalRequiresAccess: boolean = false;
@@ -254,8 +367,11 @@ function decodeAndCreateHooksConfig(
   let allowTermReduction: boolean = false;
   let fixedTermEndTime: i32 = 0;
   let minimumDeposit: BigInt | null = null;
-  if (versionString == "SingleBorrowerAccessControlHooks") {
-    const hookedMarket = accessControlHooks.getHookedMarket(
+  if (versionString == "OpenTermHooks") {
+    const openTermHooksContract = IOpenTermHooks.bind(
+      Address.fromBytes(hooksAddress)
+    );
+    const hookedMarket = openTermHooksContract.getHookedMarket(
       Address.fromBytes(market)
     );
     depositRequiresAccess = hookedMarket.depositRequiresAccess;
@@ -264,7 +380,8 @@ function decodeAndCreateHooksConfig(
     allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
     minimumDeposit = hookedMarket.minimumDeposit;
   } else {
-    const fixedTermHooksContract = IFixedTermLoanHooks.bind(
+    // @todo handle unknown hooks kind
+    const fixedTermHooksContract = IFixedTermHooks.bind(
       Address.fromBytes(hooksAddress)
     );
     const hookedMarket = fixedTermHooksContract.getHookedMarket(
@@ -278,6 +395,7 @@ function decodeAndCreateHooksConfig(
     allowTermReduction = hookedMarket.allowTermReduction;
     fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
     minimumDeposit = hookedMarket.minimumDeposit;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
   }
 
   return createHooksConfig(generateHooksConfigId(market), {

@@ -26,649 +26,6 @@
     "stateMutability": "nonpayable"
   },
   {
-    "type": "function",
-    "name": "addHooksTemplate",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "feeRecipient",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAsset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAmount",
-        "type": "uint80",
-        "internalType": "uint80"
-      },
-      {
-        "name": "protocolFeeBips",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "archController",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "changeSphereXEngine",
-    "inputs": [
-      {
-        "name": "newSphereXEngine",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "computeMarketAddress",
-    "inputs": [
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "deployHooksInstance",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "constructorArgs",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "hooksInstance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "deployMarket",
-    "inputs": [
-      {
-        "name": "parameters",
-        "type": "tuple",
-        "internalType": "struct DeployMarketInputs",
-        "components": [
-          {
-            "name": "asset",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "namePrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "symbolPrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "maxTotalSupply",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "annualInterestBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "withdrawalBatchDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "reserveRatioBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "hooks",
-            "type": "uint256",
-            "internalType": "HooksConfig"
-          }
-        ]
-      },
-      {
-        "name": "hooksData",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "deployMarketAndHooks",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "hooksTemplateArgs",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "parameters",
-        "type": "tuple",
-        "internalType": "struct DeployMarketInputs",
-        "components": [
-          {
-            "name": "asset",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "namePrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "symbolPrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "maxTotalSupply",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "annualInterestBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "withdrawalBatchDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "reserveRatioBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "hooks",
-            "type": "uint256",
-            "internalType": "HooksConfig"
-          }
-        ]
-      },
-      {
-        "name": "hooksData",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "hooksInstance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "disableHooksTemplate",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getHooksTemplateDetails",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "internalType": "struct HooksTemplate",
-        "components": [
-          {
-            "name": "originationFeeAsset",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "originationFeeAmount",
-            "type": "uint80",
-            "internalType": "uint80"
-          },
-          {
-            "name": "protocolFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "exists",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "enabled",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "index",
-            "type": "uint24",
-            "internalType": "uint24"
-          },
-          {
-            "name": "feeRecipient",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "name",
-            "type": "string",
-            "internalType": "string"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getHooksTemplateForInstance",
-    "inputs": [
-      {
-        "name": "hooksInstance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getHooksTemplates",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address[]",
-        "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getMarketParameters",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "parameters",
-        "type": "tuple",
-        "internalType": "struct MarketParameters",
-        "components": [
-          {
-            "name": "asset",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "decimals",
-            "type": "uint8",
-            "internalType": "uint8"
-          },
-          {
-            "name": "packedNameWord0",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "packedNameWord1",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "packedSymbolWord0",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "packedSymbolWord1",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "borrower",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "feeRecipient",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "sentinel",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "maxTotalSupply",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "protocolFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "annualInterestBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "withdrawalBatchDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "reserveRatioBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "archController",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "sphereXEngine",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "hooks",
-            "type": "uint256",
-            "internalType": "HooksConfig"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isHooksInstance",
-    "inputs": [
-      {
-        "name": "hooksInstance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isHooksTemplate",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "marketInitCodeHash",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "marketInitCodeStorage",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "registerWithArchController",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "sanctionsSentinel",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "sphereXEngine",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "sphereXOperator",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "updateHooksTemplateFees",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "feeRecipient",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAsset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAmount",
-        "type": "uint80",
-        "internalType": "uint80"
-      },
-      {
-        "name": "protocolFeeBips",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "event",
     "name": "ChangedSpherexEngineAddress",
     "inputs": [
@@ -914,6 +271,16 @@
   },
   {
     "type": "error",
+    "name": "FeeMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "HooksInstanceAlreadyExists",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "HooksInstanceNotFound",
     "inputs": []
   },
@@ -964,7 +331,933 @@
   },
   {
     "type": "error",
+    "name": "SetProtocolFeeBipsFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "SphereXOperatorRequired",
     "inputs": []
+  },
+  {
+    "type": "function",
+    "name": "addHooksTemplate",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "feeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint80",
+        "internalType": "uint80"
+      },
+      {
+        "name": "protocolFeeBips",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "archController",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "changeSphereXEngine",
+    "inputs": [
+      {
+        "name": "newSphereXEngine",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "computeMarketAddress",
+    "inputs": [
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deployHooksInstance",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "constructorArgs",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployMarket",
+    "inputs": [
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct DeployMarketInputs",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "namePrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbolPrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          }
+        ]
+      },
+      {
+        "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployMarketAndHooks",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hooksTemplateArgs",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct DeployMarketInputs",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "namePrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbolPrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          }
+        ]
+      },
+      {
+        "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "disableHooksTemplate",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getHooksInstancesCountForBorrower",
+    "inputs": [
+      {
+        "name": "borrower",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHooksInstancesForBorrower",
+    "inputs": [
+      {
+        "name": "borrower",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHooksTemplateDetails",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct HooksTemplate",
+        "components": [
+          {
+            "name": "originationFeeAsset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "originationFeeAmount",
+            "type": "uint80",
+            "internalType": "uint80"
+          },
+          {
+            "name": "protocolFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "exists",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "enabled",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "index",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "feeRecipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHooksTemplateForInstance",
+    "inputs": [
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHooksTemplates",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHooksTemplates",
+    "inputs": [
+      {
+        "name": "start",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "end",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "arr",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getHooksTemplatesCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketParameters",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct MarketParameters",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "decimals",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "packedNameWord0",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "packedNameWord1",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "packedSymbolWord0",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "packedSymbolWord1",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "borrower",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "feeRecipient",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "sentinel",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "protocolFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "archController",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "sphereXEngine",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketsForHooksInstance",
+    "inputs": [
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketsForHooksInstance",
+    "inputs": [
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "start",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "end",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "arr",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketsForHooksInstanceCount",
+    "inputs": [
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketsForHooksTemplate",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketsForHooksTemplate",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "start",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "end",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "arr",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarketsForHooksTemplateCount",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isHooksInstance",
+    "inputs": [
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isHooksTemplate",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "marketInitCodeHash",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "marketInitCodeStorage",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "name",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "pushProtocolFeeBipsUpdates",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "pushProtocolFeeBipsUpdates",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketStartIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "marketEndIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "registerWithArchController",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "sanctionsSentinel",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "sphereXEngine",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "sphereXOperator",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "updateHooksTemplateFees",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "feeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint80",
+        "internalType": "uint80"
+      },
+      {
+        "name": "protocolFeeBips",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   }
 ]

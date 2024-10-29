@@ -4,7 +4,7 @@ enum MarketVersion {
 }
 
 enum HooksKind {
-  AccessControl
+  OpenTerm
   FixedTerm
   Unknown
 }
@@ -219,12 +219,13 @@ type LenderHooksAccess @entity {
   canRefresh: Boolean!
   lastApprovalTimestamp: Int!
   hooks: HooksInstance! # address
-  knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "lenderStatus")
+  knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "hooksAccess")
   marketAccounts: [LenderAccount!]! @derivedFrom(field: "hooksAccess")
 }
 
 type HooksInstance @entity {
   id: ID! # address
+  name: String!
   kind: HooksKind!
   borrower: Bytes! # address
   hooksTemplate: HooksTemplate! # address
@@ -236,7 +237,7 @@ type HooksInstance @entity {
 
 type KnownLenderStatus @entity {
   id: ID! #KNOWNLENDER-marketAddress-lenderAddress
-  lenderStatus: LenderHooksAccess! # address
+  hooksAccess: LenderHooksAccess! # address
   market: Market! # address
   lenderAccount: LenderAccount # address
 }
@@ -249,7 +250,12 @@ type RoleProvider @entity {
   timeToLive: Int!
   isPullProvider: Boolean!
   pullProviderIndex: Int!
+  isPushProvider: Boolean!
+  pushProviderIndex: Int!
   isApproved: Boolean!
+  addedEvent: RoleProviderAdded @derivedFrom(field: "provider")
+  removedEvent: RoleProviderRemoved @derivedFrom(field: "provider")
+  updatedEvents: [RoleProviderUpdated!]! @derivedFrom(field: "provider")
 }
 
 type HooksConfig @entity(immutable: true) {
@@ -272,31 +278,12 @@ type HooksConfig @entity(immutable: true) {
   transferRequiresAccess: Boolean!
   transfersDisabled: Boolean!
   minimumDeposit: BigInt
-  # AccessControlHooks config values
   allowForceBuyBacks: Boolean!
   # FixedTermHooks config values
   queueWithdrawalRequiresAccess: Boolean!
   fixedTermEndTime: Int!
   allowClosureBeforeTerm: Boolean!
   allowTermReduction: Boolean!
-}
-
-# event RoleProviderUpdated(
-#   address indexed providerAddress,
-#   uint32 timeToLive,
-#   uint24 pullProviderIndex
-# );
-type RoleProviderUpdated @entity(immutable: true) {
-  id: ID! # PROVIDERUPDATE-hooksAddress-providerAddress-eventIndex
-  hooks: HooksInstance! # address
-  provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
-  isPullProvider: Boolean!
-  pullProviderIndex: Int!
-  timeToLive: Int!
-  blockNumber: Int!
-  blockTimestamp: Int!
-  transactionHash: Bytes!
-  eventIndex: Int!
 }
 
 type FixedTermUpdated @entity(immutable: true) {
@@ -308,21 +295,24 @@ type FixedTermUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
-  marketEventIndex: Int!
+  eventIndex: Int!
   fixedTermUpdatedIndex: Int!
 }
 
 # event RoleProviderAdded(
 #   address indexed providerAddress,
 #   uint32 timeToLive,
-#   uint24 pullProviderIndex
+#   uint24 pullProviderIndex,
+#   uint24 pushProviderIndex
 # );
 type RoleProviderAdded @entity(immutable: true) {
-  id: ID! # PROVIDERADD-hooksAddress-providerAddress-eventIndex
+  id: ID! # RECORD-hooksAddress-eventIndex
   hooks: HooksInstance! # address
   provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
   isPullProvider: Boolean!
   pullProviderIndex: Int!
+  isPushProvider: Boolean!
+  pushProviderIndex: Int!
   timeToLive: Int!
   blockNumber: Int!
   blockTimestamp: Int!
@@ -330,11 +320,48 @@ type RoleProviderAdded @entity(immutable: true) {
   eventIndex: Int!
 }
 
-# event RoleProviderRemoved(address indexed providerAddress, uint24 pullProviderIndex);
+# event RoleProviderRemoved(
+#   address indexed providerAddress,
+#   uint24 pullProviderIndex,
+#   uint24 pushProviderIndex
+# );
 type RoleProviderRemoved @entity(immutable: true) {
-  id: ID! # PROVIDERREMOVE-hooksAddress-providerAddress-eventIndex
+  id: ID! # RECORD-hooksAddress-eventIndex
   hooks: HooksInstance! # address
   provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event RoleProviderUpdated(
+#   address indexed providerAddress,
+#   uint32 timeToLive,
+#   uint24 pullProviderIndex,
+#   uint24 pushProviderIndex
+# );
+type RoleProviderUpdated @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance! # address
+  provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  isPushProvider: Boolean!
+  pushProviderIndex: Int!
+  timeToLive: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
+}
+
+# event NameUpdated(string name)
+type HooksNameUpdated @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance! # address
+  oldName: String!
+  newName: String!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -343,7 +370,7 @@ type RoleProviderRemoved @entity(immutable: true) {
 
 # event AccountBlockedFromDeposits(address indexed accountAddress);
 type AccountBlockedFromDeposits @entity(immutable: true) {
-  id: ID! # ACCOUNTBLOCKED-hooksAddress-accountAddress-eventIndex
+  id: ID! # RECORD-hooksAddress-eventIndex
   account: LenderHooksAccess! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -353,7 +380,7 @@ type AccountBlockedFromDeposits @entity(immutable: true) {
 
 # event AccountUnblockedFromDeposits(address indexed accountAddress);
 type AccountUnblockedFromDeposits @entity(immutable: true) {
-  id: ID! # ACCOUNTUNBLOCKED-hooksAddress-accountAddress-eventIndex
+  id: ID! # RECORD-hooksAddress-eventIndex
   account: LenderHooksAccess! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -363,15 +390,19 @@ type AccountUnblockedFromDeposits @entity(immutable: true) {
 
 # event AccountMadeFirstDeposit(address indexed accountAddress);
 type AccountMadeFirstDeposit @entity(immutable: true) {
-  id: ID! # ACCOUNTFIRSTDEPOSIT-marketAddress-accountAddress-eventIndex
-  account: LenderHooksAccess! # address
+  id: ID! # RECORD-marketAddress-eventIndex
+  # account: LenderHooksAccess! # address
+  lenderAccount: LenderAccount!
+  hooks: HooksInstance! # address
+  market: Market!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
   eventIndex: Int!
 }
 
-type MinimumDepositUpdated @entity (immutable: true) {
+# event MinimumDepositUpdated(address market, uint128 newMinimumDeposit);
+type MinimumDepositUpdated @entity(immutable: true) {
   id: ID! #RECORD-marketAddress-eventIndex
   market: Market!
   hooks: HooksInstance!
@@ -380,8 +411,19 @@ type MinimumDepositUpdated @entity (immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
-  marketEventIndex: Int!
+  eventIndex: Int!
   minimumDepositUpdatedIndex: Int!
+}
+
+# event DisabledForceBuyBacks(address market)
+type DisabledForceBuyBacks @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-eventIndex
+  market: Market!
+  hooks: HooksInstance!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  eventIndex: Int!
 }
 
 # event AccountAccessGranted(
@@ -424,7 +466,6 @@ type HooksFactory @entity {
   sentinel: Bytes! # address
 }
 
-
 # @todo This is brittle. It will break if any other template is used than HooksInstance.
 # Current workaround is to only bind a hooks instance if it is an HooksInstance instance.
 type HooksTemplate @entity {
@@ -434,7 +475,8 @@ type HooksTemplate @entity {
   protocolFeeBips: Int!
   originationFeeAsset: Token # address
   originationFeeAmount: BigInt!
-  deployedInstances: [HooksInstanceDeployed!]! @derivedFrom(field: "hooksTemplate")
+  deployedInstances: [HooksInstanceDeployed!]!
+    @derivedFrom(field: "hooksTemplate")
   hooksFactory: HooksFactory!
   disabled: Boolean!
 }
@@ -657,9 +699,8 @@ type Market @entity {
   # ---------------------------------- Config -------------------------------- #
   controller: Controller
   hooksFactory: HooksFactory
-  hooksConfig: HooksConfig  @derivedFrom(field: "market")
+  hooksConfig: HooksConfig @derivedFrom(field: "market")
   hooks: HooksInstance # address
-
   borrower: Bytes!
   sentinel: Bytes!
   feeRecipient: Bytes!
@@ -756,7 +797,8 @@ type Market @entity {
   withdrawalRequestRecords: [WithdrawalRequest!]! @derivedFrom(field: "market")
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
-  minimumDepositUpdateRecords: [MinimumDepositUpdated!]! @derivedFrom(field: "market")
+  minimumDepositUpdateRecords: [MinimumDepositUpdated!]!
+    @derivedFrom(field: "market")
 }
 
 type MarketInterestAccrued @entity(immutable: true) {

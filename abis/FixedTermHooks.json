@@ -1,5 +1,21 @@
 [
   {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_deployer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "args",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "AccountAccessGranted",
     "inputs": [
@@ -84,6 +100,19 @@
   },
   {
     "type": "event",
+    "name": "DisabledForceBuyBacks",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "FixedTermUpdated",
     "inputs": [
       {
@@ -122,6 +151,19 @@
   },
   {
     "type": "event",
+    "name": "NameUpdated",
+    "inputs": [
+      {
+        "name": "name",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RoleProviderAdded",
     "inputs": [
       {
@@ -141,6 +183,12 @@
         "type": "uint24",
         "indexed": false,
         "internalType": "uint24"
+      },
+      {
+        "name": "pushProviderIndex",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
       }
     ],
     "anonymous": false
@@ -157,6 +205,12 @@
       },
       {
         "name": "pullProviderIndex",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      },
+      {
+        "name": "pushProviderIndex",
         "type": "uint24",
         "indexed": false,
         "internalType": "uint24"
@@ -182,6 +236,12 @@
       },
       {
         "name": "pullProviderIndex",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      },
+      {
+        "name": "pushProviderIndex",
         "type": "uint24",
         "indexed": false,
         "internalType": "uint24"
@@ -299,6 +359,11 @@
   },
   {
     "type": "error",
+    "name": "CreateRoleProviderFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "DelinquencyFeeBipsOutOfBounds",
     "inputs": []
   },
@@ -315,6 +380,11 @@
   {
     "type": "error",
     "name": "FixedTermNotProvided",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ForceBuyBackDisabledBeforeTerm",
     "inputs": []
   },
   {
@@ -461,6 +531,42 @@
   },
   {
     "type": "function",
+    "name": "createRoleProvider",
+    "inputs": [
+      {
+        "name": "providerFactory",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "timeToLive",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "disableForceBuyBacks",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "factory",
     "inputs": [],
     "outputs": [
@@ -532,6 +638,11 @@
             "name": "allowTermReduction",
             "type": "bool",
             "internalType": "bool"
+          },
+          {
+            "name": "allowForceBuyBacks",
+            "type": "bool",
+            "internalType": "bool"
           }
         ]
       }
@@ -596,6 +707,11 @@
           },
           {
             "name": "allowTermReduction",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "allowForceBuyBacks",
             "type": "bool",
             "internalType": "bool"
           }
@@ -766,6 +882,19 @@
   },
   {
     "type": "function",
+    "name": "getPushProviders",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[]",
+        "internalType": "RoleProvider[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleProvider",
     "inputs": [
       {
@@ -852,6 +981,19 @@
         "name": "",
         "type": "uint32",
         "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "name",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "view"
@@ -1332,17 +1474,17 @@
     "name": "onForceBuyBack",
     "inputs": [
       {
-        "name": "lender",
+        "name": "",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "scaledAmount",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "intermediateState",
+        "name": "",
         "type": "tuple",
         "internalType": "struct MarketState",
         "components": [
@@ -1419,7 +1561,7 @@
         ]
       },
       {
-        "name": "extraData",
+        "name": "",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -2190,6 +2332,19 @@
         "name": "newMinimumDeposit",
         "type": "uint128",
         "internalType": "uint128"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setName",
+    "inputs": [
+      {
+        "name": "_name",
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "outputs": [],

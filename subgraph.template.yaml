@@ -32,6 +32,7 @@ dataSources:
         - HooksTemplateAdded
         - HooksTemplateDisabled
         - HooksTemplateFeesUpdated
+        - LenderAccount
       abis:
         - name: HooksFactory
           file: ./abis/HooksFactory.json
@@ -39,10 +40,12 @@ dataSources:
           file: ./abis/WildcatMarket.json
         - name: IERC20
           file: ./abis/IERC20.json
-        - name: AccessControlHooks
-          file: ./abis/AccessControlHooks.json
-        - name: FixedTermLoanHooks
-          file: ./abis/FixedTermLoanHooks.json
+        - name: OpenTermHooks
+          file: ./abis/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./abis/FixedTermHooks.json
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -95,8 +98,6 @@ dataSources:
           file: ./abis/WildcatMarketControllerFactory.json
         - name: HooksFactory
           file: ./abis/HooksFactory.json
-        - name: AccessControlHooks
-          file: ./abis/AccessControlHooks.json
       eventHandlers:
         - event: BorrowerAdded(address)
           handler: handleBorrowerAdded
@@ -149,16 +150,17 @@ dataSources:
       file: ./src/wildcat-sanctions-sentinel.ts
 templates:
   - kind: ethereum
-    name: AccessControlHooks
+    name: CombinedHooks
     network: {{NetworkName}}
     source:
-      abi: AccessControlHooks
+      abi: CombinedHooks
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
         - LenderHooksAccess
+        - LenderAccount
         - HooksInstance
         - RoleProvider
         - HooksConfig
@@ -172,8 +174,12 @@ templates:
         - AccountAccessRevoked
         - Token
       abis:
-        - name: AccessControlHooks
-          file: ./abis/AccessControlHooks.json
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
+        - name: OpenTermHooks
+          file: ./abis/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./abis/FixedTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted
@@ -187,11 +193,15 @@ templates:
           handler: handleAccountUnblockedFromDeposits
         - event: MinimumDepositUpdated(address,uint128)
           handler: handleMinimumDepositUpdated
-        - event: RoleProviderAdded(indexed address,uint32,uint24)
+        - event: DisabledForceBuyBacks(address)
+          handler: handleDisabledForceBuyBacks
+        - event: NameUpdated(string)
+          handler: handleNameUpdated
+        - event: RoleProviderAdded(indexed address,uint32,uint24,uint24)
           handler: handleRoleProviderAdded
-        - event: RoleProviderRemoved(indexed address,uint24)
+        - event: RoleProviderRemoved(indexed address,uint24,uint24)
           handler: handleRoleProviderRemoved
-        - event: RoleProviderUpdated(indexed address,uint32,uint24)
+        - event: RoleProviderUpdated(indexed address,uint32,uint24,uint24)
           handler: handleRoleProviderUpdated
         - event: TemporaryExcessReserveRatioActivated(indexed address,uint256,uint256,uint256)
           handler: handleTemporaryExcessReserveRatioActivated

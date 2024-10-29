@@ -94,57 +94,58 @@ import {
   rayDiv,
   rayMul,
   satSub,
+  getOrCreateLenderAccount,
 } from "./utils";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 
-function getOrCreateLenderAccount(
-  market: Market,
-  marketAddress: Address,
-  lenderAddress: Address
-): GetOrCreateReturn<LenderAccount> {
-  let lenderAccountId = generateLenderAccountId(marketAddress, lenderAddress);
-  let _lenderAccount = LenderAccount.load(lenderAccountId);
-  if (_lenderAccount != null) {
-    return new GetOrCreateReturn<LenderAccount>(_lenderAccount, false);
-  }
-  const _controller = market.controller;
-  const _hooks = market.hooks;
-  let authorization_id: string | null = null;
-  let hooks_access_id: string | null = null;
-  if (_controller != null) {
-    const controller = _controller as string;
-    let authorization = getOrInitializeLenderAuthorization(
-      generateLenderAuthorizationId(
-        Bytes.fromHexString(controller),
-        lenderAddress
-      ),
-      {
-        authorized: false,
-        controller: controller,
-        lender: lenderAddress,
-      }
-    ).entity;
-    authorization_id = authorization.id;
-  }
-  if (_hooks != null) {
-    const hooks = _hooks as string;
-    let access_id = generateLenderHooksAccessId(
-      Bytes.fromHexString(hooks),
-      lenderAddress
-    );
-    if (LenderHooksAccess.load(access_id) != null) {
-      hooks_access_id = access_id;
-    }
-  }
-  return getOrInitializeLenderAccount(lenderAccountId, {
-    address: lenderAddress,
-    lastScaleFactor: market.scaleFactor,
-    lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
-    market: market.id,
-    controllerAuthorization: authorization_id,
-    hooksAccess: hooks_access_id,
-  });
-}
+// function getOrCreateLenderAccount(
+//   market: Market,
+//   marketAddress: Address,
+//   lenderAddress: Address
+// ): GetOrCreateReturn<LenderAccount> {
+//   let lenderAccountId = generateLenderAccountId(marketAddress, lenderAddress);
+//   let _lenderAccount = LenderAccount.load(lenderAccountId);
+//   if (_lenderAccount != null) {
+//     return new GetOrCreateReturn<LenderAccount>(_lenderAccount, false);
+//   }
+//   const _controller = market.controller;
+//   const _hooks = market.hooks;
+//   let authorization_id: string | null = null;
+//   let hooks_access_id: string | null = null;
+//   if (_controller != null) {
+//     const controller = _controller as string;
+//     let authorization = getOrInitializeLenderAuthorization(
+//       generateLenderAuthorizationId(
+//         Bytes.fromHexString(controller),
+//         lenderAddress
+//       ),
+//       {
+//         authorized: false,
+//         controller: controller,
+//         lender: lenderAddress,
+//       }
+//     ).entity;
+//     authorization_id = authorization.id;
+//   }
+//   if (_hooks != null) {
+//     const hooks = _hooks as string;
+//     let access_id = generateLenderHooksAccessId(
+//       Bytes.fromHexString(hooks),
+//       lenderAddress
+//     );
+//     if (LenderHooksAccess.load(access_id) != null) {
+//       hooks_access_id = access_id;
+//     }
+//   }
+//   return getOrInitializeLenderAccount(lenderAccountId, {
+//     address: lenderAddress,
+//     lastScaleFactor: market.scaleFactor,
+//     lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
+//     market: market.id,
+//     controllerAuthorization: authorization_id,
+//     hooksAccess: hooks_access_id,
+//   });
+// }
 
 export function handleAnnualInterestBipsUpdated(
   event: AnnualInterestBipsUpdatedEvent

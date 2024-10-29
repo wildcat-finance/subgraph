@@ -398,98 +398,21 @@ entitySettings:
         type: Bytes
   RoleProviderUpdated:
     useDefault: {}
-    entityId: # PROVIDERUPDATE-hooksAddress-providerAddress-eventIndex
-      - type: constant
-        value: "PROVIDERUPDATE"
-      - name: hooksAddress
-        type: Bytes
-      - name: providerAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
   MinimumDepositUpdated:
     useDefault: {}
-    entityId: # MINIMUMDEPOSITUPDATE-marketAddress-eventIndex
-      - type: constant
-        value: "MINIMUMDEPOSITUPDATE"
-      - name: marketAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
+  DisabledForceBuyBacks:
+    useDefault: {}
   RoleProviderAdded:
     useDefault: {}
-    entityId: # PROVIDERADD-hooksAddress-providerAddress-eventIndex
-      - type: constant
-        value: "PROVIDERADD"
-      - name: hooksAddress
-        type: Bytes
-      - name: providerAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
   RoleProviderRemoved:
     useDefault: {}
-    entityId: # PROVIDERREMOVE-hooksAddress-providerAddress-eventIndex
-      - type: constant
-        value: "PROVIDERREMOVE"
-      - name: hooksAddress
-        type: Bytes
-      - name: providerAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
   AccountBlockedFromDeposits:
-    useDefault: {}
-    entityId: # ACCOUNTBLOCKED-hooksAddress-accountAddress-eventIndex
-      - type: constant
-        value: "ACCOUNTBLOCKED"
-      - name: hooksAddress
-        type: Bytes
-      - name: accountAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
+    useDefault: {} 
   AccountUnblockedFromDeposits:
-    useDefault: {}
-    entityId: # ACCOUNTUNBLOCKED-hooksAddress-accountAddress-eventIndex
-      - type: constant
-        value: "ACCOUNTUNBLOCKED"
-      - name: hooksAddress
-        type: Bytes
-      - name: accountAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
+    useDefault: {} 
   AccountMadeFirstDeposit:
     useDefault: {}
-    entityId: # ACCOUNTFIRSTDEPOSIT-marketAddress-accountAddress-eventIndex
-      - type: constant
-        value: "ACCOUNTFIRSTDEPOSIT"
-      - name: marketAddress
-        type: Bytes
-      - name: accountAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
   AccountAccessGranted:
     useDefault: {}
-    entityId: # ACCOUNTACCESSGRANTED-hooksAddress-accountAddress-eventIndex
-      - type: constant
-        value: "ACCOUNTACCESSGRANTED"
-      - name: hooksAddress
-        type: Bytes
-      - name: accountAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
   AccountAccessRevoked:
     useDefault: {}
-    entityId: # ACCOUNTACCESSREVOKED-hooksAddress-accountAddress-eventIndex
-      - type: constant
-        value: "ACCOUNTACCESSREVOKED"
-      - name: hooksAddress
-        type: Bytes
-      - name: accountAddress
-        type: Bytes
-      - name: eventIndex
-        type: Int
