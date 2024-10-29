@@ -213,7 +213,7 @@ templates:
           handler: handleTemporaryExcessReserveRatioUpdated
         - event: FixedTermUpdated(address,uint32)
           handler: handleFixedTermUpdated
-      file: ./src/access-control-hooks.ts
+      file: ./src/hooks-instance.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
     network: sepolia
