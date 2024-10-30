@@ -523,8 +523,7 @@
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "HooksDeploymentConfig"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -874,8 +873,7 @@
     "outputs": [
       {
         "name": "",
-        "type": "uint256[]",
-        "internalType": "RoleProvider[]"
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view"
@@ -887,8 +885,7 @@
     "outputs": [
       {
         "name": "",
-        "type": "uint256[]",
-        "internalType": "RoleProvider[]"
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view"
@@ -906,8 +903,7 @@
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "RoleProvider"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1249,8 +1245,7 @@
           },
           {
             "name": "hooks",
-            "type": "uint256",
-            "internalType": "HooksConfig"
+            "type": "uint256"
           }
         ]
       },
@@ -1263,8 +1258,7 @@
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "HooksConfig"
+        "type": "uint256"
       }
     ],
     "stateMutability": "nonpayable"

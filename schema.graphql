@@ -473,7 +473,7 @@ type HooksTemplate @entity {
   name: String!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
-  originationFeeAsset: Token # address
+  originationFeeAsset: Token
   originationFeeAmount: BigInt!
   deployedInstances: [HooksInstanceDeployed!]!
     @derivedFrom(field: "hooksTemplate")
@@ -504,7 +504,7 @@ type HooksTemplateAdded @entity(immutable: true) {
   hooksTemplate: HooksTemplate! # address
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
-  originationFeeAsset: Token # address
+  originationFeeAsset: Token
   originationFeeAmount: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
@@ -532,7 +532,7 @@ type HooksTemplateFeesUpdated @entity(immutable: true) {
   hooksTemplate: HooksTemplate! # address
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
-  originationFeeAsset: Token # address
+  originationFeeAsset: Token
   originationFeeAmount: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
@@ -1072,6 +1072,7 @@ type ForceBuyBack @entity(immutable: true) {
   id: ID! #RECORD-<market>-<eventIndex>
   eventIndex: Int!
   forceBuyBackIndex: Int!
+  withdrawalExpiry: Int! # uint32
   account: LenderAccount!
   market: Market!
   scaledAmount: BigInt!

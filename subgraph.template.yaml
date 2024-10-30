@@ -38,14 +38,14 @@ dataSources:
           file: ./abis/HooksFactory.json
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
-        - name: IERC20
-          file: ./abis/IERC20.json
         - name: OpenTermHooks
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
+        - name: IERC20
+          file: ./abis/IERC20.json
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -149,71 +149,6 @@ dataSources:
           handler: handleSanctionOverrideRemoved
       file: ./src/wildcat-sanctions-sentinel.ts
 templates:
-  - kind: ethereum
-    name: CombinedHooks
-    network: {{NetworkName}}
-    source:
-      abi: CombinedHooks
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - LenderHooksAccess
-        - LenderAccount
-        - HooksInstance
-        - RoleProvider
-        - HooksConfig
-        - RoleProviderUpdated
-        - RoleProviderAdded
-        - RoleProviderRemoved
-        - AccountBlockedFromDeposits
-        - AccountUnblockedFromDeposits
-        - AccountMadeFirstDeposit
-        - AccountAccessGranted
-        - AccountAccessRevoked
-        - Token
-      abis:
-        - name: CombinedHooks
-          file: ./abis/CombinedHooks.json
-        - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
-        - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
-      eventHandlers:
-        - event: AccountAccessGranted(indexed address,indexed address,uint32)
-          handler: handleAccountAccessGranted
-        - event: AccountAccessRevoked(indexed address)
-          handler: handleAccountAccessRevoked
-        - event: AccountBlockedFromDeposits(indexed address)
-          handler: handleAccountBlockedFromDeposits
-        - event: AccountMadeFirstDeposit(indexed address,indexed address)
-          handler: handleAccountMadeFirstDeposit
-        - event: AccountUnblockedFromDeposits(indexed address)
-          handler: handleAccountUnblockedFromDeposits
-        - event: MinimumDepositUpdated(address,uint128)
-          handler: handleMinimumDepositUpdated
-        - event: DisabledForceBuyBacks(address)
-          handler: handleDisabledForceBuyBacks
-        - event: NameUpdated(string)
-          handler: handleNameUpdated
-        - event: RoleProviderAdded(indexed address,uint32,uint24,uint24)
-          handler: handleRoleProviderAdded
-        - event: RoleProviderRemoved(indexed address,uint24,uint24)
-          handler: handleRoleProviderRemoved
-        - event: RoleProviderUpdated(indexed address,uint32,uint24,uint24)
-          handler: handleRoleProviderUpdated
-        - event: TemporaryExcessReserveRatioActivated(indexed address,uint256,uint256,uint256)
-          handler: handleTemporaryExcessReserveRatioActivated
-        - event: TemporaryExcessReserveRatioCanceled(indexed address)
-          handler: handleTemporaryExcessReserveRatioCanceled
-        - event: TemporaryExcessReserveRatioExpired(indexed address)
-          handler: handleTemporaryExcessReserveRatioExpired
-        - event: TemporaryExcessReserveRatioUpdated(indexed address,uint256,uint256,uint256)
-          handler: handleTemporaryExcessReserveRatioUpdated
-        - event: FixedTermUpdated(address,uint32)
-          handler: handleFixedTermUpdated
-      file: ./src/hooks-instance.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
     network: {{NetworkName}}
@@ -388,6 +323,74 @@ templates:
           handler: handleWithdrawalQueued
         - event: ProtocolFeeBipsUpdated(uint256)
           handler: handleProtocolFeeBipsUpdated
-        - event: ForceBuyBack(indexed address,uint256,uint256)
+        - event: ForceBuyBack(indexed address,uint256,uint256,uint32)
           handler: handleForceBuyBack
       file: ./src/wildcat-market.ts
+  - kind: ethereum
+    name: CombinedHooks
+    network: {{NetworkName}}
+    source:
+      abi: CombinedHooks
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - HooksInstance
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - AccountBlockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountUnblockedFromDeposits
+        - KnownLenderStatus
+        - RoleProvider
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - LenderHooksAccess
+        - Market
+        - MinimumDepositUpdated
+        - HooksConfig
+        - DisabledForceBuyBacks
+        - FixedTermUpdated
+      abis:
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
+        - name: OpenTermHooks
+          file: ./abis/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./abis/FixedTermHooks.json
+      eventHandlers:
+        - event: AccountAccessGranted(indexed address,indexed address,uint32)
+          handler: handleAccountAccessGranted
+        - event: AccountAccessRevoked(indexed address)
+          handler: handleAccountAccessRevoked
+        - event: AccountBlockedFromDeposits(indexed address)
+          handler: handleAccountBlockedFromDeposits
+        - event: AccountMadeFirstDeposit(indexed address,indexed address)
+          handler: handleAccountMadeFirstDeposit
+        - event: AccountUnblockedFromDeposits(indexed address)
+          handler: handleAccountUnblockedFromDeposits
+        - event: MinimumDepositUpdated(address,uint128)
+          handler: handleMinimumDepositUpdated
+        - event: DisabledForceBuyBacks(address)
+          handler: handleDisabledForceBuyBacks
+        - event: NameUpdated(string)
+          handler: handleNameUpdated
+        - event: RoleProviderAdded(indexed address,uint32,uint24,uint24)
+          handler: handleRoleProviderAdded
+        - event: RoleProviderRemoved(indexed address,uint24,uint24)
+          handler: handleRoleProviderRemoved
+        - event: RoleProviderUpdated(indexed address,uint32,uint24,uint24)
+          handler: handleRoleProviderUpdated
+        - event: TemporaryExcessReserveRatioActivated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioActivated
+        - event: TemporaryExcessReserveRatioCanceled(indexed address)
+          handler: handleTemporaryExcessReserveRatioCanceled
+        - event: TemporaryExcessReserveRatioExpired(indexed address)
+          handler: handleTemporaryExcessReserveRatioExpired
+        - event: TemporaryExcessReserveRatioUpdated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioUpdated
+        - event: FixedTermUpdated(address,uint32)
+          handler: handleFixedTermUpdated
+      file: ./src/hooks-instance.ts

@@ -1,34 +1,36 @@
+import { generateMarketEventId } from "./utils";
 import {
   createAccountAccessGranted,
   createAccountAccessRevoked,
   createAccountBlockedFromDeposits,
   createAccountMadeFirstDeposit,
   createAccountUnblockedFromDeposits,
+  createDisabledForceBuyBacks,
+  createFixedTermUpdated,
+  createHooksNameUpdated,
   createKnownLenderStatus,
   createMinimumDepositUpdated,
   createRoleProviderAdded,
   createRoleProviderRemoved,
   createRoleProviderUpdated,
-  generateRoleProviderId,
+  generateHooksConfigId,
+  generateHooksInstanceId,
   generateKnownLenderStatusId,
   generateLenderAccountId,
   generateLenderHooksAccessId,
   generateMarketId,
+  generateRoleProviderId,
+  getHooksConfig,
   getHooksInstance,
-  getRoleProvider,
   getLenderHooksAccess,
   getMarket,
-  getOrInitializeRoleProvider,
   getOrInitializeLenderHooksAccess,
-  createFixedTermUpdated,
-  generateHooksConfigId,
-  getHooksConfig,
-  createHooksNameUpdated,
-  generateHooksInstanceId,
-  createDisabledForceBuyBacks,
+  getOrInitializeRoleProvider,
+  getRoleProvider,
 } from "../generated/UncrashableEntityHelpers";
 import { HooksInstance } from "../generated/schema";
 import {
+  CombinedHooks as CombinedHooksContract,
   AccountAccessGranted as AccountAccessGrantedEvent,
   AccountAccessRevoked as AccountAccessRevokedEvent,
   AccountBlockedFromDeposits as AccountBlockedFromDepositsEvent,
@@ -46,8 +48,6 @@ import {
   FixedTermUpdated as FixedTermUpdatedEvent,
   NameUpdated as NameUpdatedEvent,
 } from "../generated/templates/CombinedHooks/CombinedHooks";
-import { generateMarketEventId } from "./utils";
-
 function generateHooksInstanceEventId(hooks: HooksInstance): string {
   return "RECORD" + "-" + hooks.id + "-" + hooks.eventIndex.toString();
 }
@@ -55,11 +55,11 @@ function generateHooksInstanceEventId(hooks: HooksInstance): string {
 export function handleAccountAccessGranted(
   event: AccountAccessGrantedEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const provider = getRoleProvider(
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let provider = getRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
-  const lenderHooksAccess = getOrInitializeLenderHooksAccess(
+  let lenderHooksAccess = getOrInitializeLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress),
     {
       canRefresh: provider.isPullProvider,
@@ -91,9 +91,9 @@ export function handleAccountAccessGranted(
 export function handleAccountAccessRevoked(
   event: AccountAccessRevokedEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
 
-  const lenderHooksAccess = getLenderHooksAccess(
+  let lenderHooksAccess = getLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress)
   );
   createAccountAccessRevoked(generateHooksInstanceEventId(hooks), {
@@ -115,8 +115,8 @@ export function handleAccountAccessRevoked(
 export function handleAccountBlockedFromDeposits(
   event: AccountBlockedFromDepositsEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const lenderHooksAccess = getOrInitializeLenderHooksAccess(
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let lenderHooksAccess = getOrInitializeLenderHooksAccess(
     generateLenderHooksAccessId(event.address, event.params.accountAddress),
     {
       canRefresh: false,
@@ -148,18 +148,15 @@ export function handleAccountBlockedFromDeposits(
 export function handleAccountMadeFirstDeposit(
   event: AccountMadeFirstDepositEvent
 ): void {
-  // const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const accountAddress = event.params.accountAddress;
-  const marketAddress = event.params.market;
-  const market = getMarket(generateMarketId(marketAddress));
-  const lenderStatusId = generateLenderHooksAccessId(
+  // let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let accountAddress = event.params.accountAddress;
+  let marketAddress = event.params.market;
+  let market = getMarket(generateMarketId(marketAddress));
+  let lenderStatusId = generateLenderHooksAccessId(
     event.address,
     accountAddress
   );
-  const lenderAccountId = generateLenderAccountId(
-    marketAddress,
-    accountAddress
-  );
+  let lenderAccountId = generateLenderAccountId(marketAddress, accountAddress);
   createKnownLenderStatus(
     generateKnownLenderStatusId(marketAddress, accountAddress),
     {
@@ -185,12 +182,12 @@ export function handleAccountMadeFirstDeposit(
 export function handleAccountUnblockedFromDeposits(
   event: AccountUnblockedFromDepositsEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const lenderStatusId = generateLenderHooksAccessId(
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let lenderStatusId = generateLenderHooksAccessId(
     event.address,
     event.params.accountAddress
   );
-  const access = getLenderHooksAccess(lenderStatusId);
+  let access = getLenderHooksAccess(lenderStatusId);
   access.isBlockedFromDeposits = false;
   access.save();
   createAccountUnblockedFromDeposits(generateHooksInstanceEventId(hooks), {
@@ -207,37 +204,31 @@ export function handleAccountUnblockedFromDeposits(
 export function handleMinimumDepositUpdated(
   event: MinimumDepositUpdatedEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const market = getMarket(generateMarketId(event.params.market));
-  const hooksConfig = getHooksConfig(
-    generateHooksConfigId(event.params.market)
-  );
+  let hooksId = generateHooksInstanceId(event.address);
+  let market = getMarket(generateMarketId(event.params.market));
+  let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
 
   createMinimumDepositUpdated(generateMarketEventId(market), {
-    hooks: hooks.id,
+    hooks: hooksId,
     market: market.id,
     newMinimumDeposit: event.params.newMinimumDeposit,
     oldMinimumDeposit: hooksConfig.minimumDeposit,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
     blockTimestamp: event.block.timestamp.toI32(),
-    // marketEventIndex: market.eventIndex,
-    eventIndex: hooks.eventIndex,
+    eventIndex: market.eventIndex,
     minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
   });
   hooksConfig.minimumDeposit = event.params.newMinimumDeposit;
   market.eventIndex = market.eventIndex + 1;
   market.minimumDepositUpdatedIndex = market.minimumDepositUpdatedIndex + 1;
-  hooks.save();
   hooksConfig.save();
   market.save();
 }
 
 export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
-  const market = getMarket(generateMarketId(event.params.market));
-  const hooksConfig = getHooksConfig(
-    generateHooksConfigId(event.params.market)
-  );
+  let market = getMarket(generateMarketId(event.params.market));
+  let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
   createFixedTermUpdated(generateMarketEventId(market), {
     hooks: generateHooksInstanceId(event.address),
     market: market.id,
@@ -257,9 +248,9 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
 }
 
 export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const nullProviderIndex = 2 ** 24 - 1;
-  const roleProvider = getOrInitializeRoleProvider(
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let nullProviderIndex = 2 ** 24 - 1;
+  let roleProvider = getOrInitializeRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress),
     {
       hooks: hooks.id,
@@ -303,8 +294,8 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
 export function handleRoleProviderRemoved(
   event: RoleProviderRemovedEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const roleProvider = getRoleProvider(
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let roleProvider = getRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
 
@@ -329,12 +320,12 @@ export function handleRoleProviderRemoved(
 export function handleRoleProviderUpdated(
   event: RoleProviderUpdatedEvent
 ): void {
-  const hooks = getHooksInstance(generateHooksInstanceId(event.address));
-  const roleProvider = getRoleProvider(
+  let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let roleProvider = getRoleProvider(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
 
-  const nullProviderIndex = 2 ** 24 - 1;
+  let nullProviderIndex = 2 ** 24 - 1;
   roleProvider.pullProviderIndex = event.params.pullProviderIndex;
   roleProvider.pushProviderIndex = event.params.pushProviderIndex;
   roleProvider.timeToLive = event.params.timeToLive.toI32();
@@ -421,8 +412,8 @@ export function handleNameUpdated(event: NameUpdatedEvent): void {
 export function handleDisabledForceBuyBacks(
   event: DisabledForceBuyBacksEvent
 ): void {
-  const hooksId = event.address.toHex();
-  const market = getMarket(generateMarketId(event.params.market));
+  let hooksId = event.address.toHex();
+  let market = getMarket(generateMarketId(event.params.market));
   createDisabledForceBuyBacks(generateMarketEventId(market), {
     hooks: hooksId,
     market: market.id,
@@ -431,9 +422,7 @@ export function handleDisabledForceBuyBacks(
     transactionHash: event.transaction.hash,
     eventIndex: market.eventIndex,
   });
-  const hooksConfig = getHooksConfig(
-    generateHooksConfigId(event.params.market)
-  );
+  let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
   market.eventIndex = market.eventIndex + 1;
   hooksConfig.allowForceBuyBacks = false;
   market.save();

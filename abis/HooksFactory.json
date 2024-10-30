@@ -1,31 +1,5 @@
 [
   {
-    "type": "constructor",
-    "inputs": [
-      {
-        "name": "archController_",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_sanctionsSentinel",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_marketInitCodeStorage",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_marketInitCodeHash",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "event",
     "name": "ChangedSpherexEngineAddress",
     "inputs": [
@@ -249,7 +223,7 @@
         "name": "hooks",
         "type": "uint256",
         "indexed": false,
-        "internalType": "HooksConfig"
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

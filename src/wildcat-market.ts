@@ -839,6 +839,7 @@ export function handleForceBuyBack(event: ForceBuyBackEvent): void {
     market: market.id,
     normalizedAmount: event.params.normalizedAmount,
     scaledAmount: event.params.scaledAmount,
+    withdrawalExpiry: event.params.withdrawalExpiry.toI32(),
   });
   market.forceBuyBackIndex = market.forceBuyBackIndex + 1;
   market.eventIndex = market.eventIndex + 1;
