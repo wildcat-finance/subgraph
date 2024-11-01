@@ -9,7 +9,7 @@ enum HooksKind {
   Unknown
 }
 
-"v2.0.2"
+"v2.0.1"
 type SubgraphVersion @entity {
   id: ID!
 }
@@ -226,6 +226,10 @@ type LenderHooksAccess @entity {
   hooks: HooksInstance! # address
   knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "hooksAccess")
   marketAccounts: [LenderAccount!]! @derivedFrom(field: "hooksAccess")
+  accountAccessGrantedRecords: [AccountAccessGranted!]! @derivedFrom(field: "account")
+  accountAccessRevokedRecords: [AccountAccessRevoked!]! @derivedFrom(field: "account")
+  accountBlockedFromDepositsRecords: [AccountBlockedFromDeposits!]! @derivedFrom(field: "account")
+  accountUnblockedFromDepositsRecords: [AccountUnblockedFromDeposits!]! @derivedFrom(field: "account")
 }
 
 type HooksInstance @entity {
@@ -238,6 +242,14 @@ type HooksInstance @entity {
   providers: [RoleProvider!]! @derivedFrom(field: "hooks")
   hooksFactory: HooksFactory!
   eventIndex: Int!
+
+  nameUpdatedRecords: [HooksNameUpdated!]! @derivedFrom(field: "hooks")
+  roleProviderAddedRecords: [RoleProviderAdded!]! @derivedFrom(field: "hooks")
+  roleProviderUpdatedRecords: [RoleProviderUpdated!]! @derivedFrom(field: "hooks")
+  roleProviderRemovedRecords: [RoleProviderRemoved!]! @derivedFrom(field: "hooks")
+  accountUnblockFromDepositsRecords: [AccountUnblockedFromDeposits!]! @derivedFrom(field: "hooks")
+  accountAccessGrantedRecords: [AccountAccessGranted!]! @derivedFrom(field: "hooks")
+  accountAccessRevokedRecords: [AccountAccessRevoked!]! @derivedFrom(field: "hooks")
 }
 
 type KnownLenderStatus @entity {
@@ -376,6 +388,7 @@ type HooksNameUpdated @entity(immutable: true) {
 # event AccountBlockedFromDeposits(address indexed accountAddress);
 type AccountBlockedFromDeposits @entity(immutable: true) {
   id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance!
   account: LenderHooksAccess! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -386,6 +399,7 @@ type AccountBlockedFromDeposits @entity(immutable: true) {
 # event AccountUnblockedFromDeposits(address indexed accountAddress);
 type AccountUnblockedFromDeposits @entity(immutable: true) {
   id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance!
   account: LenderHooksAccess! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -438,6 +452,7 @@ type DisabledForceBuyBacks @entity(immutable: true) {
 # );
 type AccountAccessGranted @entity(immutable: true) {
   id: ID! # ACCOUNTACCESSGRANTED-hooksAddress-accountAddress-eventIndex
+  hooks: HooksInstance!
   provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
   account: LenderHooksAccess! # address
   credentialTimestamp: Int!
@@ -450,6 +465,7 @@ type AccountAccessGranted @entity(immutable: true) {
 # event AccountAccessRevoked(address indexed accountAddress);
 type AccountAccessRevoked @entity(immutable: true) {
   id: ID! # ACCOUNTACCESSREVOKED-hooksAddress-accountAddress-eventIndex
+  hooks: HooksInstance!
   account: LenderHooksAccess! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -784,6 +800,7 @@ type Market @entity {
 
   # --------------------------------- Events --------------------------------- #
   deployedEvent: MarketDeployed!
+  forceBuyBackDisabledRecord: DisabledForceBuyBacks @derivedFrom(field: "market")
   marketClosedEvent: MarketClosed @derivedFrom(field: "market")
   removal: MarketRemoved @derivedFrom(field: "market")
   interestAccrualRecords: [MarketInterestAccrued!]!
@@ -800,7 +817,9 @@ type Market @entity {
   maxTotalSupplyUpdatedRecords: [MaxTotalSupplyUpdated!]!
     @derivedFrom(field: "market")
   withdrawalRequestRecords: [WithdrawalRequest!]! @derivedFrom(field: "market")
+  protocolFeeBipsUpdatedRecords: [ProtocolFeeBipsUpdated!]! @derivedFrom(field: "market")
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
+  
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
   minimumDepositUpdateRecords: [MinimumDepositUpdated!]!
     @derivedFrom(field: "market")

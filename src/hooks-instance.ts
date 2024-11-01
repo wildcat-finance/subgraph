@@ -76,6 +76,7 @@ export function handleAccountAccessGranted(
     lenderHooksAccess.entity.save();
   }
   createAccountAccessGranted(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
     account: lenderHooksAccess.entity.id,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -97,6 +98,7 @@ export function handleAccountAccessRevoked(
     generateLenderHooksAccessId(event.address, event.params.accountAddress)
   );
   createAccountAccessRevoked(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
     account: lenderHooksAccess.id,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -135,6 +137,7 @@ export function handleAccountBlockedFromDeposits(
   lenderHooksAccess.entity.save();
 
   createAccountBlockedFromDeposits(generateHooksInstanceEventId(hooks), {
+    hooks: hooks.id,
     account: lenderHooksAccess.entity.id,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -192,6 +195,7 @@ export function handleAccountUnblockedFromDeposits(
   access.save();
   createAccountUnblockedFromDeposits(generateHooksInstanceEventId(hooks), {
     account: lenderStatusId,
+    hooks: hooks.id,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
     blockTimestamp: event.block.timestamp.toI32(),
