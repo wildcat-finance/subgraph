@@ -614,18 +614,28 @@ export function handleWithdrawalBatchExpired(
   let scaledAmountBurned = event.params.scaledAmountBurned;
   let scaledTotalAmount = event.params.scaledTotalAmount;
   let id = generateWithdrawalBatchId(event.address, expiry);
+  let batch = getWithdrawalBatch(id);
+  let market = getMarket(event.address.toHex());
+  processWithdrawalBatchInterestAccrued(event, batch, market);
+
+  let scaledAmountOwed = batch.scaledTotalAmount.minus(
+    batch.scaledAmountBurned
+  );
+  let normalizedAmountOwed = scaledAmountOwed;
+  if (scaledAmountOwed.gt(BigInt.zero())) {
+    normalizedAmountOwed = rayMul(scaledAmountOwed, batch.lastScaleFactor);
+  }
+
   createWithdrawalBatchExpired(generateEventId(event), {
     batch: id,
     normalizedAmountPaid: normalizedAmountPaid,
     scaledAmountBurned: scaledAmountBurned,
     scaledTotalAmount: scaledTotalAmount,
+    normalizedAmountOwed: normalizedAmountOwed,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
   });
-  let market = getMarket(event.address.toHex());
-  let batch = getWithdrawalBatch(id);
-  processWithdrawalBatchInterestAccrued(event, batch, market);
   batch.isExpired = true;
   market.pendingWithdrawalExpiry = BigInt.zero();
   batch.save();

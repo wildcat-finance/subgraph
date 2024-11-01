@@ -9,6 +9,11 @@ enum HooksKind {
   Unknown
 }
 
+"v2.0.2"
+type SubgraphVersion @entity {
+  id: ID!
+}
+
 # -------------------------------------------------------------------------- #
 #                            WildcatArchController                           #
 # -------------------------------------------------------------------------- #
@@ -1026,6 +1031,7 @@ type WithdrawalBatchExpired @entity(immutable: true) {
   scaledTotalAmount: BigInt! # uint256
   scaledAmountBurned: BigInt! # uint256
   normalizedAmountPaid: BigInt! # uint256
+  normalizedAmountOwed: BigInt! # uint256
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
