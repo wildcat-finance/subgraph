@@ -379,6 +379,7 @@ function decodeAndCreateHooksConfig(
     transfersDisabled = hookedMarket.transfersDisabled;
     allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
     minimumDeposit = hookedMarket.minimumDeposit;
+    queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
   } else {
     // @todo handle unknown hooks kind
     let fixedTermHooksContract = IFixedTermHooks.bind(

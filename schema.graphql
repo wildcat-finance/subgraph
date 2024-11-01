@@ -293,11 +293,11 @@ type HooksConfig @entity(immutable: true) {
   # Common config values
   depositRequiresAccess: Boolean!
   transferRequiresAccess: Boolean!
+  # FixedTermHooks config values
+  queueWithdrawalRequiresAccess: Boolean!
   transfersDisabled: Boolean!
   minimumDeposit: BigInt
   allowForceBuyBacks: Boolean!
-  # FixedTermHooks config values
-  queueWithdrawalRequiresAccess: Boolean!
   fixedTermEndTime: Int!
   allowClosureBeforeTerm: Boolean!
   allowTermReduction: Boolean!
