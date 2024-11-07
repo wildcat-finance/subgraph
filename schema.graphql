@@ -243,6 +243,8 @@ type HooksInstance @entity {
   hooksFactory: HooksFactory!
   eventIndex: Int!
 
+  lenders: [LenderHooksAccess!]! @derivedFrom(field: "hooks")
+
   nameUpdatedRecords: [HooksNameUpdated!]! @derivedFrom(field: "hooks")
   roleProviderAddedRecords: [RoleProviderAdded!]! @derivedFrom(field: "hooks")
   roleProviderUpdatedRecords: [RoleProviderUpdated!]! @derivedFrom(field: "hooks")
@@ -626,6 +628,8 @@ type LenderAccount @entity {
   controllerAuthorization: LenderAuthorization
   hooksAccess: LenderHooksAccess
   knownLenderStatus: KnownLenderStatus @derivedFrom(field: "lenderAccount")
+  
+  addedTimestamp: Int!
 
   deposits: [Deposit!]! @derivedFrom(field: "account")
   withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "account")
@@ -749,6 +753,8 @@ type Market @entity {
   pendingWithdrawalExpiry: BigInt!
   # Whether market is currently delinquent (liquidity under requirement)
   isDelinquent: Boolean!
+  # Whether market is currently incurring delinquency penalties (timeDelinquent > delinquencyGracePeriod)
+  isIncurringPenalties: Boolean!
   # Seconds borrower has been delinquent
   timeDelinquent: Int!
   # Annual interest rate accrued to lenders, in basis points

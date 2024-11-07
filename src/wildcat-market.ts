@@ -190,7 +190,8 @@ export function handleAuthorizationStatusUpdated(
   let lender = getOrCreateLenderAccount(
     market,
     event.address,
-    event.params.account
+    event.params.account,
+    event.block.timestamp
   ).entity;
   lender.role = lenderRoles[event.params.role];
   lender.save();
@@ -285,7 +286,8 @@ export function handleDeposit(event: DepositEvent): void {
   let lender = getOrCreateLenderAccount(
     market,
     event.address,
-    event.params.account
+    event.params.account,
+    event.block.timestamp
   ).entity;
 
   createDeposit(generateMarketEventId(market), {
@@ -500,6 +502,9 @@ export function handleInterestAndFeesAccrued(
     transactionHash: event.transaction.hash,
     timeWithPenalties: timeWithPenalties.toI32(),
   });
+  market.isIncurringPenalties =
+    market.timeDelinquent > market.delinquencyGracePeriod;
+
   market.scaleFactor = scaleFactor;
   market.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued.plus(
     protocolFee
@@ -550,9 +555,18 @@ export function handleTransfer(event: TransferEvent): void {
     )
   ) {
     let market = getMarket(generateMarketId(event.address));
-    let from = getOrCreateLenderAccount(market, event.address, fromAddress)
-      .entity;
-    let to = getOrCreateLenderAccount(market, event.address, toAddress).entity;
+    let from = getOrCreateLenderAccount(
+      market,
+      event.address,
+      fromAddress,
+      event.block.timestamp
+    ).entity;
+    let to = getOrCreateLenderAccount(
+      market,
+      event.address,
+      toAddress,
+      event.block.timestamp
+    ).entity;
     processLenderInterestAccrued(event, from, market);
     processLenderInterestAccrued(event, to, market);
     let scaledAmount = rayDiv(value, market.scaleFactor);

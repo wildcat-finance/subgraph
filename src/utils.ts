@@ -97,7 +97,8 @@ export function isNullAddress(address: Address): bool {
 export function getOrCreateLenderAccount(
   market: Market,
   marketAddress: Address,
-  lenderAddress: Address
+  lenderAddress: Address,
+  addedTimestamp: BigInt
 ): GetOrCreateReturn<LenderAccount> {
   let lenderAccountId = generateLenderAccountId(marketAddress, lenderAddress);
   let _lenderAccount = LenderAccount.load(lenderAccountId);
@@ -140,5 +141,6 @@ export function getOrCreateLenderAccount(
     market: market.id,
     controllerAuthorization: authorization_id,
     hooksAccess: hooks_access_id,
+    addedTimestamp: addedTimestamp.toI32(),
   });
 }
