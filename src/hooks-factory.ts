@@ -481,5 +481,8 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       hooksFactory: hooksFactory.id,
       version: version,
     });
+
+    hooks.numMarkets = hooks.numMarkets + 1;
+    hooks.save();
   }
 }

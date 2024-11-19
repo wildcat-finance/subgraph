@@ -129,6 +129,8 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     hooksFactory: null,
     version: version,
   });
+  controller.numMarkets = controller.numMarkets + 1;
+  controller.save();
 }
 
 export function handleTemporaryExcessReserveRatioActivated(

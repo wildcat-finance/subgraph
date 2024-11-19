@@ -123,6 +123,7 @@ entitySettings:
       scaledPendingWithdrawals: {}
       pendingWithdrawalExpiry: {}
       isDelinquent: {}
+      isIncurringPenalties: {}
       timeDelinquent: {}
       totalBorrowed: {}
       totalRepaid: {}
@@ -179,7 +180,8 @@ entitySettings:
       - name: factory
         type: Bytes
   Controller:
-    useDefault: {}
+    useDefault:
+      numMarkets: {}
     entityId:
       - name: controller
         type: Bytes
@@ -377,6 +379,7 @@ entitySettings:
   HooksInstance:
     useDefault:
       eventIndex: {}
+      numMarkets: {}
     entityId:
       - name: hooksAddress
         type: Bytes

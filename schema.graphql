@@ -242,7 +242,7 @@ type HooksInstance @entity {
   providers: [RoleProvider!]! @derivedFrom(field: "hooks")
   hooksFactory: HooksFactory!
   eventIndex: Int!
-
+  numMarkets: Int!
   lenders: [LenderHooksAccess!]! @derivedFrom(field: "hooks")
 
   nameUpdatedRecords: [HooksNameUpdated!]! @derivedFrom(field: "hooks")
@@ -578,6 +578,7 @@ type Controller @entity {
   archController: ArchController!
   isRegistered: Boolean!
   removal: ControllerRemoved @derivedFrom(field: "controller")
+  numMarkets: Int!
 }
 
 type LenderAuthorization @entity {
