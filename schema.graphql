@@ -218,6 +218,7 @@ type SanctionOverrideRemoved @entity(immutable: true) {
 
 type LenderHooksAccess @entity {
   id: ID! # LenderHooksAccess-hooksAddress-lenderAddress
+  addedTimestamp: Int!
   lender: Bytes! # address
   isBlockedFromDeposits: Boolean!
   lastProvider: RoleProvider # address
@@ -226,10 +227,14 @@ type LenderHooksAccess @entity {
   hooks: HooksInstance! # address
   knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "hooksAccess")
   marketAccounts: [LenderAccount!]! @derivedFrom(field: "hooksAccess")
-  accountAccessGrantedRecords: [AccountAccessGranted!]! @derivedFrom(field: "account")
-  accountAccessRevokedRecords: [AccountAccessRevoked!]! @derivedFrom(field: "account")
-  accountBlockedFromDepositsRecords: [AccountBlockedFromDeposits!]! @derivedFrom(field: "account")
-  accountUnblockedFromDepositsRecords: [AccountUnblockedFromDeposits!]! @derivedFrom(field: "account")
+  accountAccessGrantedRecords: [AccountAccessGranted!]!
+    @derivedFrom(field: "account")
+  accountAccessRevokedRecords: [AccountAccessRevoked!]!
+    @derivedFrom(field: "account")
+  accountBlockedFromDepositsRecords: [AccountBlockedFromDeposits!]!
+    @derivedFrom(field: "account")
+  accountUnblockedFromDepositsRecords: [AccountUnblockedFromDeposits!]!
+    @derivedFrom(field: "account")
 }
 
 type HooksInstance @entity {
@@ -247,11 +252,16 @@ type HooksInstance @entity {
 
   nameUpdatedRecords: [HooksNameUpdated!]! @derivedFrom(field: "hooks")
   roleProviderAddedRecords: [RoleProviderAdded!]! @derivedFrom(field: "hooks")
-  roleProviderUpdatedRecords: [RoleProviderUpdated!]! @derivedFrom(field: "hooks")
-  roleProviderRemovedRecords: [RoleProviderRemoved!]! @derivedFrom(field: "hooks")
-  accountUnblockFromDepositsRecords: [AccountUnblockedFromDeposits!]! @derivedFrom(field: "hooks")
-  accountAccessGrantedRecords: [AccountAccessGranted!]! @derivedFrom(field: "hooks")
-  accountAccessRevokedRecords: [AccountAccessRevoked!]! @derivedFrom(field: "hooks")
+  roleProviderUpdatedRecords: [RoleProviderUpdated!]!
+    @derivedFrom(field: "hooks")
+  roleProviderRemovedRecords: [RoleProviderRemoved!]!
+    @derivedFrom(field: "hooks")
+  accountUnblockFromDepositsRecords: [AccountUnblockedFromDeposits!]!
+    @derivedFrom(field: "hooks")
+  accountAccessGrantedRecords: [AccountAccessGranted!]!
+    @derivedFrom(field: "hooks")
+  accountAccessRevokedRecords: [AccountAccessRevoked!]!
+    @derivedFrom(field: "hooks")
 }
 
 type KnownLenderStatus @entity {
@@ -277,7 +287,7 @@ type RoleProvider @entity {
   updatedEvents: [RoleProviderUpdated!]! @derivedFrom(field: "provider")
 }
 
-type HooksConfig @entity(immutable: true) {
+type HooksConfig @entity {
   id: ID! # HOOKSCONFIG-marketAddress
   market: Market!
   hooks: HooksInstance!
@@ -305,7 +315,7 @@ type HooksConfig @entity(immutable: true) {
   allowTermReduction: Boolean!
 }
 
-type FixedTermUpdated @entity(immutable: true) {
+type FixedTermUpdated @entity {
   id: ID! # RECORD-marketAddress-marketEventIndex
   hooks: HooksInstance! # address
   market: Market! # address
@@ -586,6 +596,7 @@ type LenderAuthorization @entity {
   controller: Controller!
   lender: Bytes!
   authorized: Boolean!
+  addedTimestamp: Int!
   marketAccounts: [LenderAccount!]!
     @derivedFrom(field: "controllerAuthorization")
   changes: [LenderAuthorizationChange!]! @derivedFrom(field: "authorization")
@@ -629,7 +640,7 @@ type LenderAccount @entity {
   controllerAuthorization: LenderAuthorization
   hooksAccess: LenderHooksAccess
   knownLenderStatus: KnownLenderStatus @derivedFrom(field: "lenderAccount")
-  
+
   addedTimestamp: Int!
 
   deposits: [Deposit!]! @derivedFrom(field: "account")
@@ -802,12 +813,15 @@ type Market @entity {
   # ------------------------------- Dependents ------------------------------- #
   withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
+  collateralContracts: [SimpleCollateralContract!]! @derivedFrom(field: "market")
+  numCollateralContracts: Int!
 
   createdAt: Int!
 
   # --------------------------------- Events --------------------------------- #
   deployedEvent: MarketDeployed!
-  forceBuyBackDisabledRecord: DisabledForceBuyBacks @derivedFrom(field: "market")
+  forceBuyBackDisabledRecord: DisabledForceBuyBacks
+    @derivedFrom(field: "market")
   marketClosedEvent: MarketClosed @derivedFrom(field: "market")
   removal: MarketRemoved @derivedFrom(field: "market")
   interestAccrualRecords: [MarketInterestAccrued!]!
@@ -824,11 +838,14 @@ type Market @entity {
   maxTotalSupplyUpdatedRecords: [MaxTotalSupplyUpdated!]!
     @derivedFrom(field: "market")
   withdrawalRequestRecords: [WithdrawalRequest!]! @derivedFrom(field: "market")
-  protocolFeeBipsUpdatedRecords: [ProtocolFeeBipsUpdated!]! @derivedFrom(field: "market")
+  protocolFeeBipsUpdatedRecords: [ProtocolFeeBipsUpdated!]!
+    @derivedFrom(field: "market")
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
-  
+
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
   minimumDepositUpdateRecords: [MinimumDepositUpdated!]!
+    @derivedFrom(field: "market")
+  accountMadeFirstDepositRecords: [AccountMadeFirstDeposit!]!
     @derivedFrom(field: "market")
 }
 
@@ -1109,6 +1126,180 @@ type ForceBuyBack @entity(immutable: true) {
   market: Market!
   scaledAmount: BigInt!
   normalizedAmount: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SimpleCollateralFactory @entity {
+  id: ID!
+  collateralContracts: [SimpleCollateralContract!]!
+    @derivedFrom(field: "factory")
+  approvedLiquidators: [ApprovedLiquidator!]! @derivedFrom(field: "factory")
+  liquidatorApprovals: [LiquidatorApproved!]! @derivedFrom(field: "factory")
+  liquidatorRemovals: [LiquidatorRemoved!]! @derivedFrom(field: "factory")
+  approvedExchanges: [ApprovedCollateralExchange!]! @derivedFrom(field: "factory")
+}
+
+type ApprovedCollateralExchange @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  isApproved: Boolean!
+  exchange: Bytes!
+}
+
+type CollateralExchangeApproved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  exchange: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type CollateralExchangeRemoved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  exchange: Bytes!
+  
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type ApprovedLiquidator @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  isApproved: Boolean!
+  liquidator: Bytes!
+}
+
+type LiquidatorApproved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  liquidator: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type LiquidatorRemoved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  liquidator: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SimpleCollateralContract @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  market: Market!
+  collateralAsset: Token
+
+  totalDeposited: BigInt!
+  totalReclaimed: BigInt!
+  totalLiquidated: BigInt!
+  totalShares: BigInt!
+  availableCollateral: BigInt!
+
+  lastFullLiquidationIndex: Int!
+  depositIndex: Int!
+  liquidationCooldown: Int!
+  nextLiquidationTrigger: Int!
+  eventIndex: Int!
+
+  depositors: [SimpleCollateralContractDepositor!]!
+    @derivedFrom(field: "collateralContract")
+  liquidations: [SimpleCollateralContractLiquidation!]!
+    @derivedFrom(field: "collateralContract")
+  deposits: [SimpleCollateralContractDeposit!]!
+    @derivedFrom(field: "collateralContract")
+  reclaims: [SimpleCollateralContractReclaim!]!
+    @derivedFrom(field: "collateralContract")
+  fullResets: [SimpleCollateralContractFullReset!]!
+    @derivedFrom(field: "collateralContract")
+}
+
+type SimpleCollateralContractDepositor @entity {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  shares: BigInt!
+  totalDeposited: BigInt!
+  totalReclaimed: BigInt!
+
+  deposits: [SimpleCollateralContractDeposit!]! @derivedFrom(field: "account")
+  reclaims: [SimpleCollateralContractReclaim!]! @derivedFrom(field: "account")
+  liquidatedSharesResets: [SimpleCollateralContractLiquidatedSharesReset!]! @derivedFrom(field: "account")
+}
+
+type SimpleCollateralContractLiquidation @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  collateralLiquidated: BigInt!
+  underlyingReceived: BigInt!
+  liquidator: Bytes!
+  eventIndex: Int!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SimpleCollateralContractFullReset @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  lastFullLiquidationIndex: Int!
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SimpleCollateralContractLiquidatedSharesReset @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+  account: SimpleCollateralContractDepositor!
+  sharesReset: BigInt!
+
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SimpleCollateralContractDeposit @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+  account: SimpleCollateralContractDepositor!
+
+  amountDeposited: BigInt!
+  sharesMinted: BigInt!
+  lastFullLiquidationIndex: Int!
+  depositIndex: Int!
+
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+}
+
+type SimpleCollateralContractReclaim @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  account: SimpleCollateralContractDepositor!
+  amountReclaimed: BigInt!
+  sharesBurned: BigInt!
+
+  eventIndex: Int!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!

@@ -28,7 +28,7 @@ import {
   getOrInitializeRoleProvider,
   getRoleProvider,
 } from "../generated/UncrashableEntityHelpers";
-import { HooksInstance } from "../generated/schema";
+import { HooksInstance, Market } from "../generated/schema";
 import {
   CombinedHooks as CombinedHooksContract,
   AccountAccessGranted as AccountAccessGrantedEvent,
@@ -48,6 +48,7 @@ import {
   FixedTermUpdated as FixedTermUpdatedEvent,
   NameUpdated as NameUpdatedEvent,
 } from "../generated/templates/CombinedHooks/CombinedHooks";
+import { log } from '@graphprotocol/graph-ts'
 function generateHooksInstanceEventId(hooks: HooksInstance): string {
   return "RECORD" + "-" + hooks.id + "-" + hooks.eventIndex.toString();
 }
@@ -67,6 +68,7 @@ export function handleAccountAccessGranted(
       lastApprovalTimestamp: event.params.credentialTimestamp.toI32(),
       lastProvider: provider.id,
       lender: event.params.accountAddress,
+      addedTimestamp: event.block.timestamp.toI32(),
     }
   );
   if (!lenderHooksAccess.wasCreated) {
@@ -126,6 +128,7 @@ export function handleAccountBlockedFromDeposits(
       lastApprovalTimestamp: 0,
       lastProvider: null,
       lender: event.params.accountAddress,
+      addedTimestamp: event.block.timestamp.toI32(),
     }
   );
   if (!lenderHooksAccess.wasCreated) {
@@ -209,46 +212,53 @@ export function handleMinimumDepositUpdated(
   event: MinimumDepositUpdatedEvent
 ): void {
   let hooksId = generateHooksInstanceId(event.address);
-  let market = getMarket(generateMarketId(event.params.market));
-  let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+  let marketId = generateMarketId(event.params.market);
+  let market = Market.load(marketId);
+  if (market != null) {
+    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
 
-  createMinimumDepositUpdated(generateMarketEventId(market), {
-    hooks: hooksId,
-    market: market.id,
-    newMinimumDeposit: event.params.newMinimumDeposit,
-    oldMinimumDeposit: hooksConfig.minimumDeposit,
-    blockNumber: event.block.number.toI32(),
-    transactionHash: event.transaction.hash,
-    blockTimestamp: event.block.timestamp.toI32(),
-    eventIndex: market.eventIndex,
-    minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
-  });
-  hooksConfig.minimumDeposit = event.params.newMinimumDeposit;
-  market.eventIndex = market.eventIndex + 1;
-  market.minimumDepositUpdatedIndex = market.minimumDepositUpdatedIndex + 1;
-  hooksConfig.save();
-  market.save();
+    createMinimumDepositUpdated(generateMarketEventId(market), {
+      hooks: hooksId,
+      market: market.id,
+      newMinimumDeposit: event.params.newMinimumDeposit,
+      oldMinimumDeposit: hooksConfig.minimumDeposit,
+      blockNumber: event.block.number.toI32(),
+      transactionHash: event.transaction.hash,
+      blockTimestamp: event.block.timestamp.toI32(),
+      eventIndex: market.eventIndex,
+      minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
+    });
+    hooksConfig.minimumDeposit = event.params.newMinimumDeposit;
+    market.eventIndex = market.eventIndex + 1;
+    market.minimumDepositUpdatedIndex = market.minimumDepositUpdatedIndex + 1;
+    hooksConfig.save();
+    market.save();
+  }
 }
 
 export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
-  let market = getMarket(generateMarketId(event.params.market));
-  let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
-  createFixedTermUpdated(generateMarketEventId(market), {
-    hooks: generateHooksInstanceId(event.address),
-    market: market.id,
-    newFixedTermEndTime: event.params.fixedTermEndTime.toI32(),
-    oldFixedTermEndTime: hooksConfig.fixedTermEndTime,
-    blockNumber: event.block.number.toI32(),
-    transactionHash: event.transaction.hash,
-    blockTimestamp: event.block.timestamp.toI32(),
-    eventIndex: market.eventIndex,
-    fixedTermUpdatedIndex: market.fixedTermUpdatedIndex,
-  });
-  hooksConfig.fixedTermEndTime = event.params.fixedTermEndTime.toI32();
-  market.eventIndex = market.eventIndex + 1;
-  market.fixedTermUpdatedIndex = market.fixedTermUpdatedIndex + 1;
-  market.save();
-  hooksConfig.save();
+  let marketId = generateMarketId(event.params.market);
+  let market = Market.load(marketId);
+  if (market != null) {
+    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+    log.warning("handleFixedTermUpdated: {} market event index: {}", [event.params.market.toHex(), market.eventIndex.toString()]);
+    createFixedTermUpdated(generateMarketEventId(market), {
+      hooks: generateHooksInstanceId(event.address),
+      market: market.id,
+      newFixedTermEndTime: event.params.fixedTermEndTime.toI32(),
+      oldFixedTermEndTime: hooksConfig.fixedTermEndTime,
+      blockNumber: event.block.number.toI32(),
+      transactionHash: event.transaction.hash,
+      blockTimestamp: event.block.timestamp.toI32(),
+      eventIndex: market.eventIndex,
+      fixedTermUpdatedIndex: market.fixedTermUpdatedIndex,
+    });
+    hooksConfig.fixedTermEndTime = event.params.fixedTermEndTime.toI32();
+    market.eventIndex = market.eventIndex + 1;
+    market.fixedTermUpdatedIndex = market.fixedTermUpdatedIndex + 1;
+    market.save();
+    hooksConfig.save();
+  }
 }
 
 export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {

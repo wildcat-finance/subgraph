@@ -419,3 +419,28 @@ entitySettings:
     useDefault: {}
   AccountAccessRevoked:
     useDefault: {}
+  SimpleCollateralContract:
+    useDefault: {}
+  SimpleCollateralContractDepositor:
+    useDefault: {}
+    entityId: # <collateralContractAddress>-<depositorAddress>
+      - name: collateralContractAddress
+        type: Bytes
+      - name: depositorAddress
+        type: Bytes
+  SimpleCollateralContractLiquidation:
+    useDefault: {}
+  SimpleCollateralContractReclaim:
+    useDefault: {}
+  SimpleCollateralContractFullReset:
+    useDefault: {}
+  SimpleCollateralContractDeposit:
+    useDefault: {}
+  SimpleCollateralFactory:
+    useDefault: {}
+  ApprovedLiquidator:
+    useDefault: {}
+  LiquidatorApproved:
+    useDefault: {}
+  LiquidatorRemoved:
+    useDefault: {}

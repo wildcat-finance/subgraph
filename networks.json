@@ -9,6 +9,14 @@
       "WildcatSanctionsSentinel": {
         "address": "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A",
         "startBlock": 18686645
+      },
+      "HooksFactory": {
+        "address": "0xdd7dd3b5076cf89440d05585ff56d246386207be",
+        "startBlock": 21788182
+      },
+      "CollateralFactory": {
+        "address": "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c",
+        "startBlock": 23167811
       }
     }
   },
@@ -24,8 +32,12 @@
         "startBlock": 4796511
       },
       "HooksFactory": {
-        "address": "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88",
-        "startBlock": 6973842
+        "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
+        "startBlock": 7124440
+      },
+      "CollateralFactory": {
+        "address": "0xe11E41e9162ad07F1a9853c3123c33B7e9Cf59D6",
+        "startBlock": 9010415
       }
     }
   }

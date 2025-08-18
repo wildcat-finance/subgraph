@@ -336,7 +336,7 @@ function decodeAndCreateHooksConfig(
   let hooksConfigBytes = hooksConfig
     .toHex()
     .replace("0x", "")
-    .padEnd(64, "0");
+    .padStart(64, "0");
 
   let hooksAddress = Bytes.fromHexString(hooksConfigBytes.slice(0, 40));
   let flagBytes = Bytes.fromHexString(hooksConfigBytes.slice(40, 64));
@@ -480,6 +480,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       hooks: hooks.id,
       hooksFactory: hooksFactory.id,
       version: version,
+      numCollateralContracts: 0,
     });
 
     hooks.numMarkets = hooks.numMarkets + 1;

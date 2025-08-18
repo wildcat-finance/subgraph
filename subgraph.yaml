@@ -3,12 +3,53 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
+    name: WildcatMarketCollateralFactory
+    network: sepolia
+    source:
+      address: "0xe11E41e9162ad07F1a9853c3123c33B7e9Cf59D6"
+      abi: WildcatMarketCollateralFactory
+      startBlock: 9010415
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - SimpleCollateralContract
+        - SimpleCollateralFactory
+        - ApprovedLiquidator
+        - LiquidatorApproved
+        - LiquidatorRemoved
+        - Token
+        - ApprovedCollateralExchange
+        - CollateralExchangeApproved
+        - CollateralExchangeRemoved
+      abis:
+        - name: WildcatMarketCollateralFactory
+          file: ./abis/WildcatMarketCollateralFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+        - name: SimpleMarketCollateralMultiParty
+          file: ./abis/SimpleMarketCollateralMultiParty.json
+      eventHandlers:
+        - event: CollateralContractCreated(address,address,address)
+          handler: handleCollateralContractCreated
+        - event: ExecutorApproved(address)
+          handler: handleExecutorApproved
+        - event: ExecutorRemoved(address)
+          handler: handleExecutorRemoved
+        - event: ExchangeApproved(address)
+          handler: handleExchangeApproved
+        - event: ExchangeRemoved(address)
+          handler: handleExchangeRemoved
+      file: ./src/simple-collateral-factory.ts
+  - kind: ethereum
     name: HooksFactory
     network: sepolia
     source:
-      address: "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88"
+      address: "0x10A64ABa0159720F8a23E1A552800CA4eb21576C"
       abi: HooksFactory
-      startBlock: 6973842
+      startBlock: 7124440
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -149,6 +190,40 @@ dataSources:
           handler: handleSanctionOverrideRemoved
       file: ./src/wildcat-sanctions-sentinel.ts
 templates:
+  - kind: ethereum
+    name: SimpleMarketCollateralMultiParty
+    network: sepolia
+    source:
+      abi: SimpleMarketCollateralMultiParty
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - SimpleCollateralFactory
+        - SimpleCollateralContract
+        - SimpleCollateralContractDepositor
+        - SimpleCollateralContractLiquidation
+        - SimpleCollateralFullReset
+        - SimpleCollateralContractDeposit
+        - SimpleCollateralContractReclaim
+      abis:
+        - name: SimpleMarketCollateralMultiParty
+          file: ./abis/SimpleMarketCollateralMultiParty.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: CollateralDeposited(address,uint256,uint256,uint32)
+          handler: handleCollateralDeposited
+        - event: CollateralReclaimed(address,uint256,uint256)
+          handler: handleCollateralReclaimed
+        - event: Liquidation(address,uint256,uint256)
+          handler: handleLiquidation
+        - event: FullLiquidation(uint32)
+          handler: handleFullLiquidation
+        - event: LiquidatedSharesReset(address,uint256)
+          handler: handleLiquidatedSharesReset
+      file: ./src/simple-collateral.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
     network: sepolia

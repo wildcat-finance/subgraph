@@ -120,6 +120,7 @@ export function getOrCreateLenderAccount(
         authorized: false,
         controller: controller,
         lender: lenderAddress,
+        addedTimestamp: addedTimestamp.toI32(),
       }
     ).entity;
     authorization_id = authorization.id;

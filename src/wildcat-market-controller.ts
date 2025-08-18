@@ -36,6 +36,7 @@ export function handleLenderAuthorized(event: LenderAuthorizedEvent): void {
     authorized: true,
     controller: controller.id,
     lender: event.params.param0,
+    addedTimestamp: event.block.timestamp.toI32(),
   });
   if (!status.wasCreated) {
     status.entity.authorized = true;
@@ -59,6 +60,7 @@ export function handleLenderDeauthorized(event: LenderDeauthorizedEvent): void {
     authorized: false,
     controller: controller.id,
     lender: event.params.param0,
+    addedTimestamp: event.block.timestamp.toI32(),
   });
   if (!status.wasCreated) {
     status.entity.authorized = false;
@@ -128,6 +130,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     hooks: null,
     hooksFactory: null,
     version: version,
+    numCollateralContracts: 0,
   });
   controller.numMarkets = controller.numMarkets + 1;
   controller.save();
