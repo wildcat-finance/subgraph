@@ -634,6 +634,7 @@ type LenderAccount @entity {
   totalDeposited: BigInt!
   lastScaleFactor: BigInt!
   lastUpdatedTimestamp: Int!
+  lastUpdatedBlockNumber: Int!
   totalInterestEarned: BigInt!
   numPendingWithdrawalBatches: Int!
 
@@ -776,6 +777,7 @@ type Market @entity {
   # Ratio between internal balances and underlying token amounts
   scaleFactor: BigInt!
   lastInterestAccruedTimestamp: Int!
+  lastInterestAccruedBlockNumber: Int!
 
   originalAnnualInterestBips: Int!
   originalReserveRatioBips: Int!

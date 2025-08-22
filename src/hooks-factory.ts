@@ -377,7 +377,7 @@ function decodeAndCreateHooksConfig(
     depositRequiresAccess = hookedMarket.depositRequiresAccess;
     transferRequiresAccess = hookedMarket.transferRequiresAccess;
     transfersDisabled = hookedMarket.transfersDisabled;
-    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
+    allowForceBuyBacks = false;
     minimumDeposit = hookedMarket.minimumDeposit;
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
   } else {
@@ -396,7 +396,7 @@ function decodeAndCreateHooksConfig(
     allowTermReduction = hookedMarket.allowTermReduction;
     fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
     minimumDeposit = hookedMarket.minimumDeposit;
-    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
+    allowForceBuyBacks = false;
   }
 
   return createHooksConfig(generateHooksConfigId(market), {
@@ -471,6 +471,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       scaleFactor: BigInt.fromI32(10).pow(27),
       maxTotalSupply: params.maxTotalSupply,
       lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
+      lastInterestAccruedBlockNumber: event.block.number.toI32(),
       reserveRatioBips: params.reserveRatioBips.toI32(),
       withdrawalBatchDuration: params.withdrawalBatchDuration.toI32(),
       isRegistered: true,

@@ -139,6 +139,7 @@ export function getOrCreateLenderAccount(
     address: lenderAddress,
     lastScaleFactor: market.scaleFactor,
     lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
+    lastUpdatedBlockNumber: market.lastInterestAccruedBlockNumber,
     market: market.id,
     controllerAuthorization: authorization_id,
     hooksAccess: hooks_access_id,

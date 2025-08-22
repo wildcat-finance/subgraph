@@ -255,6 +255,7 @@ function processLenderInterestAccrued(
   }
   if (lender.lastUpdatedTimestamp != event.block.timestamp.toI32()) {
     lender.lastUpdatedTimestamp = event.block.timestamp.toI32();
+    lender.lastUpdatedBlockNumber = event.block.number.toI32();
   }
 }
 
@@ -511,6 +512,7 @@ export function handleInterestAndFeesAccrued(
   );
   market.pendingProtocolFees = market.pendingProtocolFees.plus(protocolFee);
   market.lastInterestAccruedTimestamp = toTimestamp.toI32();
+  market.lastInterestAccruedBlockNumber = event.block.number.toI32();
   market.save();
 }
 
