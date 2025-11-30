@@ -40,5 +40,39 @@
         "startBlock": 9010415
       }
     }
+  },
+  "plasma-testnet": {
+    "name": "plasma-testnet",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0x1EeBC079aE1e7dCDe31C74A7EF48fA8737673A6a",
+        "startBlock": 2994796
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0x7cc91e3c64A0b5844650d586B87B291AC3A3aaD4",
+        "startBlock": 2994800
+      },
+      "HooksFactory": {
+        "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
+        "startBlock": 2994816
+      }
+    }
+  },
+  "plasma-mainnet": {
+    "name": "plasma-mainnet",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae",
+        "startBlock": 1989721
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0x37064895ba2C1e269EAF7FF32564818d08903f5B",
+        "startBlock": 1989725
+      },
+      "HooksFactory": {
+        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
+        "startBlock": 1989742
+      }
+    }
   }
 }
