@@ -71,6 +71,7 @@ import {
   getOrInitializeLenderAccount,
   getOrInitializeLenderAuthorization,
   getOrInitializeLenderWithdrawalStatus,
+  getOrInitializeMarketDailyStats,
   getWithdrawalBatch,
   setAnnualInterestBips,
   setMarketIsClosed,
@@ -83,6 +84,7 @@ import {
   Market,
   WithdrawalBatch,
   LenderHooksAccess,
+  MarketDailyStats,
 } from "../generated/schema";
 import {
   calculateBatchInterestEarned,
@@ -97,6 +99,25 @@ import {
   getOrCreateLenderAccount,
 } from "./utils";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+
+function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): GetOrCreateReturn<MarketDailyStats> {
+  let startOfDayTimestamp = (timestamp.toI32() / 86400) * 86400;
+  let marketDailyStatsId = market.id.concat("-").concat(startOfDayTimestamp.toString());
+  let marketDailyStats = MarketDailyStats.load(marketDailyStatsId);
+  if (marketDailyStats != null) {
+    return new GetOrCreateReturn<MarketDailyStats>(marketDailyStats, false);
+  }
+  return getOrInitializeMarketDailyStats(marketDailyStatsId, {
+    market: market.id,
+    startTimestamp: startOfDayTimestamp,
+    endTimestamp: startOfDayTimestamp + 86400,
+    totalDeposited: BigInt.fromI32(0),
+    totalWithdrawalsRequested: BigInt.fromI32(0),
+    totalWithdrawalsExecuted: BigInt.fromI32(0),
+    totalBorrowed: BigInt.fromI32(0),
+    totalRepaid: BigInt.fromI32(0),
+  });
+}
 
 // function getOrCreateLenderAccount(
 //   market: Market,
@@ -213,6 +234,10 @@ export function handleBorrow(event: BorrowEvent): void {
   market.eventIndex = market.eventIndex + 1;
   market.totalBorrowed = market.totalBorrowed.plus(event.params.assetAmount);
   market.save();
+
+  let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
+  marketDailyStats.totalBorrowed = marketDailyStats.totalBorrowed.plus(event.params.assetAmount);
+  marketDailyStats.save();
 }
 
 export function handleDebtRepaid(event: DebtRepaidEvent): void {
@@ -231,6 +256,9 @@ export function handleDebtRepaid(event: DebtRepaidEvent): void {
   market.eventIndex = market.eventIndex + 1;
   market.totalRepaid = market.totalRepaid.plus(event.params.assetAmount);
   market.save();
+  let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
+  marketDailyStats.totalRepaid = marketDailyStats.totalRepaid.plus(event.params.assetAmount);
+  marketDailyStats.save();
 }
 
 function processLenderInterestAccrued(
@@ -316,6 +344,10 @@ export function handleDeposit(event: DepositEvent): void {
   );
   market.totalDeposited = market.totalDeposited.plus(event.params.assetAmount);
   market.save();
+
+  let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
+  marketDailyStats.totalDeposited = marketDailyStats.totalDeposited.plus(event.params.assetAmount);
+  marketDailyStats.save();
 }
 
 export function handleFeesCollected(event: FeesCollectedEvent): void {
@@ -758,6 +790,10 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
   batch.save();
   status.save();
   market.save();
+
+  let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
+  marketDailyStats.totalWithdrawalsExecuted = marketDailyStats.totalWithdrawalsExecuted.plus(normalizedAmount);
+  marketDailyStats.save();
 }
 
 export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
@@ -822,6 +858,10 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   status.save();
   market.save();
   batch.save();
+
+  let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
+  marketDailyStats.totalWithdrawalsRequested = marketDailyStats.totalWithdrawalsRequested.plus(normalizedAmount);
+  marketDailyStats.save();
 }
 
 export function handleChangedSpherexEngineAddress(

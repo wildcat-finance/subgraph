@@ -694,6 +694,7 @@ type WithdrawalBatch @entity {
   interestAccrualRecords: [WithdrawalBatchInterestAccrued!]!
     @derivedFrom(field: "batch")
   creation: WithdrawalBatchCreated! @derivedFrom(field: "batch")
+  expiration: WithdrawalBatchExpired @derivedFrom(field: "batch")
 }
 
 type WithdrawalBatchInterestAccrued @entity(immutable: true) {
@@ -815,7 +816,8 @@ type Market @entity {
   # ------------------------------- Dependents ------------------------------- #
   withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
-  collateralContracts: [SimpleCollateralContract!]! @derivedFrom(field: "market")
+  collateralContracts: [SimpleCollateralContract!]!
+    @derivedFrom(field: "market")
   numCollateralContracts: Int!
 
   createdAt: Int!
@@ -849,6 +851,20 @@ type Market @entity {
     @derivedFrom(field: "market")
   accountMadeFirstDepositRecords: [AccountMadeFirstDeposit!]!
     @derivedFrom(field: "market")
+
+  dailyStats: [MarketDailyStats!]! @derivedFrom(field: "market")
+}
+
+type MarketDailyStats @entity {
+  id: ID!
+  startTimestamp: Int!
+  endTimestamp: Int!
+  market: Market!
+  totalDeposited: BigInt!
+  totalWithdrawalsRequested: BigInt!
+  totalWithdrawalsExecuted: BigInt!
+  totalBorrowed: BigInt!
+  totalRepaid: BigInt!
 }
 
 type MarketInterestAccrued @entity(immutable: true) {
@@ -1140,7 +1156,8 @@ type SimpleCollateralFactory @entity {
   approvedLiquidators: [ApprovedLiquidator!]! @derivedFrom(field: "factory")
   liquidatorApprovals: [LiquidatorApproved!]! @derivedFrom(field: "factory")
   liquidatorRemovals: [LiquidatorRemoved!]! @derivedFrom(field: "factory")
-  approvedExchanges: [ApprovedCollateralExchange!]! @derivedFrom(field: "factory")
+  approvedExchanges: [ApprovedCollateralExchange!]!
+    @derivedFrom(field: "factory")
 }
 
 type ApprovedCollateralExchange @entity {
@@ -1164,7 +1181,7 @@ type CollateralExchangeRemoved @entity {
   id: ID!
   factory: SimpleCollateralFactory!
   exchange: Bytes!
-  
+
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -1237,7 +1254,8 @@ type SimpleCollateralContractDepositor @entity {
 
   deposits: [SimpleCollateralContractDeposit!]! @derivedFrom(field: "account")
   reclaims: [SimpleCollateralContractReclaim!]! @derivedFrom(field: "account")
-  liquidatedSharesResets: [SimpleCollateralContractLiquidatedSharesReset!]! @derivedFrom(field: "account")
+  liquidatedSharesResets: [SimpleCollateralContractLiquidatedSharesReset!]!
+    @derivedFrom(field: "account")
 }
 
 type SimpleCollateralContractLiquidation @entity(immutable: true) {
