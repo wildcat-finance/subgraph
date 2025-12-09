@@ -62,6 +62,7 @@ export function handleExecutorApproved(event: ExecutorApproved): void {
         liquidator: event.params.executor,
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
         blockNumber: event.block.number.toI32(),
         factory: event.address.toHex(),
     })
@@ -78,6 +79,7 @@ export function handleExecutorRemoved(event: ExecutorRemoved): void {
         liquidator: event.params.executor,
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
         blockNumber: event.block.number.toI32(),
         factory: event.address.toHex(),
     })
@@ -100,6 +102,7 @@ export function handleExchangeApproved(event: ExchangeApproved): void {
         exchange: event.params.exchange,
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
         blockNumber: event.block.number.toI32(),
         factory: event.address.toHex(),
     })
@@ -116,6 +119,7 @@ export function handleExchangeRemoved(event: ExchangeRemoved): void {
         exchange: event.params.exchange,
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
         blockNumber: event.block.number.toI32(),
         factory: event.address.toHex(),
     })

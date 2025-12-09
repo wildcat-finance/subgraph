@@ -83,6 +83,7 @@ export function handleAccountAccessGranted(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     credentialTimestamp: event.params.credentialTimestamp.toI32(),
     provider: provider.id,
     eventIndex: hooks.eventIndex,
@@ -105,6 +106,7 @@ export function handleAccountAccessRevoked(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     eventIndex: hooks.eventIndex,
   });
   lenderHooksAccess.canRefresh = false;
@@ -145,6 +147,7 @@ export function handleAccountBlockedFromDeposits(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     eventIndex: hooks.eventIndex,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
@@ -178,6 +181,7 @@ export function handleAccountMadeFirstDeposit(
     market: market.id,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: market.eventIndex,
   });
@@ -201,6 +205,7 @@ export function handleAccountUnblockedFromDeposits(
     hooks: hooks.id,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
   });
@@ -224,6 +229,7 @@ export function handleMinimumDepositUpdated(
       oldMinimumDeposit: hooksConfig.minimumDeposit,
       blockNumber: event.block.number.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       eventIndex: market.eventIndex,
       minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
@@ -249,6 +255,7 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
       oldFixedTermEndTime: hooksConfig.fixedTermEndTime,
       blockNumber: event.block.number.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       eventIndex: market.eventIndex,
       fixedTermUpdatedIndex: market.fixedTermUpdatedIndex,
@@ -297,6 +304,7 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
     provider: roleProvider.entity.id,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
     timeToLive: roleProvider.entity.timeToLive,
@@ -318,6 +326,7 @@ export function handleRoleProviderRemoved(
     provider: roleProvider.id,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
   });
@@ -354,6 +363,7 @@ export function handleRoleProviderUpdated(
     provider: roleProvider.id,
     blockNumber: event.block.number.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
     isPullProvider: roleProvider.isPullProvider,
@@ -416,6 +426,7 @@ export function handleNameUpdated(event: NameUpdatedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     eventIndex: hooks.eventIndex,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
@@ -434,6 +445,7 @@ export function handleDisabledForceBuyBacks(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     eventIndex: market.eventIndex,
   });
   let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));

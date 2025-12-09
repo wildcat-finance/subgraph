@@ -33,6 +33,7 @@ export function handleCollateralDeposited(event: CollateralDeposited): void {
         blockNumber: event.block.number.toI32(),
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
     });
     collateralContract.availableCollateral = collateralContract.availableCollateral.plus(event.params.depositAmount);
     collateralContract.totalDeposited = collateralContract.totalDeposited.plus(event.params.depositAmount);
@@ -62,6 +63,7 @@ export function handleCollateralReclaimed(event: CollateralReclaimed): void {
         blockNumber: event.block.number.toI32(),
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
     });
 }
 
@@ -76,6 +78,7 @@ export function handleLiquidation(event: Liquidation): void {
         blockNumber: event.block.number.toI32(),
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
     });
     collateralContract.eventIndex = collateralContract.eventIndex + 1;
     collateralContract.availableCollateral = collateralContract.availableCollateral.minus(event.params.collateralLiquidated);
@@ -96,6 +99,7 @@ export function handleFullLiquidation(event: FullLiquidation): void {
         blockNumber: event.block.number.toI32(),
         blockTimestamp: event.block.timestamp.toI32(),
         transactionHash: event.transaction.hash,
+        blockLogIndex: event.logIndex.toI32(),
     });
 }
 
@@ -114,6 +118,7 @@ export function handleLiquidatedSharesReset(event: LiquidatedSharesReset): void 
             blockNumber: event.block.number.toI32(),
             blockTimestamp: event.block.timestamp.toI32(),
             transactionHash: event.transaction.hash,
+            blockLogIndex: event.logIndex.toI32(),
         }
     );
 }

@@ -43,6 +43,7 @@ type BorrowerRegistrationChange @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerFactoryRemoved @entity(immutable: true) {
@@ -51,6 +52,7 @@ type ControllerFactoryRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerRemoved @entity(immutable: true) {
@@ -59,6 +61,7 @@ type ControllerRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketRemoved @entity(immutable: true) {
@@ -67,6 +70,7 @@ type MarketRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerAdded @entity(immutable: true) {
@@ -76,6 +80,7 @@ type ControllerAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerFactoryAdded @entity(immutable: true) {
@@ -84,6 +89,7 @@ type ControllerFactoryAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketAdded @entity(immutable: true) {
@@ -93,6 +99,7 @@ type MarketAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type OwnershipHandoverCanceled @entity(immutable: true) {
@@ -101,6 +108,7 @@ type OwnershipHandoverCanceled @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type OwnershipHandoverRequested @entity(immutable: true) {
@@ -109,6 +117,7 @@ type OwnershipHandoverRequested @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type OwnershipTransferred @entity(immutable: true) {
@@ -118,6 +127,7 @@ type OwnershipTransferred @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type GlobalAccount @entity {
@@ -167,6 +177,7 @@ type NewController @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type UpdateProtocolFeeConfiguration @entity(immutable: true) {
@@ -178,6 +189,7 @@ type UpdateProtocolFeeConfiguration @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -192,6 +204,7 @@ type NewSanctionsEscrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionOverride @entity(immutable: true) {
@@ -201,6 +214,7 @@ type SanctionOverride @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionOverrideRemoved @entity(immutable: true) {
@@ -210,6 +224,7 @@ type SanctionOverrideRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -324,6 +339,7 @@ type FixedTermUpdated @entity {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
   fixedTermUpdatedIndex: Int!
 }
@@ -346,6 +362,7 @@ type RoleProviderAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -361,6 +378,7 @@ type RoleProviderRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -382,6 +400,7 @@ type RoleProviderUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -394,6 +413,7 @@ type HooksNameUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -405,6 +425,7 @@ type AccountBlockedFromDeposits @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -416,6 +437,7 @@ type AccountUnblockedFromDeposits @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -429,6 +451,7 @@ type AccountMadeFirstDeposit @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -442,6 +465,7 @@ type MinimumDepositUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
   minimumDepositUpdatedIndex: Int!
 }
@@ -454,6 +478,7 @@ type DisabledForceBuyBacks @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -471,6 +496,7 @@ type AccountAccessGranted @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -482,6 +508,7 @@ type AccountAccessRevoked @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
   eventIndex: Int!
 }
 
@@ -522,6 +549,7 @@ type HooksInstanceDeployed @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # event HooksTemplateAdded(
@@ -542,6 +570,7 @@ type HooksTemplateAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # event HooksTemplateDisabled(address hooksTemplate);
@@ -551,6 +580,7 @@ type HooksTemplateDisabled @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # event HooksTemplateFeesUpdated(
@@ -570,6 +600,7 @@ type HooksTemplateFeesUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -611,6 +642,7 @@ type LenderAuthorizationChange @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketDeployed @entity(immutable: true) {
@@ -619,6 +651,7 @@ type MarketDeployed @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -881,6 +914,7 @@ type MarketInterestAccrued @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type DelinquencyStatusChanged @entity(immutable: true) {
@@ -906,6 +940,7 @@ type AnnualInterestBipsUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ProtocolFeeBipsUpdated @entity(immutable: true) {
@@ -918,6 +953,7 @@ type ProtocolFeeBipsUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type Approval @entity(immutable: true) {
@@ -928,6 +964,7 @@ type Approval @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type AuthorizationStatusUpdated @entity(immutable: true) {
@@ -948,6 +985,7 @@ type Borrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type DebtRepaid @entity(immutable: true) {
@@ -960,6 +998,7 @@ type DebtRepaid @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type Deposit @entity(immutable: true) {
@@ -973,6 +1012,7 @@ type Deposit @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type FeesCollected @entity(immutable: true) {
@@ -984,6 +1024,7 @@ type FeesCollected @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketClosed @entity(immutable: true) {
@@ -994,6 +1035,7 @@ type MarketClosed @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MaxTotalSupplyUpdated @entity(immutable: true) {
@@ -1006,6 +1048,7 @@ type MaxTotalSupplyUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ReserveRatioBipsUpdated @entity(immutable: true) {
@@ -1016,6 +1059,7 @@ type ReserveRatioBipsUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionedAccountAssetsQueuedForWithdrawal @entity(immutable: true) {
@@ -1027,6 +1071,7 @@ type SanctionedAccountAssetsQueuedForWithdrawal @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 type SanctionedAccountAssetsSentToEscrow @entity(immutable: true) {
   id: ID!
@@ -1036,6 +1081,7 @@ type SanctionedAccountAssetsSentToEscrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionedAccountWithdrawalSentToEscrow @entity(immutable: true) {
@@ -1047,6 +1093,7 @@ type SanctionedAccountWithdrawalSentToEscrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type StateUpdated @entity(immutable: true) {
@@ -1068,6 +1115,7 @@ type Transfer @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type WithdrawalBatchClosed @entity(immutable: true) {
@@ -1084,6 +1132,7 @@ type WithdrawalBatchCreated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalBatchExpired @entity(immutable: true) {
@@ -1096,6 +1145,7 @@ type WithdrawalBatchExpired @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalBatchPayment @entity(immutable: true) {
@@ -1106,6 +1156,7 @@ type WithdrawalBatchPayment @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalExecution @entity(immutable: true) {
@@ -1117,6 +1168,7 @@ type WithdrawalExecution @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalRequest @entity(immutable: true) {
@@ -1133,6 +1185,7 @@ type WithdrawalRequest @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ForceBuyBack @entity(immutable: true) {
@@ -1147,6 +1200,7 @@ type ForceBuyBack @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SimpleCollateralFactory @entity {
@@ -1175,6 +1229,7 @@ type CollateralExchangeApproved @entity {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type CollateralExchangeRemoved @entity {
@@ -1185,6 +1240,7 @@ type CollateralExchangeRemoved @entity {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ApprovedLiquidator @entity {
@@ -1202,6 +1258,7 @@ type LiquidatorApproved @entity {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type LiquidatorRemoved @entity {
@@ -1212,6 +1269,7 @@ type LiquidatorRemoved @entity {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SimpleCollateralContract @entity {
@@ -1270,6 +1328,7 @@ type SimpleCollateralContractLiquidation @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SimpleCollateralContractFullReset @entity(immutable: true) {
@@ -1281,6 +1340,7 @@ type SimpleCollateralContractFullReset @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SimpleCollateralContractLiquidatedSharesReset @entity(immutable: true) {
@@ -1293,6 +1353,7 @@ type SimpleCollateralContractLiquidatedSharesReset @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SimpleCollateralContractDeposit @entity(immutable: true) {
@@ -1309,6 +1370,7 @@ type SimpleCollateralContractDeposit @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SimpleCollateralContractReclaim @entity(immutable: true) {
@@ -1323,6 +1385,7 @@ type SimpleCollateralContractReclaim @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #

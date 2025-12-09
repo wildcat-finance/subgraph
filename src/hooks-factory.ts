@@ -159,6 +159,7 @@ export function handleHooksInstanceDeployed(
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
     }
   );
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
@@ -205,6 +206,7 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
       hooksTemplate: hooksTemplateId,
       feeRecipient: event.params.feeRecipient,
       originationFeeAmount: event.params.originationFeeAmount,
@@ -240,6 +242,7 @@ export function handleHooksTemplateDisabled(
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
       hooksTemplate: hooksTemplateId,
     }
   );
@@ -262,6 +265,7 @@ export function handleHooksTemplateFeesUpdated(
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
       hooksTemplate: hooksTemplateId,
       feeRecipient: event.params.feeRecipient,
       originationFeeAmount: event.params.originationFeeAmount,
@@ -315,6 +319,7 @@ function decodeAndCreateRoleProvider(
     pushProviderIndex: pushProviderIndex,
     timeToLive: timeToLive,
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
   return createRoleProvider(providerId, {
     isApproved: true,
@@ -436,6 +441,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
       market: marketId,
     });
     let hooksConfig = decodeAndCreateHooksConfig(

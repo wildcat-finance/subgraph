@@ -182,6 +182,7 @@ export function handleAnnualInterestBipsUpdated(
     annualInterestBipsUpdatedIndex: market.annualInterestBipsUpdatedIndex,
     eventIndex: market.eventIndex,
     market: market.id,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.annualInterestBips = newAnnualInterestBips;
   market.annualInterestBipsUpdatedIndex =
@@ -199,6 +200,7 @@ export function handleApproval(event: ApprovalEvent): void {
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
+  entity.blockLogIndex = event.logIndex.toI32();
 
   entity.save();
 }
@@ -229,6 +231,7 @@ export function handleBorrow(event: BorrowEvent): void {
     market: market.id,
     borrowIndex: market.borrowIndex,
     eventIndex: market.eventIndex,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.borrowIndex = market.borrowIndex + 1;
   market.eventIndex = market.eventIndex + 1;
@@ -251,6 +254,7 @@ export function handleDebtRepaid(event: DebtRepaidEvent): void {
     market: market.id,
     debtRepaidIndex: market.debtRepaidIndex,
     eventIndex: market.eventIndex,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.debtRepaidIndex = market.debtRepaidIndex + 1;
   market.eventIndex = market.eventIndex + 1;
@@ -329,6 +333,7 @@ export function handleDeposit(event: DepositEvent): void {
     transactionHash: event.transaction.hash,
     depositIndex: market.depositIndex,
     eventIndex: market.eventIndex,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.depositIndex = market.depositIndex + 1;
   market.eventIndex = market.eventIndex + 1;
@@ -363,6 +368,7 @@ export function handleFeesCollected(event: FeesCollectedEvent): void {
     transactionHash: event.transaction.hash,
     feesCollectedIndex: market.feesCollectedIndex,
     eventIndex: market.eventIndex,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.feesCollectedIndex = market.feesCollectedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
@@ -380,6 +386,7 @@ export function handleMarketClosed(event: MarketClosedEvent): void {
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
     eventIndex: market.eventIndex,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.eventIndex = market.eventIndex + 1;
   market.save();
@@ -398,6 +405,7 @@ export function handleMaxTotalSupplyUpdated(
     transactionHash: event.transaction.hash,
     maxTotalSupplyUpdatedIndex: market.maxTotalSupplyUpdatedIndex,
     eventIndex: market.eventIndex,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.maxTotalSupplyUpdatedIndex = market.maxTotalSupplyUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
@@ -416,6 +424,7 @@ export function handleReserveRatioBipsUpdated(
     newReserveRatioBips: event.params.reserveRatioBipsUpdated.toI32(),
     oldReserveRatioBips: market.reserveRatioBips,
     market: market.id,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.reserveRatioBips = event.params.reserveRatioBipsUpdated.toI32();
   market.save();
@@ -432,7 +441,7 @@ export function handleSanctionedAccountAssetsSentToEscrow(
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
-
+  entity.blockLogIndex = event.logIndex.toI32();
   entity.save();
 }
 
@@ -450,6 +459,7 @@ export function handleSanctionedAccountWithdrawalSentToEscrow(
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
+  entity.blockLogIndex = event.logIndex.toI32();
 
   entity.save();
 }
@@ -534,6 +544,7 @@ export function handleInterestAndFeesAccrued(
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
     timeWithPenalties: timeWithPenalties.toI32(),
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.isIncurringPenalties =
     market.timeDelinquent > market.delinquencyGracePeriod;
@@ -617,6 +628,7 @@ export function handleTransfer(event: TransferEvent): void {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
     });
   }
 }
@@ -642,6 +654,7 @@ export function handleWithdrawalBatchCreated(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
   let market = getMarket(event.address.toHex());
   createWithdrawalBatch(id, {
@@ -683,6 +696,7 @@ export function handleWithdrawalBatchExpired(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
   batch.isExpired = true;
   market.pendingWithdrawalExpiry = BigInt.zero();
@@ -714,6 +728,7 @@ export function handleWithdrawalBatchPayment(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
   batch.paymentsCount = batch.paymentsCount + 1;
   batch.scaledAmountBurned = batch.scaledAmountBurned.plus(scaledAmountBurned);
@@ -761,6 +776,7 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
     }
   );
   status.normalizedAmountWithdrawn = status.normalizedAmountWithdrawn.plus(
@@ -831,6 +847,7 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     withdrawalRequestsIndex: market.withdrawalRequestsIndex,
     eventIndex: market.eventIndex,
     market: market.id,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.withdrawalRequestsIndex = market.withdrawalRequestsIndex + 1;
   market.eventIndex = market.eventIndex + 1;
@@ -886,6 +903,7 @@ export function handleProtocolFeeBipsUpdated(
     protocolFeeBipsUpdatedIndex: market.protocolFeeBipsUpdatedIndex,
     eventIndex: market.eventIndex,
     market: market.id,
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.protocolFeeBips = newProtocolFeeBips;
   market.protocolFeeBipsUpdatedIndex = market.protocolFeeBipsUpdatedIndex + 1;
@@ -906,6 +924,7 @@ export function handleForceBuyBack(event: ForceBuyBackEvent): void {
     normalizedAmount: event.params.normalizedAmount,
     scaledAmount: event.params.scaledAmount,
     withdrawalExpiry: event.params.withdrawalExpiry.toI32(),
+    blockLogIndex: event.logIndex.toI32(),
   });
   market.forceBuyBackIndex = market.forceBuyBackIndex + 1;
   market.eventIndex = market.eventIndex + 1;

@@ -19,7 +19,7 @@ export function handleNewSanctionsEscrow(event: NewSanctionsEscrowEvent): void {
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
-
+  entity.blockLogIndex = event.logIndex.toI32();
   entity.save();
 }
 
@@ -31,6 +31,7 @@ export function handleSanctionOverride(event: SanctionOverrideEvent): void {
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
+  entity.blockLogIndex = event.logIndex.toI32();
 
   entity.save();
 }
@@ -45,6 +46,6 @@ export function handleSanctionOverrideRemoved(
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
-
+  entity.blockLogIndex = event.logIndex.toI32();
   entity.save();
 }

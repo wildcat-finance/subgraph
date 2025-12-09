@@ -49,6 +49,7 @@ export function handleLenderAuthorized(event: LenderAuthorizedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     authorization: id,
   });
 }
@@ -73,6 +74,7 @@ export function handleLenderDeauthorized(event: LenderDeauthorizedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     authorization: id,
   });
 }
@@ -101,6 +103,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
     market: marketId,
   });
 
