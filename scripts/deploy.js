@@ -4,7 +4,7 @@ require("dotenv").config();
 
 const provider = process.argv[2];
 const network = process.argv[3];
-let subgraphName = process.argv[4];
+const subgraphName = process.argv[4] || network;
 
 if (!network) {
   console.error("Usage: yarn deploy <provider> <network> <subgraph-name>");
@@ -41,11 +41,10 @@ switch (provider) {
     break;
 
   case "alchemy":
-    subgraphName = subgraphName || network;
-    run(
-      `graph deploy ${network} --version-label ${version} --node https://subgraphs.alchemy.com/api/subgraphs/deploy --ipfs https://ipfs.satsuma.xyz --deploy-key ${process.env.ALCHEMY_DEPLOY_KEY}`
-    );
-    break;
+    throw Error(`Alchemy subgraph support is deprecated. Use Goldsky instead.`)
+    // run(
+    //   `graph deploy ${network} --version-label ${version} --node https://subgraphs.alchemy.com/api/subgraphs/deploy --ipfs https://ipfs.satsuma.xyz --deploy-key ${process.env.ALCHEMY_DEPLOY_KEY}`
+    // );
 
   case "goldsky":
     run(`goldsky subgraph deploy ${subgraphName}/${version} --path .`);
