@@ -580,6 +580,7 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
       market: market.id,
       delinquencyStatusChangedIndex: market.delinquencyStatusChangedIndex,
       eventIndex: market.eventIndex,
+      blockLogIndex: event.logIndex.toI32(),
     });
     market.delinquencyStatusChangedIndex =
       market.delinquencyStatusChangedIndex + 1;
