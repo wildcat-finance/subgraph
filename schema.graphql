@@ -928,6 +928,7 @@ type DelinquencyStatusChanged @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type AnnualInterestBipsUpdated @entity(immutable: true) {
