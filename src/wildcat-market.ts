@@ -98,16 +98,37 @@ import {
   satSub,
   getOrCreateLenderAccount,
 } from "./utils";
-import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { ensureTokenDailyPrice, getTokenPriceUSD } from "./price-feeds";
+import { Address, BigDecimal, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 
 function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): GetOrCreateReturn<MarketDailyStats> {
   let startOfDayTimestamp = (timestamp.toI32() / 86400) * 86400;
   let marketDailyStatsId = market.id.concat("-").concat(startOfDayTimestamp.toString());
   let marketDailyStats = MarketDailyStats.load(marketDailyStatsId);
   if (marketDailyStats != null) {
+    // Update snapshot fields to latest market state
+    marketDailyStats.scaledTotalSupply = market.scaledTotalSupply;
+    marketDailyStats.scaleFactor = market.scaleFactor;
+    marketDailyStats.totalBorrowedAllTime = market.totalBorrowed;
+    marketDailyStats.totalRepaidAllTime = market.totalRepaid;
+    marketDailyStats.totalBaseInterestAccruedAllTime = market.totalBaseInterestAccrued;
+    marketDailyStats.totalDelinquencyFeesAccruedAllTime = market.totalDelinquencyFeesAccrued;
+    marketDailyStats.totalProtocolFeesAccruedAllTime = market.totalProtocolFeesAccrued;
+    marketDailyStats.totalDepositedAllTime = market.totalDeposited;
+    marketDailyStats.totalWithdrawalsRequestedAllTime = market.totalWithdrawalsRequested;
+    marketDailyStats.totalWithdrawalsExecutedAllTime = market.totalWithdrawalsExecuted;
+    marketDailyStats.save();
     return new GetOrCreateReturn<MarketDailyStats>(marketDailyStats, false);
   }
-  return getOrInitializeMarketDailyStats(marketDailyStatsId, {
+  let dailyPrice = ensureTokenDailyPrice(market.asset, timestamp);
+  if (dailyPrice != null) {
+    market.tokenDailyPrice = dailyPrice.id;
+  }
+  let usdPrice: BigDecimal | null = null;
+  if (dailyPrice != null) {
+    usdPrice = dailyPrice.priceUSD;
+  }
+  let result = getOrInitializeMarketDailyStats(marketDailyStatsId, {
     market: market.id,
     startTimestamp: startOfDayTimestamp,
     endTimestamp: startOfDayTimestamp + 86400,
@@ -116,7 +137,19 @@ function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): GetOrCr
     totalWithdrawalsExecuted: BigInt.fromI32(0),
     totalBorrowed: BigInt.fromI32(0),
     totalRepaid: BigInt.fromI32(0),
+    scaledTotalSupply: market.scaledTotalSupply,
+    scaleFactor: market.scaleFactor,
+    usdPrice: usdPrice,
+    totalBorrowedAllTime: market.totalBorrowed,
+    totalRepaidAllTime: market.totalRepaid,
+    totalBaseInterestAccruedAllTime: market.totalBaseInterestAccrued,
+    totalDelinquencyFeesAccruedAllTime: market.totalDelinquencyFeesAccrued,
+    totalProtocolFeesAccruedAllTime: market.totalProtocolFeesAccrued,
+    totalDepositedAllTime: market.totalDeposited,
+    totalWithdrawalsRequestedAllTime: market.totalWithdrawalsRequested,
+    totalWithdrawalsExecutedAllTime: market.totalWithdrawalsExecuted,
   });
+  return result;
 }
 
 // function getOrCreateLenderAccount(
@@ -556,6 +589,9 @@ export function handleInterestAndFeesAccrued(
   market.pendingProtocolFees = market.pendingProtocolFees.plus(protocolFee);
   market.lastInterestAccruedTimestamp = toTimestamp.toI32();
   market.lastInterestAccruedBlockNumber = event.block.number.toI32();
+
+  let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
+  marketDailyStats.save();
   market.save();
 }
 

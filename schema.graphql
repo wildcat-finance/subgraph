@@ -754,13 +754,23 @@ type LenderWithdrawalStatus @entity {
   executions: [WithdrawalExecution!]! @derivedFrom(field: "status")
 }
 
-type Token @entity(immutable: true) {
+type Token @entity {
   id: ID!
   address: Bytes!
   name: String!
   symbol: String!
   decimals: Int!
   isMock: Boolean!
+  isUsdStablecoin: Boolean!
+  priceFeed0: Bytes
+  priceFeed1: Bytes
+}
+
+type TokenDailyPrice @entity {
+  id: ID!
+  token: Token!
+  timestamp: Int!
+  priceUSD: BigDecimal!
 }
 
 type Market @entity {
@@ -831,6 +841,10 @@ type Market @entity {
   totalProtocolFeesAccrued: BigInt!
   # all time deposits
   totalDeposited: BigInt!
+  # all time withdrawals requested
+  totalWithdrawalsRequested: BigInt!
+  # all time withdrawals executed
+  totalWithdrawalsExecuted: BigInt!
 
   eventIndex: Int!
   delinquencyStatusChangedIndex: Int!
@@ -886,6 +900,7 @@ type Market @entity {
     @derivedFrom(field: "market")
 
   dailyStats: [MarketDailyStats!]! @derivedFrom(field: "market")
+  tokenDailyPrice: TokenDailyPrice
 }
 
 type MarketDailyStats @entity {
@@ -898,6 +913,20 @@ type MarketDailyStats @entity {
   totalWithdrawalsExecuted: BigInt!
   totalBorrowed: BigInt!
   totalRepaid: BigInt!
+
+  # Cumulative values
+  totalBorrowedAllTime: BigInt!
+  totalRepaidAllTime: BigInt!
+  totalBaseInterestAccruedAllTime: BigInt!
+  totalDelinquencyFeesAccruedAllTime: BigInt!
+  totalProtocolFeesAccruedAllTime: BigInt!
+  totalDepositedAllTime: BigInt!
+  totalWithdrawalsRequestedAllTime: BigInt!
+  totalWithdrawalsExecutedAllTime: BigInt!
+
+  scaledTotalSupply: BigInt!
+  scaleFactor: BigInt!
+  usdPrice: BigDecimal
 }
 
 type MarketInterestAccrued @entity(immutable: true) {

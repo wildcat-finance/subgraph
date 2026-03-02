@@ -131,6 +131,9 @@ entitySettings:
       totalDelinquencyFeesAccrued: {}
       totalProtocolFeesAccrued: {}
       totalDeposited: {}
+      totalWithdrawalsRequested: {}
+      totalWithdrawalsExecuted: {}
+      tokenDailyPrice: {}
       originalAnnualInterestBips: {}
       temporaryReserveRatioActive: {}
       originalReserveRatioBips: {}
@@ -186,7 +189,10 @@ entitySettings:
       - name: controller
         type: Bytes
   Token:
-    useDefault: {}
+    useDefault:
+      isUsdStablecoin: {}
+      priceFeed0: {}
+      priceFeed1: {}
     entityId:
       - type: constant
         value: "TKN"

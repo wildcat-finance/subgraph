@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: WildcatMarketCollateralFactory
-    network: sepolia
+    network: mainnet
     source:
-      address: "0xe11E41e9162ad07F1a9853c3123c33B7e9Cf59D6"
+      address: "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c"
       abi: WildcatMarketCollateralFactory
-      startBlock: 9010415
+      startBlock: 23167811
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -31,6 +31,10 @@ dataSources:
           file: ./abis/IERC20.json
         - name: SimpleMarketCollateralMultiParty
           file: ./abis/SimpleMarketCollateralMultiParty.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: CollateralContractCreated(address,address,address)
           handler: handleCollateralContractCreated
@@ -45,11 +49,11 @@ dataSources:
       file: ./src/simple-collateral-factory.ts
   - kind: ethereum
     name: HooksFactory
-    network: sepolia
+    network: mainnet
     source:
-      address: "0x10A64ABa0159720F8a23E1A552800CA4eb21576C"
+      address: "0xdd7dd3b5076cf89440d05585ff56d246386207be"
       abi: HooksFactory
-      startBlock: 7124440
+      startBlock: 21788182
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -87,6 +91,10 @@ dataSources:
           file: ./abis/CombinedHooks.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -105,11 +113,11 @@ dataSources:
       file: ./src/hooks-factory.ts
   - kind: ethereum
     name: WildcatArchController
-    network: sepolia
+    network: mainnet
     source:
-      address: "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+      address: "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4"
       abi: WildcatArchController
-      startBlock: 4796511
+      startBlock: 18686645
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -165,11 +173,11 @@ dataSources:
       file: ./src/wildcat-arch-controller.ts
   - kind: ethereum
     name: WildcatSanctionsSentinel
-    network: sepolia
+    network: mainnet
     source:
-      address: "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B"
+      address: "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A"
       abi: WildcatSanctionsSentinel
-      startBlock: 4796511
+      startBlock: 18686645
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -192,7 +200,7 @@ dataSources:
 templates:
   - kind: ethereum
     name: SimpleMarketCollateralMultiParty
-    network: sepolia
+    network: mainnet
     source:
       abi: SimpleMarketCollateralMultiParty
     mapping:
@@ -226,7 +234,7 @@ templates:
       file: ./src/simple-collateral.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
-    network: sepolia
+    network: mainnet
     source:
       abi: WildcatMarketControllerFactory
     mapping:
@@ -244,6 +252,10 @@ templates:
           file: ./abis/WildcatMarketControllerFactory.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: NewController(address,address)
           handler: handleNewController
@@ -252,7 +264,7 @@ templates:
       file: ./src/wildcat-market-controller-factory.ts
   - kind: ethereum
     name: WildcatMarketController
-    network: sepolia
+    network: mainnet
     source:
       abi: WildcatMarketController
     mapping:
@@ -271,6 +283,10 @@ templates:
           file: ./abis/WildcatMarket.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: LenderAuthorized(address)
           handler: handleLenderAuthorized
@@ -289,7 +305,7 @@ templates:
       file: ./src/wildcat-market-controller.ts
   - kind: ethereum
     name: WildcatMarket
-    network: sepolia
+    network: mainnet
     source:
       abi: WildcatMarket
     mapping:
@@ -342,11 +358,16 @@ templates:
         - HooksTemplateAdded
         - HooksTemplateDisabled
         - HooksTemplateFeesUpdated
+        - MarketDailyStats
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
       eventHandlers:
         - event: AnnualInterestBipsUpdated(uint256)
           handler: handleAnnualInterestBipsUpdated
@@ -403,7 +424,7 @@ templates:
       file: ./src/wildcat-market.ts
   - kind: ethereum
     name: CombinedHooks
-    network: sepolia
+    network: mainnet
     source:
       abi: CombinedHooks
     mapping:

@@ -24,6 +24,7 @@ import {
   TemporaryExcessReserveRatioUpdated,
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -88,13 +89,14 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     let erc20 = IERC20.bind(event.params.asset);
     let result = erc20.try_isMock();
     // let isMock = !result.reverted && result.value;
-    createToken(assetId, {
+    let newToken = createToken(assetId, {
       address: event.params.asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
       isMock: true,
     });
+    setupTokenPriceFeeds(newToken);
   }
   const marketId = generateMarketId(event.params.market);
   MarketTemplate.create(event.params.market);

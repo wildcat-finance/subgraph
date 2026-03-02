@@ -48,6 +48,7 @@ import {
   Token,
 } from "../generated/schema";
 import { generateEventId, isNullAddress } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
 import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
@@ -177,13 +178,15 @@ function createTokenIfNotExists(asset: Address): Token | null {
     let erc20 = IERC20.bind(asset);
     let result = erc20.try_isMock();
     let isMock = !result.reverted && result.value;
-    return createToken(assetId, {
+    let newToken = createToken(assetId, {
       address: asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
       isMock: isMock,
     });
+    setupTokenPriceFeeds(newToken);
+    return newToken;
   }
   return token;
 }

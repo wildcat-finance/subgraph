@@ -2,6 +2,7 @@ import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { LenderAccount, LenderHooksAccess, Market, WithdrawalBatch } from "../generated/schema";
 import { generateLenderAccountId, generateLenderAuthorizationId, generateLenderHooksAccessId, GetOrCreateReturn, getOrInitializeLenderAccount, getOrInitializeLenderAuthorization } from "../generated/UncrashableEntityHelpers";
 
+
 export function generateEventId(event: ethereum.Event): string {
   return event.transaction.hash
     .toHex()
@@ -146,3 +147,4 @@ export function getOrCreateLenderAccount(
     addedTimestamp: addedTimestamp.toI32(),
   });
 }
+

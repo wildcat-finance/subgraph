@@ -3,6 +3,7 @@ import { ApprovedLiquidator, Token } from "../generated/schema";
 import { createSimpleCollateralContract, createToken, generateTokenId, createLiquidatorApproved, createLiquidatorRemoved,  getApprovedLiquidator, getOrInitializeApprovedLiquidator, getOrInitializeSimpleCollateralFactory, generateMarketId, getMarket, getOrInitializeApprovedCollateralExchange, createCollateralExchangeApproved, createCollateralExchangeRemoved, getApprovedCollateralExchange } from "../generated/UncrashableEntityHelpers";
 import { CollateralContractCreated, ExecutorApproved, ExecutorRemoved, ExchangeRemoved, ExchangeApproved } from "../generated/WildcatMarketCollateralFactory/WildcatMarketCollateralFactory";
 import { generateEventId } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
 import { IERC20 } from "../generated/templates/SimpleMarketCollateralMultiParty/IERC20";
 import { SimpleMarketCollateralMultiParty } from "../generated/templates/SimpleMarketCollateralMultiParty/SimpleMarketCollateralMultiParty";
 import { SimpleMarketCollateralMultiParty as SimpleMarketCollateralMultiPartyTemplate } from "../generated/templates";
@@ -14,13 +15,14 @@ export function handleCollateralContractCreated(event: CollateralContractCreated
       let erc20 = IERC20.bind(event.params.collateralToken);
       let result = erc20.try_isMock();
       let isMock = !result.reverted && result.value;
-      createToken(collateralAssetId, {
+      let newToken = createToken(collateralAssetId, {
         address: event.params.collateralToken,
         name: erc20.name(),
         symbol: erc20.symbol(),
         decimals: erc20.decimals(),
         isMock: isMock
       });
+      setupTokenPriceFeeds(newToken);
     }
     let market = getMarket(generateMarketId(event.params.associatedMarket));
     market.numCollateralContracts = market.numCollateralContracts + 1;

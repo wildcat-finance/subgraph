@@ -15,6 +15,7 @@ import { WildcatMarketController as WildcatMarketControllerTemplate } from "../g
 import { Token } from "../generated/schema";
 import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
 import { isNullAddress } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
 
 function createTokenIfNotExists(asset: Address): string | null {
   if (isNullAddress(asset)) {
@@ -26,13 +27,15 @@ function createTokenIfNotExists(asset: Address): string | null {
     let erc20 = IERC20.bind(asset);
     let result = erc20.try_isMock();
     let isMock = !result.reverted && result.value;
-    return createToken(assetId, {
+    let newToken = createToken(assetId, {
       address: asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
       isMock: isMock,
-    }).id;
+    });
+    setupTokenPriceFeeds(newToken);
+    return newToken.id;
   }
   return token.id;
 }
