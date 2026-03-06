@@ -949,6 +949,7 @@ type ProtocolStats @entity {
   numClosedMarkets: Int!
   numActiveBorrowers: Int!
   numActiveLenders: Int!
+  numActiveLenderAccounts: Int!
 }
 
 type ProtocolDailyStats @entity {
@@ -983,6 +984,7 @@ type ProtocolDailyStats @entity {
   numClosedMarkets: Int!
   numActiveBorrowers: Int!
   numActiveLenders: Int!
+  numActiveLenderAccounts: Int!
 }
 
 type BorrowerStats @entity {
@@ -1044,6 +1046,45 @@ type BorrowerDailyStats @entity {
   numActiveMarkets: Int!
   numDelinquentMarkets: Int!
   numClosedMarkets: Int!
+}
+
+type LenderStats @entity {
+  id: ID! # "LENDER-STATS-{address}"
+  lender: Bytes!
+  firstSeenTimestamp: Int!
+
+  # Cumulative USD all-time
+  totalDepositedUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalInterestEarnedUSD: BigDecimal!
+
+  # Counts
+  numMarkets: Int!
+  numActiveMarkets: Int!
+}
+
+type LenderDailyStats @entity {
+  id: ID! # "LENDER-DAILY-{address}-{dayTimestamp}"
+  lender: Bytes!
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  # Daily deltas in USD
+  dayDepositedUSD: BigDecimal!
+  dayWithdrawalsRequestedUSD: BigDecimal!
+  dayWithdrawalsExecutedUSD: BigDecimal!
+  dayInterestEarnedUSD: BigDecimal!
+
+  # Cumulative USD all-time (snapshotted from LenderStats)
+  totalDepositedUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalInterestEarnedUSD: BigDecimal!
+
+  # Count snapshots
+  numMarkets: Int!
+  numActiveMarkets: Int!
 }
 
 type MarketDailyStats @entity {

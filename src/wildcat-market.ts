@@ -108,9 +108,12 @@ import {
   amountToUSD,
   getOrCreateProtocolStats,
   getOrCreateBorrowerStats,
+  getOrCreateLenderStats,
   getOrCreateProtocolDailyStats,
   getOrCreateBorrowerDailyStats,
+  getOrCreateLenderDailyStats,
   updateBorrowerActiveMarketCount,
+  updateLenderActiveMarketCount,
   getOrCreateMarketDailyStats,
 } from "./daily-stats";
 
@@ -156,14 +159,21 @@ export function handleAuthorizationStatusUpdated(
 ): void {
   let market = getMarket(generateMarketId(event.address));
   let lenderRoles = ["Null", "Blocked", "WithdrawOnly", "DepositAndWithdraw"];
-  let lender = getOrCreateLenderAccount(
+  let lenderResult = getOrCreateLenderAccount(
     market,
     event.address,
     event.params.account,
     event.block.timestamp
-  ).entity;
+  );
+  let lender = lenderResult.entity;
   lender.role = lenderRoles[event.params.role];
   lender.save();
+
+  if (lenderResult.wasCreated) {
+    let ls = getOrCreateLenderStats(event.params.account, event.block.timestamp);
+    ls.numMarkets = ls.numMarkets + 1;
+    ls.save();
+  }
 }
 
 export function handleBorrow(event: BorrowEvent): void {
@@ -261,9 +271,10 @@ function processLenderInterestAccrued(
   event: ethereum.Event,
   lender: LenderAccount,
   market: Market,
-): void {
+): BigInt {
+  let interestEarned = BigInt.zero();
   if (lender.lastScaleFactor.notEqual(market.scaleFactor)) {
-    let interestEarned = calculateInterestEarned(lender, market);
+    interestEarned = calculateInterestEarned(lender, market);
     lender.lastScaleFactor = market.scaleFactor;
     lender.totalInterestEarned = lender.totalInterestEarned.plus(
       interestEarned
@@ -281,6 +292,7 @@ function processLenderInterestAccrued(
     lender.lastUpdatedTimestamp = event.block.timestamp.toI32();
     lender.lastUpdatedBlockNumber = event.block.number.toI32();
   }
+  return interestEarned;
 }
 
 function processWithdrawalBatchInterestAccrued(
@@ -308,12 +320,14 @@ function processWithdrawalBatchInterestAccrued(
 
 export function handleDeposit(event: DepositEvent): void {
   let market = getMarket(generateMarketId(event.address));
-  let lender = getOrCreateLenderAccount(
+  let lenderResult = getOrCreateLenderAccount(
     market,
     event.address,
     event.params.account,
     event.block.timestamp
-  ).entity;
+  );
+  let lender = lenderResult.entity;
+  let lenderAccountCreated = lenderResult.wasCreated;
 
   createDeposit(generateMarketEventId(market), {
     account: lender.id,
@@ -330,7 +344,8 @@ export function handleDeposit(event: DepositEvent): void {
   market.depositIndex = market.depositIndex + 1;
   market.eventIndex = market.eventIndex + 1;
 
-  processLenderInterestAccrued(event, lender, market);
+  let prevLenderBalance = lender.scaledBalance;
+  let interestEarned = processLenderInterestAccrued(event, lender, market);
   lender.totalDeposited = lender.totalDeposited.plus(event.params.assetAmount);
   lender.scaledBalance = lender.scaledBalance.plus(event.params.scaledAmount);
   lender.lastScaleFactor = market.scaleFactor;
@@ -347,19 +362,37 @@ export function handleDeposit(event: DepositEvent): void {
   let hasPrice = !priceMul.equals(BigDecimal.zero());
   let ps = getOrCreateProtocolStats();
   let bs = getOrCreateBorrowerStats(market.borrower);
+  let ls = getOrCreateLenderStats(event.params.account, event.block.timestamp);
   updateBorrowerActiveMarketCount(bs, ps, prevSupply, market.scaledTotalSupply, market.isClosed, market.isClosed);
-  
+  if (lenderAccountCreated) {
+    ls.numMarkets = ls.numMarkets + 1;
+  }
+  updateLenderActiveMarketCount(ls, ps, prevLenderBalance, lender.scaledBalance);
+
   if (hasPrice) {
     let usdDelta = amountToUSD(event.params.assetAmount, priceMul);
     market.totalDepositedUSD = market.totalDepositedUSD.plus(usdDelta);
     ps.totalDepositedUSD = ps.totalDepositedUSD.plus(usdDelta);
     bs.totalDepositedUSD = bs.totalDepositedUSD.plus(usdDelta);
+    ls.totalDepositedUSD = ls.totalDepositedUSD.plus(usdDelta);
+    if (!interestEarned.isZero()) {
+      let interestUSD = amountToUSD(interestEarned, priceMul);
+      ls.totalInterestEarnedUSD = ls.totalInterestEarnedUSD.plus(interestUSD);
+    }
+
     let pds = getOrCreateProtocolDailyStats(event.block.timestamp, ps);
     let bds = getOrCreateBorrowerDailyStats(market.borrower, event.block.timestamp, bs);
+    let lds = getOrCreateLenderDailyStats(event.params.account, event.block.timestamp, ls);
     pds.dayDepositedUSD = pds.dayDepositedUSD.plus(usdDelta);
     bds.dayDepositedUSD = bds.dayDepositedUSD.plus(usdDelta);
+    lds.dayDepositedUSD = lds.dayDepositedUSD.plus(usdDelta);
+    if (!interestEarned.isZero()) {
+      let interestUSD = amountToUSD(interestEarned, priceMul);
+      lds.dayInterestEarnedUSD = lds.dayInterestEarnedUSD.plus(interestUSD);
+    }
     pds.save();
     bds.save();
+    lds.save();
   }
 
   let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
@@ -369,6 +402,7 @@ export function handleDeposit(event: DepositEvent): void {
   mds.save();
   ps.save();
   bs.save();
+  ls.save();
 }
 
 export function handleFeesCollected(event: FeesCollectedEvent): void {
@@ -696,20 +730,25 @@ export function handleTransfer(event: TransferEvent): void {
     )
   ) {
     let market = getMarket(generateMarketId(event.address));
-    let from = getOrCreateLenderAccount(
+    let fromResult = getOrCreateLenderAccount(
       market,
       event.address,
       fromAddress,
       event.block.timestamp
-    ).entity;
-    let to = getOrCreateLenderAccount(
+    );
+    let from = fromResult.entity;
+    let toResult = getOrCreateLenderAccount(
       market,
       event.address,
       toAddress,
       event.block.timestamp
-    ).entity;
-    processLenderInterestAccrued(event, from, market);
-    processLenderInterestAccrued(event, to, market);
+    );
+    let to = toResult.entity;
+
+    let prevFromBalance = from.scaledBalance;
+    let prevToBalance = to.scaledBalance;
+    let fromInterest = processLenderInterestAccrued(event, from, market);
+    let toInterest = processLenderInterestAccrued(event, to, market);
     let scaledAmount = rayDiv(value, market.scaleFactor);
     from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
     to.scaledBalance = to.scaledBalance.plus(scaledAmount);
@@ -717,7 +756,45 @@ export function handleTransfer(event: TransferEvent): void {
     to.save();
 
     let ps = getOrCreateProtocolStats();
+    let fromLs = getOrCreateLenderStats(fromAddress, event.block.timestamp);
+    let toLs = getOrCreateLenderStats(toAddress, event.block.timestamp);
+    if (fromResult.wasCreated) {
+      fromLs.numMarkets = fromLs.numMarkets + 1;
+    }
+    if (toResult.wasCreated) {
+      toLs.numMarkets = toLs.numMarkets + 1;
+    }
+    updateLenderActiveMarketCount(fromLs, ps, prevFromBalance, from.scaledBalance);
+    updateLenderActiveMarketCount(toLs, ps, prevToBalance, to.scaledBalance);
+
+    let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+    let hasPrice = !priceMul.equals(BigDecimal.zero());
+
+    if (hasPrice) {
+      if (!fromInterest.isZero()) {
+        let fromInterestUSD = amountToUSD(fromInterest, priceMul);
+        fromLs.totalInterestEarnedUSD = fromLs.totalInterestEarnedUSD.plus(fromInterestUSD);
+      }
+      if (!toInterest.isZero()) {
+        let toInterestUSD = amountToUSD(toInterest, priceMul);
+        toLs.totalInterestEarnedUSD = toLs.totalInterestEarnedUSD.plus(toInterestUSD);
+      }
+
+      let fromLds = getOrCreateLenderDailyStats(fromAddress, event.block.timestamp, fromLs);
+      let toLds = getOrCreateLenderDailyStats(toAddress, event.block.timestamp, toLs);
+      if (!fromInterest.isZero()) {
+        fromLds.dayInterestEarnedUSD = fromLds.dayInterestEarnedUSD.plus(amountToUSD(fromInterest, priceMul));
+      }
+      if (!toInterest.isZero()) {
+        toLds.dayInterestEarnedUSD = toLds.dayInterestEarnedUSD.plus(amountToUSD(toInterest, priceMul));
+      }
+      fromLds.save();
+      toLds.save();
+    }
+
     ps.save();
+    fromLs.save();
+    toLs.save();
 
     createTransfer(generateEventId(event), {
       market: market.id,
@@ -745,11 +822,10 @@ export function handleWithdrawalBatchClosed(
 
   let bs = getOrCreateBorrowerStats(market.borrower);
   if (batch.expiration != null) {
-    let expirationTime = getWithdrawalBatchExpired(batch.expiration).blockTimestamp;
-    if (expirationTime) {
-      if (expirationTime < event.block.timestamp.toI32()) {
-        bs.numBatchesPaidLate = bs.numBatchesPaidLate + 1;
-      }
+    let expId = batch.expiration as string;
+    let expirationTime = getWithdrawalBatchExpired(expId).blockTimestamp;
+    if (expirationTime < event.block.timestamp.toI32()) {
+      bs.numBatchesPaidLate = bs.numBatchesPaidLate + 1;
     }
   }
   bs.save();
@@ -801,7 +877,7 @@ export function handleWithdrawalBatchExpired(
     normalizedAmountOwed = rayMul(scaledAmountOwed, batch.lastScaleFactor);
   }
 
-  let result =createWithdrawalBatchExpired(generateEventId(event), {
+  let result = createWithdrawalBatchExpired(generateEventId(event), {
     batch: id,
     normalizedAmountPaid: normalizedAmountPaid,
     scaledAmountBurned: scaledAmountBurned,
@@ -934,20 +1010,26 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
   if (hasPrice) {
     let usdDelta = amountToUSD(normalizedAmount, priceMul);
     market.totalWithdrawalsExecutedUSD = market.totalWithdrawalsExecutedUSD.plus(usdDelta);
-    
+
     let ps = getOrCreateProtocolStats();
     let bs = getOrCreateBorrowerStats(market.borrower);
+    let ls = getOrCreateLenderStats(account, event.block.timestamp);
     ps.totalWithdrawalsExecutedUSD = ps.totalWithdrawalsExecutedUSD.plus(usdDelta);
     bs.totalWithdrawalsExecutedUSD = bs.totalWithdrawalsExecutedUSD.plus(usdDelta);
+    ls.totalWithdrawalsExecutedUSD = ls.totalWithdrawalsExecutedUSD.plus(usdDelta);
     ps.save();
     bs.save();
+    ls.save();
 
     let pds = getOrCreateProtocolDailyStats(event.block.timestamp, ps);
-    pds.dayWithdrawalsExecutedUSD = pds.dayWithdrawalsExecutedUSD.plus(usdDelta);
     let bds = getOrCreateBorrowerDailyStats(market.borrower, event.block.timestamp, bs);
+    let lds = getOrCreateLenderDailyStats(account, event.block.timestamp, ls);
+    pds.dayWithdrawalsExecutedUSD = pds.dayWithdrawalsExecutedUSD.plus(usdDelta);
     bds.dayWithdrawalsExecutedUSD = bds.dayWithdrawalsExecutedUSD.plus(usdDelta);
+    lds.dayWithdrawalsExecutedUSD = lds.dayWithdrawalsExecutedUSD.plus(usdDelta);
     bds.save();
     pds.save();
+    lds.save();
   }
   if (batch.isClosed) {
     status.isCompleted = true;
@@ -1018,8 +1100,8 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   );
   let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
 
-  processLenderInterestAccrued(event, lender, market);
-  // let prevLenderBalance = lender.scaledBalance;
+  let prevLenderBalance = lender.scaledBalance;
+  let interestEarned = processLenderInterestAccrued(event, lender, market);
   lender.scaledBalance = lender.scaledBalance.minus(scaledAmount);
   market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.plus(
     scaledAmount
@@ -1038,15 +1120,22 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
 
   market.totalWithdrawalsRequested = market.totalWithdrawalsRequested.plus(normalizedAmount);
 
+  let ps = getOrCreateProtocolStats();
+  let ls = getOrCreateLenderStats(account, event.block.timestamp);
+  updateLenderActiveMarketCount(ls, ps, prevLenderBalance, lender.scaledBalance);
+
   if (hasPrice) {
     let usdDelta = amountToUSD(normalizedAmount, priceMul);
     market.totalWithdrawalsRequestedUSD = market.totalWithdrawalsRequestedUSD.plus(usdDelta);
 
-    let ps = getOrCreateProtocolStats();
     let bs = getOrCreateBorrowerStats(market.borrower);
     ps.totalWithdrawalsRequestedUSD = ps.totalWithdrawalsRequestedUSD.plus(usdDelta);
     bs.totalWithdrawalsRequestedUSD = bs.totalWithdrawalsRequestedUSD.plus(usdDelta);
-    ps.save();
+    ls.totalWithdrawalsRequestedUSD = ls.totalWithdrawalsRequestedUSD.plus(usdDelta);
+    if (!interestEarned.isZero()) {
+      let interestUSD = amountToUSD(interestEarned, priceMul);
+      ls.totalInterestEarnedUSD = ls.totalInterestEarnedUSD.plus(interestUSD);
+    }
     bs.save();
 
     let bds = getOrCreateBorrowerDailyStats(market.borrower, event.block.timestamp, bs);
@@ -1056,7 +1145,16 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     let pds = getOrCreateProtocolDailyStats(event.block.timestamp, ps);
     pds.dayWithdrawalsRequestedUSD = pds.dayWithdrawalsRequestedUSD.plus(usdDelta);
     pds.save();
+
+    let lds = getOrCreateLenderDailyStats(account, event.block.timestamp, ls);
+    lds.dayWithdrawalsRequestedUSD = lds.dayWithdrawalsRequestedUSD.plus(usdDelta);
+    if (!interestEarned.isZero()) {
+      lds.dayInterestEarnedUSD = lds.dayInterestEarnedUSD.plus(amountToUSD(interestEarned, priceMul));
+    }
+    lds.save();
   }
+  ps.save();
+  ls.save();
   let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
   mds.dayWithdrawalsRequested = mds.dayWithdrawalsRequested.plus(normalizedAmount);
   lender.save();

@@ -2,8 +2,10 @@ import { BigDecimal, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import {
   ProtocolStats,
   BorrowerStats,
+  LenderStats,
   ProtocolDailyStats,
   BorrowerDailyStats,
+  LenderDailyStats,
   Token,
   Market,
   MarketDailyStats,
@@ -11,10 +13,13 @@ import {
 import {
   generateProtocolStatsId,
   generateBorrowerStatsId,
+  generateLenderStatsId,
   getOrInitializeProtocolStats,
   getOrInitializeBorrowerStats,
+  getOrInitializeLenderStats,
   getOrInitializeProtocolDailyStats,
   getOrInitializeBorrowerDailyStats,
+  getOrInitializeLenderDailyStats,
   getOrInitializeMarketDailyStats,
 } from "../generated/UncrashableEntityHelpers";
 import { ensureTokenDailyPrice } from "./price-feeds";
@@ -87,10 +92,13 @@ export function getOrCreateBorrowerStats(borrower: Bytes): BorrowerStats {
   }).entity;
 }
 
-// export function getOrCreateLenderStats(lender: Bytes): LenderStats {
-//   let id = generateLenderStatsId(lender);
-//   return getOrInitializeLenderStats(id, { lender }).entity;
-// }
+export function getOrCreateLenderStats(lender: Bytes, timestamp: BigInt): LenderStats {
+  let id = generateLenderStatsId(lender);
+  return getOrInitializeLenderStats(id, {
+    lender,
+    firstSeenTimestamp: timestamp.toI32(),
+  }).entity;
+}
 
 // -------------------------------------------------------------------------- //
 //                           Daily snapshot helpers                           //
@@ -115,6 +123,7 @@ export function refreshProtocolDailyFromStats(entity: ProtocolDailyStats, ps: Pr
   entity.numClosedMarkets = ps.numClosedMarkets;
   entity.numActiveBorrowers = ps.numActiveBorrowers;
   entity.numActiveLenders = ps.numActiveLenders;
+  entity.numActiveLenderAccounts = ps.numActiveLenderAccounts;
 }
 
 export function getOrCreateProtocolDailyStats(timestamp: BigInt, ps: ProtocolStats): ProtocolDailyStats {
@@ -184,38 +193,32 @@ export function getOrCreateBorrowerDailyStats(borrower: Bytes, timestamp: BigInt
   return result.entity;
 }
 
-// function refreshLenderDailyFromStats(entity: LenderDailyStats, ls: LenderStats): void {
-//   entity.totalDepositedUSD = ls.totalDepositedUSD;
-//   entity.totalWithdrawalsRequestedUSD = ls.totalWithdrawalsRequestedUSD;
-//   entity.totalWithdrawalsExecutedUSD = ls.totalWithdrawalsExecutedUSD;
-//   entity.totalInterestEarnedUSD = ls.totalInterestEarnedUSD;
-//   entity.numActiveMarkets = ls.numActiveMarkets;
-//   entity.totalBalanceUSD = ls.totalDepositedUSD
-//     .minus(ls.totalWithdrawalsExecutedUSD)
-//     .plus(ls.totalInterestEarnedUSD);
-// }
+export function getOrCreateLenderDailyStats(lender: Bytes, timestamp: BigInt, ls: LenderStats): LenderDailyStats {
+  let startOfDay = dayTimestamp(timestamp);
+  let id = "LENDER-DAILY-" + lender.toHex() + "-" + startOfDay.toString();
 
-// export function getOrCreateLenderDailyStats(lender: Bytes, timestamp: BigInt, ls: LenderStats): LenderDailyStats {
-//   let startOfDay = dayTimestamp(timestamp);
-//   let id = "LENDER-DAILY-" + lender.toHex() + "-" + startOfDay.toString();
+  let result = getOrInitializeLenderDailyStats(id, {
+    startTimestamp: startOfDay,
+    endTimestamp: startOfDay + 86400,
+    lender: lender,
+    numMarkets: ls.numMarkets,
+    numActiveMarkets: ls.numActiveMarkets,
+    totalDepositedUSD: ls.totalDepositedUSD,
+    totalWithdrawalsRequestedUSD: ls.totalWithdrawalsRequestedUSD,
+    totalWithdrawalsExecutedUSD: ls.totalWithdrawalsExecutedUSD,
+    totalInterestEarnedUSD: ls.totalInterestEarnedUSD,
+  });
+  if (!result.wasCreated) {
+    result.entity.numMarkets = ls.numMarkets;
+    result.entity.numActiveMarkets = ls.numActiveMarkets;
+    result.entity.totalDepositedUSD = ls.totalDepositedUSD;
+    result.entity.totalWithdrawalsRequestedUSD = ls.totalWithdrawalsRequestedUSD;
+    result.entity.totalWithdrawalsExecutedUSD = ls.totalWithdrawalsExecutedUSD;
+    result.entity.totalInterestEarnedUSD = ls.totalInterestEarnedUSD;
+  }
 
-//   let result = getOrInitializeLenderDailyStats(id, {
-//     startTimestamp: startOfDay,
-//     endTimestamp: startOfDay + 86400,
-//     lender: lender,
-//     numActiveMarkets: ls.numActiveMarkets,
-//     totalBalanceUSD: ls.totalDepositedUSD
-//       .minus(ls.totalWithdrawalsExecutedUSD)
-//       .plus(ls.totalInterestEarnedUSD),
-//     totalDepositedUSD
-//     dayDepositedUSD: ls.totalDepositedUSD,
-//     totalWithdrawalsRequestedUSD: ls.totalWithdrawalsRequestedUSD,
-//     totalWithdrawalsExecutedUSD: ls.totalWithdrawalsExecutedUSD,
-//     totalInterestEarnedUSD: ls.totalInterestEarnedUSD,
-//   });
-
-//   return result.entity;
-// }
+  return result.entity;
+}
 
 export function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): MarketDailyStats {
   let startOfDay = dayTimestamp(timestamp);
@@ -280,34 +283,37 @@ export function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): 
 //                     Active market count transitions                        //
 // -------------------------------------------------------------------------- //
 
-// /**
-//  * On zero↔nonzero transitions of a lender's scaledBalance:
-//  * adjusts LenderStats.numActiveMarkets and ProtocolStats.numActiveLenders.
-//  *
-//  * Does NOT save the entities — caller must save ls and ps after all mutations.
-//  */
-// export function updateLenderActiveMarketCount(
-//   ls: LenderStats,
-//   ps: ProtocolStats,
-//   prevBalance: BigInt,
-//   newBalance: BigInt
-// ): void {
-//   let wasZero = prevBalance.isZero();
-//   let isZero = newBalance.isZero();
-//   if (wasZero == isZero) return;
+/**
+ * On zero↔nonzero transitions of a lender's scaledBalance:
+ * adjusts LenderStats.numActiveMarkets, ProtocolStats.numActiveLenders,
+ * and ProtocolStats.numActiveLenderAccounts.
+ *
+ * Does NOT save the entities — caller must save ls and ps after all mutations.
+ */
+export function updateLenderActiveMarketCount(
+  ls: LenderStats,
+  ps: ProtocolStats,
+  prevBalance: BigInt,
+  newBalance: BigInt
+): void {
+  let wasZero = prevBalance.isZero();
+  let isZero = newBalance.isZero();
+  if (wasZero == isZero) return;
 
-//   if (wasZero && !isZero) {
-//     ls.numActiveMarkets = ls.numActiveMarkets + 1;
-//     if (ls.numActiveMarkets == 1) {
-//       ps.numActiveLenders = ps.numActiveLenders + 1;
-//     }
-//   } else {
-//     ls.numActiveMarkets = ls.numActiveMarkets - 1;
-//     if (ls.numActiveMarkets == 0) {
-//       ps.numActiveLenders = ps.numActiveLenders - 1;
-//     }
-//   }
-// }
+  if (wasZero && !isZero) {
+    ls.numActiveMarkets = ls.numActiveMarkets + 1;
+    ps.numActiveLenderAccounts = ps.numActiveLenderAccounts + 1;
+    if (ls.numActiveMarkets == 1) {
+      ps.numActiveLenders = ps.numActiveLenders + 1;
+    }
+  } else {
+    ls.numActiveMarkets = ls.numActiveMarkets - 1;
+    ps.numActiveLenderAccounts = ps.numActiveLenderAccounts - 1;
+    if (ls.numActiveMarkets == 0) {
+      ps.numActiveLenders = ps.numActiveLenders - 1;
+    }
+  }
+}
 
 /**
  * On zero↔nonzero transitions of scaledTotalSupply on non-closed markets,

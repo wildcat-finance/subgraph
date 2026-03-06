@@ -471,6 +471,7 @@ entitySettings:
       numClosedMarkets: {}
       numActiveBorrowers: {}
       numActiveLenders: {}
+      numActiveLenderAccounts: {}
     entityId:
       - type: constant
         value: "PROTOCOL_STATS"
@@ -490,6 +491,7 @@ entitySettings:
       numClosedMarkets: {}
       numActiveBorrowers: {}
       numActiveLenders: {}
+      numActiveLenderAccounts: {}
     entityId:
       - type: constant
         value: "PROTOCOL-DAILY-STATS"
@@ -551,32 +553,32 @@ entitySettings:
         type: Bytes
       - name: startTimestamp
         type: Int
-  # LenderStats:
-  #   useDefault:
-  #     lastUpdatedTimestamp: {}
-  #     totalDepositedUSDAllTime: {}
-  #     totalWithdrawalsRequestedUSDAllTime: {}
-  #     totalWithdrawalsExecutedUSDAllTime: {}
-  #     totalInterestEarnedUSDAllTime: {}
-  #     numActiveMarkets: {}
-  #   entityId:
-  #     - type: constant
-  #       value: "LENDER-STATS"
-  #     - name: lender
-  #       type: Bytes
-  # LenderDailyStats:
-  #   useDefault:
-  #     totalDepositedUSD: {}
-  #     totalWithdrawalsRequestedUSD: {}
-  #     totalWithdrawalsExecutedUSD: {}
-  #     totalInterestEarnedUSD: {}
-  #   entityId:
-  #     - type: constant
-  #       value: "LENDER-DAILY-STATS"
-  #     - name: lender
-  #       type: Bytes
-  #     - name: startTimestamp
-  #       type: Int
+  LenderStats:
+    useDefault:
+      totalDepositedUSD: {}
+      totalWithdrawalsRequestedUSD: {}
+      totalWithdrawalsExecutedUSD: {}
+      totalInterestEarnedUSD: {}
+      numMarkets: {}
+      numActiveMarkets: {}
+    entityId:
+      - type: constant
+        value: "LENDER-STATS"
+      - name: lender
+        type: Bytes
+  LenderDailyStats:
+    useDefault:
+      dayDepositedUSD: {}
+      dayWithdrawalsRequestedUSD: {}
+      dayWithdrawalsExecutedUSD: {}
+      dayInterestEarnedUSD: {}
+    entityId:
+      - type: constant
+        value: "LENDER-DAILY-STATS"
+      - name: lender
+        type: Bytes
+      - name: startTimestamp
+        type: Int
   SimpleCollateralFactory:
     useDefault: {}
   ApprovedLiquidator:
