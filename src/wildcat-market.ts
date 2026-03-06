@@ -801,7 +801,7 @@ export function handleWithdrawalBatchExpired(
     normalizedAmountOwed = rayMul(scaledAmountOwed, batch.lastScaleFactor);
   }
 
-  createWithdrawalBatchExpired(generateEventId(event), {
+  let result =createWithdrawalBatchExpired(generateEventId(event), {
     batch: id,
     normalizedAmountPaid: normalizedAmountPaid,
     scaledAmountBurned: scaledAmountBurned,
@@ -814,6 +814,7 @@ export function handleWithdrawalBatchExpired(
   });
   batch.isExpired = true;
   market.pendingWithdrawalExpiry = BigInt.zero();
+  batch.expiration = result.id;
   batch.save();
   market.save();
   let bs = getOrCreateBorrowerStats(market.borrower);
