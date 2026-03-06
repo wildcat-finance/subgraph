@@ -1046,24 +1046,6 @@ type BorrowerDailyStats @entity {
   numClosedMarkets: Int!
 }
 
-type LenderAccountDailyStats @entity {
-  id: ID! # "{lenderAccount}-{market}-{dayTimestamp}"
-  lenderAccount: LenderAccount!
-  startTimestamp: Int!
-  endTimestamp: Int!
-  market: Market!
-
-  # Daily deltas
-  dayDeposited: BigInt!
-  dayInterestEarned: BigInt!
-
-  # Snapshot values from LenderAccount
-  totalDeposited: BigInt!
-  totalInterestEarned: BigInt!
-  lastScaleFactor: BigInt!
-  scaledBalance: BigInt!
-}
-
 type MarketDailyStats @entity {
   id: ID!
   startTimestamp: Int!
