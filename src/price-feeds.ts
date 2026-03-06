@@ -27,11 +27,13 @@ const ETH_USD_FEED = Address.fromString(
 const BTC_USD_FEED = Address.fromString(
   "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
 );
+const SOL_USD_FEED = Address.fromString("0x4ffC43a60e009B551865A93d232E33Fce9f01507");
 
 // Known stablecoin addresses (mainnet)
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+const SOL = "0xd31a59c85ae9d8edefec411d448f90841571b89c";
 
 const ONE_E8 = new BigDecimal(BigInt.fromI64(100000000)); // 10^8
 const SECONDS_PER_DAY: i64 = 86400;
@@ -55,6 +57,13 @@ export function setupTokenPriceFeeds(token: Token): void {
   if (addr == WETH) {
     token.priceFeed0 = ETH_USD_FEED
     log.warning("Token is WETH: {}", [addr]);
+    token.save();
+    return;
+  }
+
+  if (addr == SOL) {
+    token.priceFeed0 = SOL_USD_FEED;
+    log.warning("Token is SOL: {}", [addr]);
     token.save();
     return;
   }

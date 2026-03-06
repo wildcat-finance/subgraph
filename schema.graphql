@@ -727,7 +727,8 @@ type WithdrawalBatch @entity {
   interestAccrualRecords: [WithdrawalBatchInterestAccrued!]!
     @derivedFrom(field: "batch")
   creation: WithdrawalBatchCreated! @derivedFrom(field: "batch")
-  expiration: WithdrawalBatchExpired @derivedFrom(field: "batch")
+  # Field must actually be set so it can be checked in the indexer
+  expiration: WithdrawalBatchExpired
 }
 
 type WithdrawalBatchInterestAccrued @entity(immutable: true) {
@@ -846,6 +847,27 @@ type Market @entity {
   # all time withdrawals executed
   totalWithdrawalsExecuted: BigInt!
 
+  # ----------------------------- Cumulative USD ------------------------------ #
+  # all time borrows in USD
+  totalBorrowedUSD: BigDecimal!
+  # all time DebtRepaid amounts in USD
+  totalRepaidUSD: BigDecimal!
+  # all time earnings from base APR in USD
+  totalBaseInterestAccruedUSD: BigDecimal!
+  # all time earnings from delinquency fees in USD
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  # all time protocol fees in USD
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  # all time deposits in USD
+  totalDepositedUSD: BigDecimal!
+  # all time withdrawals requested in USD
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  # all time withdrawals executed in USD
+  totalWithdrawalsExecutedUSD: BigDecimal!
+
+  # Current total debt in USD (scaledTotalSupply * scaleFactor / RAY * priceUSD)
+  totalDebtUSD: BigDecimal!
+
   eventIndex: Int!
   delinquencyStatusChangedIndex: Int!
   borrowIndex: Int!
@@ -903,26 +925,180 @@ type Market @entity {
   tokenDailyPrice: TokenDailyPrice
 }
 
+# -------------------------------------------------------------------------- #
+#                         Protocol / Borrower / Lender Stats                 #
+# -------------------------------------------------------------------------- #
+
+type ProtocolStats @entity {
+  id: ID! # "PROTOCOL_STATS"
+
+  # Cumulative USD all-time
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+
+  # Counts
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+  numActiveBorrowers: Int!
+  numActiveLenders: Int!
+}
+
+type ProtocolDailyStats @entity {
+  id: ID! # "PROTOCOL-{dayTimestamp}"
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  # Daily USD deltas
+  dayDepositedUSD: BigDecimal!
+  dayBorrowedUSD: BigDecimal!
+  dayRepaidUSD: BigDecimal!
+  dayWithdrawalsRequestedUSD: BigDecimal!
+  dayWithdrawalsExecutedUSD: BigDecimal!
+  dayBaseInterestAccruedUSD: BigDecimal!
+  dayDelinquencyFeesAccruedUSD: BigDecimal!
+  dayProtocolFeesAccruedUSD: BigDecimal!
+
+  # Cumulative USD all-time (snapshotted from ProtocolStats)
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+
+  # Count snapshots
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+  numActiveBorrowers: Int!
+  numActiveLenders: Int!
+}
+
+type BorrowerStats @entity {
+  id: ID! # "BORROWER-STATS-{address}"
+  borrower: Bytes!
+
+  # Cumulative USD all-time
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+
+  # Counts
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+
+  # Total withdrawal batches that have expired
+  numBatchesExpired: Int!
+  # Total withdrawal batches that expired without sufficient assets to cover all withdrawals
+  numBatchesExpiredUnpaid: Int!
+  # Total withdrawal batches that expired with insufficient assets and were paid later
+  numBatchesPaidLate: Int!
+}
+
+type BorrowerDailyStats @entity {
+  id: ID! # "BORROWER-DAILY-{address}-{dayTimestamp}"
+  borrower: Bytes!
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  # Daily deltas in USD
+  dayDepositedUSD: BigDecimal!
+  dayBorrowedUSD: BigDecimal!
+  dayRepaidUSD: BigDecimal!
+  dayWithdrawalsRequestedUSD: BigDecimal!
+  dayWithdrawalsExecutedUSD: BigDecimal!
+  dayBaseInterestAccruedUSD: BigDecimal!
+  dayDelinquencyFeesAccruedUSD: BigDecimal!
+  dayProtocolFeesAccruedUSD: BigDecimal!
+
+  # Cumulative USD all-time (snapshotted from BorrowerStats)
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+
+  # Count snapshots
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+}
+
+type LenderAccountDailyStats @entity {
+  id: ID! # "{lenderAccount}-{market}-{dayTimestamp}"
+  lenderAccount: LenderAccount!
+  startTimestamp: Int!
+  endTimestamp: Int!
+  market: Market!
+
+  # Daily deltas
+  dayDeposited: BigInt!
+  dayInterestEarned: BigInt!
+
+  # Snapshot values from LenderAccount
+  totalDeposited: BigInt!
+  totalInterestEarned: BigInt!
+  lastScaleFactor: BigInt!
+  scaledBalance: BigInt!
+}
+
 type MarketDailyStats @entity {
   id: ID!
   startTimestamp: Int!
   endTimestamp: Int!
   market: Market!
+
+  # Daily values in asset amount (not replicated as USD since those can be attained with the usdPrice field)
+  dayDeposited: BigInt!
+  dayWithdrawalsRequested: BigInt!
+  dayWithdrawalsExecuted: BigInt!
+  dayBorrowed: BigInt!
+  dayRepaid: BigInt!
+  dayBaseInterestAccrued: BigInt!
+  dayDelinquencyFeesAccrued: BigInt!
+  dayProtocolFeesAccrued: BigInt!
+
+  # Cumulative values in asset amount
+  totalBorrowed: BigInt!
+  totalRepaid: BigInt!
+  totalBaseInterestAccrued: BigInt!
+  totalDelinquencyFeesAccrued: BigInt!
+  totalProtocolFeesAccrued: BigInt!
   totalDeposited: BigInt!
   totalWithdrawalsRequested: BigInt!
   totalWithdrawalsExecuted: BigInt!
-  totalBorrowed: BigInt!
-  totalRepaid: BigInt!
 
-  # Cumulative values
-  totalBorrowedAllTime: BigInt!
-  totalRepaidAllTime: BigInt!
-  totalBaseInterestAccruedAllTime: BigInt!
-  totalDelinquencyFeesAccruedAllTime: BigInt!
-  totalProtocolFeesAccruedAllTime: BigInt!
-  totalDepositedAllTime: BigInt!
-  totalWithdrawalsRequestedAllTime: BigInt!
-  totalWithdrawalsExecutedAllTime: BigInt!
+  # Cumulative values in USD amount
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  totalDepositedUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
 
   scaledTotalSupply: BigInt!
   scaleFactor: BigInt!

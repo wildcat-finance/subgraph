@@ -25,6 +25,7 @@ import {
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
+import { getOrCreateProtocolStats, getOrCreateBorrowerStats } from "./daily-stats";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -140,6 +141,15 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
   });
   controller.numMarkets = controller.numMarkets + 1;
   controller.save();
+
+  // Update protocol and borrower stats
+  let ps = getOrCreateProtocolStats();
+  ps.numMarkets = ps.numMarkets + 1;
+  ps.save();
+
+  let bs = getOrCreateBorrowerStats(controller.borrower);
+  bs.numMarkets = bs.numMarkets + 1;
+  bs.save();
 }
 
 export function handleTemporaryExcessReserveRatioActivated(
