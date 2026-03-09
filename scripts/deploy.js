@@ -5,6 +5,9 @@ require("dotenv").config();
 const provider = process.argv[2];
 const network = process.argv[3];
 const subgraphName = process.argv[4] || network;
+const devDeployKey = process.env.DEV_DEPLOY_KEY;
+const devIpfsUrl = process.env.DEV_IPFS_URL;
+const devNodeUrl = process.env.DEV_NODE_URL;
 
 if (!network) {
   console.error("Usage: yarn deploy <provider> <network> <subgraph-name>");
@@ -34,6 +37,18 @@ run(`yarn netconfig ${network}`);
 run(`yarn build`);
 
 switch (provider) {
+  case "dev":
+    if (!devDeployKey || !devNodeUrl || !devIpfsUrl) {
+      console.error("DEV_DEPLOY_KEY, DEV_NODE_URL, and DEV_IPFS_URL must be set");
+      process.exit(1);
+    }
+    // Graph name can't contain periods or hyphens
+    const deployId = `${subgraphName}_${version.replaceAll(/\.\-/g, '_')}`;
+    run(`
+      graph deploy --node ${devNodeUrl} --ipfs ${devIpfsUrl} --deploy-key ${devDeployKey} --headers '{"Authorization": "Bearer ${devDeployKey}"}' --version-label ${version} ${deployId}
+    `);
+    console.log(`Deployed ${subgraphName}@${version} to dev with name ${deployId}`);
+    break;
   case "thegraph":
     run(
       `graph deploy --node https://api.studio.thegraph.com/deploy/ ${subgraphName} --version-label ${version}`
@@ -51,6 +66,6 @@ switch (provider) {
     break;
 
   default:
-    console.error("Unknown provider. Use: thegraph | alchemy | goldsky");
+    console.error("Unknown provider. Use: thegraph | alchemy | goldsky | dev");
     process.exit(1);
 }
