@@ -485,13 +485,6 @@ entitySettings:
       dayBaseInterestAccruedUSD: {}
       dayDelinquencyFeesAccruedUSD: {}
       dayProtocolFeesAccruedUSD: {}
-      numMarkets: {}
-      numActiveMarkets: {}
-      numDelinquentMarkets: {}
-      numClosedMarkets: {}
-      numActiveBorrowers: {}
-      numActiveLenders: {}
-      numActiveLenderAccounts: {}
     entityId:
       - type: constant
         value: "PROTOCOL-DAILY-STATS"

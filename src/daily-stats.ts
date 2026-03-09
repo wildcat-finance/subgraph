@@ -140,6 +140,13 @@ export function getOrCreateProtocolDailyStats(timestamp: BigInt, ps: ProtocolSta
     totalBaseInterestAccruedUSD: ps.totalBaseInterestAccruedUSD,
     totalDelinquencyFeesAccruedUSD: ps.totalDelinquencyFeesAccruedUSD,
     totalProtocolFeesAccruedUSD: ps.totalProtocolFeesAccruedUSD,
+    numActiveBorrowers: ps.numActiveBorrowers,
+    numActiveLenderAccounts: ps.numActiveLenderAccounts,
+    numActiveLenders: ps.numActiveLenders,
+    numActiveMarkets: ps.numActiveMarkets,
+    numDelinquentMarkets: ps.numDelinquentMarkets,
+    numClosedMarkets: ps.numClosedMarkets,
+    numMarkets: ps.numMarkets,
   });
   if (!result.wasCreated) {
     result.entity.totalDepositedUSD = ps.totalDepositedUSD;
@@ -150,6 +157,13 @@ export function getOrCreateProtocolDailyStats(timestamp: BigInt, ps: ProtocolSta
     result.entity.totalBaseInterestAccruedUSD = ps.totalBaseInterestAccruedUSD;
     result.entity.totalDelinquencyFeesAccruedUSD = ps.totalDelinquencyFeesAccruedUSD;
     result.entity.totalProtocolFeesAccruedUSD = ps.totalProtocolFeesAccruedUSD;
+    result.entity.numActiveBorrowers = ps.numActiveBorrowers;
+    result.entity.numActiveLenderAccounts = ps.numActiveLenderAccounts;
+    result.entity.numActiveLenders = ps.numActiveLenders;
+    result.entity.numActiveMarkets = ps.numActiveMarkets;
+    result.entity.numDelinquentMarkets = ps.numDelinquentMarkets;
+    result.entity.numClosedMarkets = ps.numClosedMarkets;
+    result.entity.numMarkets = ps.numMarkets;
   }
   return result.entity;
 }
