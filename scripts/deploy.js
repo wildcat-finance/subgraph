@@ -43,10 +43,12 @@ switch (provider) {
       process.exit(1);
     }
     // Graph name can't contain periods or hyphens
-    const deployId = `${subgraphName}_${version.replaceAll(/\.\-/g, '_')}`;
-    run(`
-      graph deploy --node ${devNodeUrl} --ipfs ${devIpfsUrl} --deploy-key ${devDeployKey} --headers '{"Authorization": "Bearer ${devDeployKey}"}' --version-label ${version} ${deployId}
-    `);
+    const deployId = `${subgraphName}_${version.replaceAll(/[.\-]/g, '_')}`;
+    // Try to create subgraph if it doesn't exist
+    try {
+      run(`graph create --node ${devNodeUrl} --access-token ${devDeployKey} ${deployId}`);
+    } catch (err) {}
+    run(`graph deploy --node ${devNodeUrl} --ipfs ${devIpfsUrl} --deploy-key ${devDeployKey} --headers '{"Authorization": "Bearer ${devDeployKey}"}' --version-label ${version} ${deployId}`);
     console.log(`Deployed ${subgraphName}@${version} to dev with name ${deployId}`);
     break;
   case "thegraph":
