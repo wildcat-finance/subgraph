@@ -955,7 +955,7 @@ export function handleWithdrawalBatchPayment(
   let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
   let pds = getOrCreateProtocolDailyStats(event.block.timestamp, ps);
   let bds = getOrCreateBorrowerDailyStats(market.borrower, event.block.timestamp, bs);
-  mds.dayWithdrawalsRequested = mds.dayWithdrawalsRequested.plus(normalizedAmountPaid);
+  mds.dayRepaid = mds.dayRepaid.plus(normalizedAmountPaid);
   mds.save();
   pds.save();
   bds.save();
