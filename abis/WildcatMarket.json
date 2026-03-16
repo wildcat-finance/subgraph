@@ -1,173 +1,16 @@
 [
   {
-    "inputs": [],
-    "name": "AccountBlacklisted",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "AccountNotBlocked",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "BadLaunchCode",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "BorrowAmountTooHigh",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "BorrowFromClosedMarket",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "CloseMarketInPenalizedDelinquency",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "CloseMarketWithUnpaidWithdrawals",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "DepositToClosedMarket",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "FIFOQueueOutOfBounds",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "FeeSetWithoutRecipient",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InsufficientReservesForFeeWithdrawal",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InsufficientReservesForNewLiquidityRatio",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InsufficientReservesForOldLiquidityRatio",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InterestFeeTooHigh",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InterestRateTooHigh",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "MaxSupplyExceeded",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NewMaxSupplyTooLow",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NoReentrantCalls",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NotApprovedBorrower",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NotApprovedLender",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NotController",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NotReversedOrStunning",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NullBurnAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NullFeeAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NullMintAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NullRepayAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NullTransferAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NullWithdrawalAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "PenaltyFeeTooHigh",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "RepayToClosedMarket",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ReserveRatioBipsTooHigh",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "UnknownNameQueryError",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "UnknownSymbolQueryError",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "WithdrawalBatchNotExpired",
-    "type": "error"
+    "type": "event",
+    "name": "AccountSanctioned",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "anonymous": false,
@@ -238,6 +81,44 @@
     ],
     "name": "Borrow",
     "type": "event"
+  },
+  {
+    "type": "event",
+    "name": "ChangedSpherexEngineAddress",
+    "inputs": [
+      {
+        "name": "oldEngineAddress",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newEngineAddress",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ChangedSpherexOperator",
+    "inputs": [
+      {
+        "name": "oldSphereXAdmin",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "newSphereXAdmin",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "anonymous": false,
@@ -377,6 +258,37 @@
     ],
     "name": "ReserveRatioBipsUpdated",
     "type": "event"
+  },
+  {
+    "type": "event",
+    "name": "SanctionedAccountAssetsQueuedForWithdrawal",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "expiry",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "scaledAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "normalizedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "anonymous": false,
@@ -643,6 +555,176 @@
   },
   {
     "inputs": [],
+    "name": "AccountBlacklisted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AccountNotBlocked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BadLaunchCode",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BorrowAmountTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BorrowFromClosedMarket",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CloseMarketInPenalizedDelinquency",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CloseMarketWithUnpaidWithdrawals",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DepositToClosedMarket",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "FeeSetWithoutRecipient",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "FIFOQueueOutOfBounds",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InsufficientReservesForFeeWithdrawal",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InsufficientReservesForNewLiquidityRatio",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InsufficientReservesForOldLiquidityRatio",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InterestFeeTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InterestRateTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaxSupplyExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NewMaxSupplyTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NoReentrantCalls",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotApprovedBorrower",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotApprovedLender",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotController",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotReversedOrStunning",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NullBurnAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NullFeeAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NullMintAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NullRepayAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NullTransferAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NullWithdrawalAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PenaltyFeeTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "RepayToClosedMarket",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReserveRatioBipsTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnknownNameQueryError",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnknownSymbolQueryError",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "WithdrawalBatchNotExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "accruedProtocolFees",
     "outputs": [
       {
@@ -821,86 +903,6 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentState",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "bool",
-            "name": "isClosed",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint128",
-            "name": "maxTotalSupply",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "accruedProtocolFees",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "normalizedUnclaimedWithdrawals",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint104",
-            "name": "scaledTotalSupply",
-            "type": "uint104"
-          },
-          {
-            "internalType": "uint104",
-            "name": "scaledPendingWithdrawals",
-            "type": "uint104"
-          },
-          {
-            "internalType": "uint32",
-            "name": "pendingWithdrawalExpiry",
-            "type": "uint32"
-          },
-          {
-            "internalType": "bool",
-            "name": "isDelinquent",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint32",
-            "name": "timeDelinquent",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint16",
-            "name": "annualInterestBips",
-            "type": "uint16"
-          },
-          {
-            "internalType": "uint16",
-            "name": "reserveRatioBips",
-            "type": "uint16"
-          },
-          {
-            "internalType": "uint112",
-            "name": "scaleFactor",
-            "type": "uint112"
-          },
-          {
-            "internalType": "uint32",
-            "name": "lastInterestAccruedTimestamp",
-            "type": "uint32"
-          }
-        ],
-        "internalType": "struct MarketState",
-        "name": "state",
-        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -1101,7 +1103,7 @@
           }
         ],
         "internalType": "struct AccountWithdrawalStatus",
-        "name": "",
+        "name": "status",
         "type": "tuple"
       }
     ],
@@ -1174,7 +1176,7 @@
           }
         ],
         "internalType": "struct WithdrawalBatch",
-        "name": "",
+        "name": "batch",
         "type": "tuple"
       }
     ],
@@ -1183,7 +1185,7 @@
   },
   {
     "inputs": [],
-    "name": "maxTotalSupply",
+    "name": "maximumDeposit",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1196,7 +1198,7 @@
   },
   {
     "inputs": [],
-    "name": "maximumDeposit",
+    "name": "maxTotalSupply",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1241,86 +1243,6 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "previousState",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "bool",
-            "name": "isClosed",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint128",
-            "name": "maxTotalSupply",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "accruedProtocolFees",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint128",
-            "name": "normalizedUnclaimedWithdrawals",
-            "type": "uint128"
-          },
-          {
-            "internalType": "uint104",
-            "name": "scaledTotalSupply",
-            "type": "uint104"
-          },
-          {
-            "internalType": "uint104",
-            "name": "scaledPendingWithdrawals",
-            "type": "uint104"
-          },
-          {
-            "internalType": "uint32",
-            "name": "pendingWithdrawalExpiry",
-            "type": "uint32"
-          },
-          {
-            "internalType": "bool",
-            "name": "isDelinquent",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint32",
-            "name": "timeDelinquent",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint16",
-            "name": "annualInterestBips",
-            "type": "uint16"
-          },
-          {
-            "internalType": "uint16",
-            "name": "reserveRatioBips",
-            "type": "uint16"
-          },
-          {
-            "internalType": "uint112",
-            "name": "scaleFactor",
-            "type": "uint112"
-          },
-          {
-            "internalType": "uint32",
-            "name": "lastInterestAccruedTimestamp",
-            "type": "uint32"
-          }
-        ],
-        "internalType": "struct MarketState",
-        "name": "",
-        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -1400,19 +1322,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "scaleFactor",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -1434,6 +1343,19 @@
   {
     "inputs": [],
     "name": "scaledTotalSupply",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "scaleFactor",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1677,5 +1599,49 @@
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "type": "event",
+    "name": "ProtocolFeeBipsUpdated",
+    "inputs": [
+      {
+        "name": "protocolFeeBips",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ForceBuyBack",
+    "inputs": [
+      {
+        "name": "lender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "scaledAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "normalizedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "withdrawalExpiry",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
   }
 ]

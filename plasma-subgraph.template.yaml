@@ -3,53 +3,12 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
-    name: WildcatMarketCollateralFactory
-    network: sepolia
-    source:
-      address: "0xe11E41e9162ad07F1a9853c3123c33B7e9Cf59D6"
-      abi: WildcatMarketCollateralFactory
-      startBlock: 9010415
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - Market
-        - SimpleCollateralContract
-        - SimpleCollateralFactory
-        - ApprovedLiquidator
-        - LiquidatorApproved
-        - LiquidatorRemoved
-        - Token
-        - ApprovedCollateralExchange
-        - CollateralExchangeApproved
-        - CollateralExchangeRemoved
-      abis:
-        - name: WildcatMarketCollateralFactory
-          file: ./abis/WildcatMarketCollateralFactory.json
-        - name: IERC20
-          file: ./abis/IERC20.json
-        - name: SimpleMarketCollateralMultiParty
-          file: ./abis/SimpleMarketCollateralMultiParty.json
-      eventHandlers:
-        - event: CollateralContractCreated(address,address,address)
-          handler: handleCollateralContractCreated
-        - event: ExecutorApproved(address)
-          handler: handleExecutorApproved
-        - event: ExecutorRemoved(address)
-          handler: handleExecutorRemoved
-        - event: ExchangeApproved(address)
-          handler: handleExchangeApproved
-        - event: ExchangeRemoved(address)
-          handler: handleExchangeRemoved
-      file: ./src/simple-collateral-factory.ts
-  - kind: ethereum
     name: HooksFactory
-    network: sepolia
+    network: {{NetworkName}}
     source:
-      address: "0x10A64ABa0159720F8a23E1A552800CA4eb21576C"
+      address: "{{HooksFactoryAddress}}"
       abi: HooksFactory
-      startBlock: 7124440
+      startBlock: {{HooksFactoryStartBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -105,11 +64,11 @@ dataSources:
       file: ./src/hooks-factory.ts
   - kind: ethereum
     name: WildcatArchController
-    network: sepolia
+    network: {{NetworkName}}
     source:
-      address: "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+      address: "{{WildcatArchControllerAddress}}"
       abi: WildcatArchController
-      startBlock: 4796511
+      startBlock: {{WildcatArchControllerStartBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -165,11 +124,11 @@ dataSources:
       file: ./src/wildcat-arch-controller.ts
   - kind: ethereum
     name: WildcatSanctionsSentinel
-    network: sepolia
+    network: {{NetworkName}}
     source:
-      address: "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B"
+      address: "{{WildcatSanctionsSentinelAddress}}"
       abi: WildcatSanctionsSentinel
-      startBlock: 4796511
+      startBlock: {{WildcatSanctionsSentinelStartBlock}}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -191,42 +150,8 @@ dataSources:
       file: ./src/wildcat-sanctions-sentinel.ts
 templates:
   - kind: ethereum
-    name: SimpleMarketCollateralMultiParty
-    network: sepolia
-    source:
-      abi: SimpleMarketCollateralMultiParty
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.7
-      language: wasm/assemblyscript
-      entities:
-        - SimpleCollateralFactory
-        - SimpleCollateralContract
-        - SimpleCollateralContractDepositor
-        - SimpleCollateralContractLiquidation
-        - SimpleCollateralFullReset
-        - SimpleCollateralContractDeposit
-        - SimpleCollateralContractReclaim
-      abis:
-        - name: SimpleMarketCollateralMultiParty
-          file: ./abis/SimpleMarketCollateralMultiParty.json
-        - name: IERC20
-          file: ./abis/IERC20.json
-      eventHandlers:
-        - event: CollateralDeposited(address,uint256,uint256,uint32)
-          handler: handleCollateralDeposited
-        - event: CollateralReclaimed(address,uint256,uint256)
-          handler: handleCollateralReclaimed
-        - event: Liquidation(address,uint256,uint256)
-          handler: handleLiquidation
-        - event: FullLiquidation(uint32)
-          handler: handleFullLiquidation
-        - event: LiquidatedSharesReset(address,uint256)
-          handler: handleLiquidatedSharesReset
-      file: ./src/simple-collateral.ts
-  - kind: ethereum
     name: WildcatMarketControllerFactory
-    network: sepolia
+    network: {{NetworkName}}
     source:
       abi: WildcatMarketControllerFactory
     mapping:
@@ -252,7 +177,7 @@ templates:
       file: ./src/wildcat-market-controller-factory.ts
   - kind: ethereum
     name: WildcatMarketController
-    network: sepolia
+    network: {{NetworkName}}
     source:
       abi: WildcatMarketController
     mapping:
@@ -289,7 +214,7 @@ templates:
       file: ./src/wildcat-market-controller.ts
   - kind: ethereum
     name: WildcatMarket
-    network: sepolia
+    network: {{NetworkName}}
     source:
       abi: WildcatMarket
     mapping:
@@ -403,7 +328,7 @@ templates:
       file: ./src/wildcat-market.ts
   - kind: ethereum
     name: CombinedHooks
-    network: sepolia
+    network: {{NetworkName}}
     source:
       abi: CombinedHooks
     mapping:

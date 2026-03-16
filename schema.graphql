@@ -1,5 +1,18 @@
-# scalar Bytes
-# scalar BigInt
+enum MarketVersion {
+  V1
+  V2
+}
+
+enum HooksKind {
+  OpenTerm
+  FixedTerm
+  Unknown
+}
+
+"v2.0.1"
+type SubgraphVersion @entity {
+  id: ID!
+}
 
 # -------------------------------------------------------------------------- #
 #                            WildcatArchController                           #
@@ -12,6 +25,7 @@ type ArchController @entity {
   controllers: [Controller!]! @derivedFrom(field: "archController")
   markets: [Market!]! @derivedFrom(field: "archController")
   borrowers: [RegisteredBorrower!]! @derivedFrom(field: "archController")
+  hooksFactory: HooksFactory @derivedFrom(field: "archController")
 }
 
 type RegisteredBorrower @entity {
@@ -29,6 +43,7 @@ type BorrowerRegistrationChange @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerFactoryRemoved @entity(immutable: true) {
@@ -37,6 +52,7 @@ type ControllerFactoryRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerRemoved @entity(immutable: true) {
@@ -45,6 +61,7 @@ type ControllerRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketRemoved @entity(immutable: true) {
@@ -53,6 +70,7 @@ type MarketRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerAdded @entity(immutable: true) {
@@ -62,6 +80,7 @@ type ControllerAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ControllerFactoryAdded @entity(immutable: true) {
@@ -70,6 +89,7 @@ type ControllerFactoryAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketAdded @entity(immutable: true) {
@@ -79,6 +99,7 @@ type MarketAdded @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type OwnershipHandoverCanceled @entity(immutable: true) {
@@ -87,6 +108,7 @@ type OwnershipHandoverCanceled @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type OwnershipHandoverRequested @entity(immutable: true) {
@@ -95,6 +117,7 @@ type OwnershipHandoverRequested @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type OwnershipTransferred @entity(immutable: true) {
@@ -104,6 +127,7 @@ type OwnershipTransferred @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type GlobalAccount @entity {
@@ -120,7 +144,7 @@ type ControllerFactory @entity {
   sentinel: Bytes! # address
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
-  originationFeeAsset: Bytes! # address
+  originationFeeAsset: Token # address
   originationFeeAmount: BigInt!
   constraints: ParameterConstraints!
   controllers: [Controller!]! @derivedFrom(field: "controllerFactory")
@@ -153,17 +177,19 @@ type NewController @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type UpdateProtocolFeeConfiguration @entity(immutable: true) {
   id: ID!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int! # uint16
-  originationFeeAsset: Bytes! # address
+  originationFeeAsset: Token # address
   originationFeeAmount: BigInt! # uint256
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -178,6 +204,7 @@ type NewSanctionsEscrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionOverride @entity(immutable: true) {
@@ -187,6 +214,7 @@ type SanctionOverride @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionOverrideRemoved @entity(immutable: true) {
@@ -196,6 +224,383 @@ type SanctionOverrideRemoved @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+# -------------------------------------------------------------------------- #
+#                              HooksInstance                            #
+# -------------------------------------------------------------------------- #
+
+type LenderHooksAccess @entity {
+  id: ID! # LenderHooksAccess-hooksAddress-lenderAddress
+  addedTimestamp: Int!
+  lender: Bytes! # address
+  isBlockedFromDeposits: Boolean!
+  lastProvider: RoleProvider # address
+  canRefresh: Boolean!
+  lastApprovalTimestamp: Int!
+  hooks: HooksInstance! # address
+  knownLenderStatuses: [KnownLenderStatus!]! @derivedFrom(field: "hooksAccess")
+  marketAccounts: [LenderAccount!]! @derivedFrom(field: "hooksAccess")
+  accountAccessGrantedRecords: [AccountAccessGranted!]!
+    @derivedFrom(field: "account")
+  accountAccessRevokedRecords: [AccountAccessRevoked!]!
+    @derivedFrom(field: "account")
+  accountBlockedFromDepositsRecords: [AccountBlockedFromDeposits!]!
+    @derivedFrom(field: "account")
+  accountUnblockedFromDepositsRecords: [AccountUnblockedFromDeposits!]!
+    @derivedFrom(field: "account")
+}
+
+type HooksInstance @entity {
+  id: ID! # address
+  name: String!
+  kind: HooksKind!
+  borrower: Bytes! # address
+  hooksTemplate: HooksTemplate! # address
+  markets: [Market!]! @derivedFrom(field: "hooks")
+  providers: [RoleProvider!]! @derivedFrom(field: "hooks")
+  hooksFactory: HooksFactory!
+  eventIndex: Int!
+  numMarkets: Int!
+  lenders: [LenderHooksAccess!]! @derivedFrom(field: "hooks")
+
+  nameUpdatedRecords: [HooksNameUpdated!]! @derivedFrom(field: "hooks")
+  roleProviderAddedRecords: [RoleProviderAdded!]! @derivedFrom(field: "hooks")
+  roleProviderUpdatedRecords: [RoleProviderUpdated!]!
+    @derivedFrom(field: "hooks")
+  roleProviderRemovedRecords: [RoleProviderRemoved!]!
+    @derivedFrom(field: "hooks")
+  accountUnblockFromDepositsRecords: [AccountUnblockedFromDeposits!]!
+    @derivedFrom(field: "hooks")
+  accountAccessGrantedRecords: [AccountAccessGranted!]!
+    @derivedFrom(field: "hooks")
+  accountAccessRevokedRecords: [AccountAccessRevoked!]!
+    @derivedFrom(field: "hooks")
+}
+
+type KnownLenderStatus @entity {
+  id: ID! #KNOWNLENDER-marketAddress-lenderAddress
+  hooksAccess: LenderHooksAccess! # address
+  market: Market! # address
+  lenderAccount: LenderAccount # address
+}
+
+type RoleProvider @entity {
+  id: ID! # PROVIDER-hooksAddress-providerAddress
+  providerAddress: Bytes! # address
+  hooks: HooksInstance! # address
+  # version: String!
+  timeToLive: Int!
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  isPushProvider: Boolean!
+  pushProviderIndex: Int!
+  isApproved: Boolean!
+  addedEvent: RoleProviderAdded @derivedFrom(field: "provider")
+  removedEvent: RoleProviderRemoved @derivedFrom(field: "provider")
+  updatedEvents: [RoleProviderUpdated!]! @derivedFrom(field: "provider")
+}
+
+type HooksConfig @entity {
+  id: ID! # HOOKSCONFIG-marketAddress
+  market: Market!
+  hooks: HooksInstance!
+  useOnDeposit: Boolean!
+  useOnQueueWithdrawal: Boolean!
+  useOnExecuteWithdrawal: Boolean!
+  useOnTransfer: Boolean!
+  useOnBorrow: Boolean!
+  useOnRepay: Boolean!
+  useOnCloseMarket: Boolean!
+  useOnNukeFromOrbit: Boolean!
+  useOnSetMaxTotalSupply: Boolean!
+  useOnSetAnnualInterestAndReserveRatioBips: Boolean!
+  useOnSetProtocolFeeBips: Boolean!
+  # Common config values
+  depositRequiresAccess: Boolean!
+  transferRequiresAccess: Boolean!
+  # FixedTermHooks config values
+  queueWithdrawalRequiresAccess: Boolean!
+  transfersDisabled: Boolean!
+  minimumDeposit: BigInt
+  allowForceBuyBacks: Boolean!
+  fixedTermEndTime: Int!
+  allowClosureBeforeTerm: Boolean!
+  allowTermReduction: Boolean!
+}
+
+type FixedTermUpdated @entity {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  oldFixedTermEndTime: Int!
+  newFixedTermEndTime: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+  fixedTermUpdatedIndex: Int!
+}
+
+# event RoleProviderAdded(
+#   address indexed providerAddress,
+#   uint32 timeToLive,
+#   uint24 pullProviderIndex,
+#   uint24 pushProviderIndex
+# );
+type RoleProviderAdded @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance! # address
+  provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  isPushProvider: Boolean!
+  pushProviderIndex: Int!
+  timeToLive: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event RoleProviderRemoved(
+#   address indexed providerAddress,
+#   uint24 pullProviderIndex,
+#   uint24 pushProviderIndex
+# );
+type RoleProviderRemoved @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance! # address
+  provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event RoleProviderUpdated(
+#   address indexed providerAddress,
+#   uint32 timeToLive,
+#   uint24 pullProviderIndex,
+#   uint24 pushProviderIndex
+# );
+type RoleProviderUpdated @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance! # address
+  provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
+  isPullProvider: Boolean!
+  pullProviderIndex: Int!
+  isPushProvider: Boolean!
+  pushProviderIndex: Int!
+  timeToLive: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event NameUpdated(string name)
+type HooksNameUpdated @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance! # address
+  oldName: String!
+  newName: String!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event AccountBlockedFromDeposits(address indexed accountAddress);
+type AccountBlockedFromDeposits @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance!
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event AccountUnblockedFromDeposits(address indexed accountAddress);
+type AccountUnblockedFromDeposits @entity(immutable: true) {
+  id: ID! # RECORD-hooksAddress-eventIndex
+  hooks: HooksInstance!
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event AccountMadeFirstDeposit(address indexed accountAddress);
+type AccountMadeFirstDeposit @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-eventIndex
+  # account: LenderHooksAccess! # address
+  lenderAccount: LenderAccount!
+  hooks: HooksInstance! # address
+  market: Market!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event MinimumDepositUpdated(address market, uint128 newMinimumDeposit);
+type MinimumDepositUpdated @entity(immutable: true) {
+  id: ID! #RECORD-marketAddress-eventIndex
+  market: Market!
+  hooks: HooksInstance!
+  oldMinimumDeposit: BigInt
+  newMinimumDeposit: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+  minimumDepositUpdatedIndex: Int!
+}
+
+# event DisabledForceBuyBacks(address market)
+type DisabledForceBuyBacks @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-eventIndex
+  market: Market!
+  hooks: HooksInstance!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event AccountAccessGranted(
+#   address indexed providerAddress,
+#   address indexed accountAddress,
+#   uint32 credentialTimestamp
+# );
+type AccountAccessGranted @entity(immutable: true) {
+  id: ID! # ACCOUNTACCESSGRANTED-hooksAddress-accountAddress-eventIndex
+  hooks: HooksInstance!
+  provider: RoleProvider! # PROVIDER-hooksAddress-providerAddress
+  account: LenderHooksAccess! # address
+  credentialTimestamp: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# event AccountAccessRevoked(address indexed accountAddress);
+type AccountAccessRevoked @entity(immutable: true) {
+  id: ID! # ACCOUNTACCESSREVOKED-hooksAddress-accountAddress-eventIndex
+  hooks: HooksInstance!
+  account: LenderHooksAccess! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+# -------------------------------------------------------------------------- #
+#                                 HooksFactory                               #
+# -------------------------------------------------------------------------- #
+
+type HooksFactory @entity {
+  id: ID!
+  hooksTemplates: [HooksTemplate!]! @derivedFrom(field: "hooksFactory")
+  hooksInstances: [HooksInstance!]! @derivedFrom(field: "hooksFactory")
+  archController: ArchController!
+  isRegistered: Boolean!
+  eventIndex: Int!
+  sentinel: Bytes! # address
+}
+
+# @todo This is brittle. It will break if any other template is used than HooksInstance.
+# Current workaround is to only bind a hooks instance if it is an HooksInstance instance.
+type HooksTemplate @entity {
+  id: ID! # address
+  name: String!
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Token
+  originationFeeAmount: BigInt!
+  deployedInstances: [HooksInstanceDeployed!]!
+    @derivedFrom(field: "hooksTemplate")
+  hooksFactory: HooksFactory!
+  disabled: Boolean!
+}
+
+# event HooksInstanceDeployed(address hooksInstance, address hooksTemplate);
+type HooksInstanceDeployed @entity(immutable: true) {
+  id: ID!
+  hooksTemplate: HooksTemplate!
+  hooks: HooksInstance! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+# event HooksTemplateAdded(
+#   address hooksTemplate,
+#   string name,
+#   address feeRecipient,
+#   address originationFeeAsset,
+#   uint80 originationFeeAmount,
+#   uint16 protocolFeeBips
+# );
+type HooksTemplateAdded @entity(immutable: true) {
+  id: ID! # TEMPLATEADD-template-eventIndex
+  hooksTemplate: HooksTemplate! # address
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Token
+  originationFeeAmount: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+# event HooksTemplateDisabled(address hooksTemplate);
+type HooksTemplateDisabled @entity(immutable: true) {
+  id: ID! # TEMPLATEDISABLE-template-eventIndex
+  hooksTemplate: HooksTemplate! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+# event HooksTemplateFeesUpdated(
+#   address hooksTemplate,
+#   address feeRecipient,
+#   address originationFeeAsset,
+#   uint80 originationFeeAmount,
+#   uint16 protocolFeeBips
+# );
+type HooksTemplateFeesUpdated @entity(immutable: true) {
+  id: ID! # TEMPLATEFEEUPDATE-template-eventIndex
+  hooksTemplate: HooksTemplate! # address
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Token
+  originationFeeAmount: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -214,6 +619,7 @@ type Controller @entity {
   archController: ArchController!
   isRegistered: Boolean!
   removal: ControllerRemoved @derivedFrom(field: "controller")
+  numMarkets: Int!
 }
 
 type LenderAuthorization @entity {
@@ -221,6 +627,7 @@ type LenderAuthorization @entity {
   controller: Controller!
   lender: Bytes!
   authorized: Boolean!
+  addedTimestamp: Int!
   marketAccounts: [LenderAccount!]!
     @derivedFrom(field: "controllerAuthorization")
   changes: [LenderAuthorizationChange!]! @derivedFrom(field: "authorization")
@@ -235,6 +642,7 @@ type LenderAuthorizationChange @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketDeployed @entity(immutable: true) {
@@ -243,6 +651,7 @@ type MarketDeployed @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #
@@ -258,10 +667,16 @@ type LenderAccount @entity {
   totalDeposited: BigInt!
   lastScaleFactor: BigInt!
   lastUpdatedTimestamp: Int!
+  lastUpdatedBlockNumber: Int!
   totalInterestEarned: BigInt!
   numPendingWithdrawalBatches: Int!
 
-  controllerAuthorization: LenderAuthorization!
+  controllerAuthorization: LenderAuthorization
+  hooksAccess: LenderHooksAccess
+  knownLenderStatus: KnownLenderStatus @derivedFrom(field: "lenderAccount")
+
+  addedTimestamp: Int!
+
   deposits: [Deposit!]! @derivedFrom(field: "account")
   withdrawals: [LenderWithdrawalStatus!]! @derivedFrom(field: "account")
   interestAccrualRecords: [LenderInterestAccrued!]!
@@ -312,6 +727,7 @@ type WithdrawalBatch @entity {
   interestAccrualRecords: [WithdrawalBatchInterestAccrued!]!
     @derivedFrom(field: "batch")
   creation: WithdrawalBatchCreated! @derivedFrom(field: "batch")
+  expiration: WithdrawalBatchExpired @derivedFrom(field: "batch")
 }
 
 type WithdrawalBatchInterestAccrued @entity(immutable: true) {
@@ -351,8 +767,12 @@ type Market @entity {
   id: ID!
   archController: ArchController!
   isRegistered: Boolean!
+  version: MarketVersion!
   # ---------------------------------- Config -------------------------------- #
-  controller: Controller!
+  controller: Controller
+  hooksFactory: HooksFactory
+  hooksConfig: HooksConfig @derivedFrom(field: "market")
+  hooks: HooksInstance # address
   borrower: Bytes!
   sentinel: Bytes!
   feeRecipient: Bytes!
@@ -380,6 +800,8 @@ type Market @entity {
   pendingWithdrawalExpiry: BigInt!
   # Whether market is currently delinquent (liquidity under requirement)
   isDelinquent: Boolean!
+  # Whether market is currently incurring delinquency penalties (timeDelinquent > delinquencyGracePeriod)
+  isIncurringPenalties: Boolean!
   # Seconds borrower has been delinquent
   timeDelinquent: Int!
   # Annual interest rate accrued to lenders, in basis points
@@ -389,6 +811,7 @@ type Market @entity {
   # Ratio between internal balances and underlying token amounts
   scaleFactor: BigInt!
   lastInterestAccruedTimestamp: Int!
+  lastInterestAccruedBlockNumber: Int!
 
   originalAnnualInterestBips: Int!
   originalReserveRatioBips: Int!
@@ -418,15 +841,24 @@ type Market @entity {
   maxTotalSupplyUpdatedIndex: Int!
   annualInterestBipsUpdatedIndex: Int!
   withdrawalRequestsIndex: Int!
+  protocolFeeBipsUpdatedIndex: Int!
+  forceBuyBackIndex: Int!
+  fixedTermUpdatedIndex: Int!
+  minimumDepositUpdatedIndex: Int!
 
   # ------------------------------- Dependents ------------------------------- #
   withdrawalBatches: [WithdrawalBatch!]! @derivedFrom(field: "market")
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
+  collateralContracts: [SimpleCollateralContract!]!
+    @derivedFrom(field: "market")
+  numCollateralContracts: Int!
 
   createdAt: Int!
 
   # --------------------------------- Events --------------------------------- #
   deployedEvent: MarketDeployed!
+  forceBuyBackDisabledRecord: DisabledForceBuyBacks
+    @derivedFrom(field: "market")
   marketClosedEvent: MarketClosed @derivedFrom(field: "market")
   removal: MarketRemoved @derivedFrom(field: "market")
   interestAccrualRecords: [MarketInterestAccrued!]!
@@ -443,6 +875,29 @@ type Market @entity {
   maxTotalSupplyUpdatedRecords: [MaxTotalSupplyUpdated!]!
     @derivedFrom(field: "market")
   withdrawalRequestRecords: [WithdrawalRequest!]! @derivedFrom(field: "market")
+  protocolFeeBipsUpdatedRecords: [ProtocolFeeBipsUpdated!]!
+    @derivedFrom(field: "market")
+  forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
+
+  fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
+  minimumDepositUpdateRecords: [MinimumDepositUpdated!]!
+    @derivedFrom(field: "market")
+  accountMadeFirstDepositRecords: [AccountMadeFirstDeposit!]!
+    @derivedFrom(field: "market")
+
+  dailyStats: [MarketDailyStats!]! @derivedFrom(field: "market")
+}
+
+type MarketDailyStats @entity {
+  id: ID!
+  startTimestamp: Int!
+  endTimestamp: Int!
+  market: Market!
+  totalDeposited: BigInt!
+  totalWithdrawalsRequested: BigInt!
+  totalWithdrawalsExecuted: BigInt!
+  totalBorrowed: BigInt!
+  totalRepaid: BigInt!
 }
 
 type MarketInterestAccrued @entity(immutable: true) {
@@ -459,6 +914,7 @@ type MarketInterestAccrued @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type DelinquencyStatusChanged @entity(immutable: true) {
@@ -472,6 +928,7 @@ type DelinquencyStatusChanged @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type AnnualInterestBipsUpdated @entity(immutable: true) {
@@ -484,6 +941,20 @@ type AnnualInterestBipsUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type ProtocolFeeBipsUpdated @entity(immutable: true) {
+  id: ID! # RECORD-<market>-<eventIndex>
+  protocolFeeBipsUpdatedIndex: Int!
+  eventIndex: Int!
+  market: Market!
+  oldProtocolFeeBips: Int!
+  newProtocolFeeBips: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type Approval @entity(immutable: true) {
@@ -494,6 +965,7 @@ type Approval @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type AuthorizationStatusUpdated @entity(immutable: true) {
@@ -514,6 +986,7 @@ type Borrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type DebtRepaid @entity(immutable: true) {
@@ -526,6 +999,7 @@ type DebtRepaid @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type Deposit @entity(immutable: true) {
@@ -539,6 +1013,7 @@ type Deposit @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type FeesCollected @entity(immutable: true) {
@@ -550,6 +1025,7 @@ type FeesCollected @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MarketClosed @entity(immutable: true) {
@@ -560,6 +1036,7 @@ type MarketClosed @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type MaxTotalSupplyUpdated @entity(immutable: true) {
@@ -572,6 +1049,7 @@ type MaxTotalSupplyUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type ReserveRatioBipsUpdated @entity(immutable: true) {
@@ -582,8 +1060,20 @@ type ReserveRatioBipsUpdated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
+type SanctionedAccountAssetsQueuedForWithdrawal @entity(immutable: true) {
+  id: ID!
+  account: Bytes! # address
+  scaledAmount: BigInt! # uint256
+  normalizedAmount: BigInt! # uint256
+  amount: BigInt! # uint256
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
 type SanctionedAccountAssetsSentToEscrow @entity(immutable: true) {
   id: ID!
   account: Bytes! # address
@@ -592,6 +1082,7 @@ type SanctionedAccountAssetsSentToEscrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type SanctionedAccountWithdrawalSentToEscrow @entity(immutable: true) {
@@ -603,6 +1094,7 @@ type SanctionedAccountWithdrawalSentToEscrow @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type StateUpdated @entity(immutable: true) {
@@ -624,6 +1116,7 @@ type Transfer @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # type WithdrawalBatchClosed @entity(immutable: true) {
@@ -640,6 +1133,7 @@ type WithdrawalBatchCreated @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalBatchExpired @entity(immutable: true) {
@@ -648,9 +1142,11 @@ type WithdrawalBatchExpired @entity(immutable: true) {
   scaledTotalAmount: BigInt! # uint256
   scaledAmountBurned: BigInt! # uint256
   normalizedAmountPaid: BigInt! # uint256
+  normalizedAmountOwed: BigInt! # uint256
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalBatchPayment @entity(immutable: true) {
@@ -661,6 +1157,7 @@ type WithdrawalBatchPayment @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalExecution @entity(immutable: true) {
@@ -672,6 +1169,7 @@ type WithdrawalExecution @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type WithdrawalRequest @entity(immutable: true) {
@@ -688,6 +1186,207 @@ type WithdrawalRequest @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type ForceBuyBack @entity(immutable: true) {
+  id: ID! #RECORD-<market>-<eventIndex>
+  eventIndex: Int!
+  forceBuyBackIndex: Int!
+  withdrawalExpiry: Int! # uint32
+  account: LenderAccount!
+  market: Market!
+  scaledAmount: BigInt!
+  normalizedAmount: BigInt!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type SimpleCollateralFactory @entity {
+  id: ID!
+  collateralContracts: [SimpleCollateralContract!]!
+    @derivedFrom(field: "factory")
+  approvedLiquidators: [ApprovedLiquidator!]! @derivedFrom(field: "factory")
+  liquidatorApprovals: [LiquidatorApproved!]! @derivedFrom(field: "factory")
+  liquidatorRemovals: [LiquidatorRemoved!]! @derivedFrom(field: "factory")
+  approvedExchanges: [ApprovedCollateralExchange!]!
+    @derivedFrom(field: "factory")
+}
+
+type ApprovedCollateralExchange @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  isApproved: Boolean!
+  exchange: Bytes!
+}
+
+type CollateralExchangeApproved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  exchange: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type CollateralExchangeRemoved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  exchange: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type ApprovedLiquidator @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  isApproved: Boolean!
+  liquidator: Bytes!
+}
+
+type LiquidatorApproved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  liquidator: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type LiquidatorRemoved @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  liquidator: Bytes!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type SimpleCollateralContract @entity {
+  id: ID!
+  factory: SimpleCollateralFactory!
+  market: Market!
+  collateralAsset: Token
+
+  totalDeposited: BigInt!
+  totalReclaimed: BigInt!
+  totalLiquidated: BigInt!
+  totalShares: BigInt!
+  availableCollateral: BigInt!
+
+  lastFullLiquidationIndex: Int!
+  depositIndex: Int!
+  liquidationCooldown: Int!
+  nextLiquidationTrigger: Int!
+  eventIndex: Int!
+
+  depositors: [SimpleCollateralContractDepositor!]!
+    @derivedFrom(field: "collateralContract")
+  liquidations: [SimpleCollateralContractLiquidation!]!
+    @derivedFrom(field: "collateralContract")
+  deposits: [SimpleCollateralContractDeposit!]!
+    @derivedFrom(field: "collateralContract")
+  reclaims: [SimpleCollateralContractReclaim!]!
+    @derivedFrom(field: "collateralContract")
+  fullResets: [SimpleCollateralContractFullReset!]!
+    @derivedFrom(field: "collateralContract")
+}
+
+type SimpleCollateralContractDepositor @entity {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  shares: BigInt!
+  totalDeposited: BigInt!
+  totalReclaimed: BigInt!
+
+  deposits: [SimpleCollateralContractDeposit!]! @derivedFrom(field: "account")
+  reclaims: [SimpleCollateralContractReclaim!]! @derivedFrom(field: "account")
+  liquidatedSharesResets: [SimpleCollateralContractLiquidatedSharesReset!]!
+    @derivedFrom(field: "account")
+}
+
+type SimpleCollateralContractLiquidation @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  collateralLiquidated: BigInt!
+  underlyingReceived: BigInt!
+  liquidator: Bytes!
+  eventIndex: Int!
+
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type SimpleCollateralContractFullReset @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  lastFullLiquidationIndex: Int!
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type SimpleCollateralContractLiquidatedSharesReset @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+  account: SimpleCollateralContractDepositor!
+  sharesReset: BigInt!
+
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type SimpleCollateralContractDeposit @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+  account: SimpleCollateralContractDepositor!
+
+  amountDeposited: BigInt!
+  sharesMinted: BigInt!
+  lastFullLiquidationIndex: Int!
+  depositIndex: Int!
+
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type SimpleCollateralContractReclaim @entity(immutable: true) {
+  id: ID!
+  collateralContract: SimpleCollateralContract!
+
+  account: SimpleCollateralContractDepositor!
+  amountReclaimed: BigInt!
+  sharesBurned: BigInt!
+
+  eventIndex: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 # -------------------------------------------------------------------------- #

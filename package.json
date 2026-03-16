@@ -1,6 +1,6 @@
 {
-  "name": "wildcat-finance",
-  "version": "0.0.28",
+  "name": "@wildcatfi/wildcat-subgraph",
+  "version": "2.0.22",
   "license": "UNLICENSED",
   "main": "index.js",
   "repository": "git@github.com:wildcat-finance/subgraph",
@@ -9,24 +9,26 @@
     "auth": "graph auth --studio",
     "codegen": "graph codegen -u",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/",
-    "create-local": "graph create --node http://localhost:8020/ wildcat-finance",
-    "remove-local": "graph remove --node http://localhost:8020/ wildcat-finance",
-    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 wildcat-finance",
+    "deploy": "node scripts/deploy.js",
+    "create-local": "graph create --node $NODE_HOST:$NODE_PORT/ wildcat-test-deployment",
+    "remove-local": "graph remove --node $NODE_HOST:$NODE_PORT/ wildcat-test-deployment",
+    "local:sepolia": "graph deploy --node $NODE_HOST:$NODE_PORT --ipfs $NODE_HOST:$IPFS_PORT wildcat-test-deployment --version-label v2.0.16",
+    "local:mainnet": "graph deploy --node $NODE_HOST:$NODE_PORT --ipfs $NODE_HOST:$IPFS_PORT wildcat-test-mainnet --version-label v2.0.15",
     "test": "graph test",
     "netconfig": "node ./scripts/set-addresses",
     "postnetconfig": "yarn codegen",
-    "deploy:sepolia": "yarn netconfig sepolia; yarn build; yarn deploy wildcat-finance --version-label $(node scripts/next-version)",
-    "deploy:mainnet": "yarn netconfig mainnet; yarn build; yarn deploy wildcat-finance-mainnet --version-label $(node scripts/next-version)",
-    "deploy:both": "yarn deploy:mainnet",
-    "postdeploy:both": "echo 'Updated sepolia and mainnet deployments to' $(node ./scripts/next-version --update)",
-    "help1": "graph deploy --help"
+    "deploy:sepolia": "yarn deploy goldsky sepolia",
+    "deploy:mainnet": "yarn deploy goldsky mainnet",
+    "deploy:plasma-testnet": "yarn deploy goldsky plasma-testnet",
+    "deploy:plasma-mainnet": "yarn deploy goldsky plasma-mainnet"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",
-    "@graphprotocol/graph-ts": "0.30.0"
+    "@graphprotocol/graph-ts": "0.30.0",
+    "dotenv": "16.6.1"
   },
   "devDependencies": {
+    "@ethersproject/abi": "5.7.0",
     "matchstick-as": "0.5.0"
   }
 }

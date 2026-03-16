@@ -1,0 +1,546 @@
+[
+    {
+        "type": "constructor",
+        "inputs": [
+            {
+                "name": "_archController",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_collateralInitCodeStorage",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_collateralInitCodeHash",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_initialExchanges",
+                "type": "address[]",
+                "internalType": "address[]"
+            },
+            {
+                "name": "_initialExecutors",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "approveExchange",
+        "inputs": [
+            {
+                "name": "_exchange",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "approveExecutor",
+        "inputs": [
+            {
+                "name": "_executor",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "archController",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "calculateCollateralContractAddress",
+        "inputs": [
+            {
+                "name": "marketAddress",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "collateralToken",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "collateralContractsByMarket",
+        "inputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "collateralInitCodeHash",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "collateralInitCodeStorage",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "deployCollateralContract",
+        "inputs": [
+            {
+                "name": "marketAddress",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "collateralToken",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "collateralContract",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "getApprovedExchanges",
+        "inputs": [
+            {
+                "name": "start",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "end",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "arr",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getApprovedExchanges",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getApprovedExchangesCount",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getApprovedExecutors",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getApprovedExecutors",
+        "inputs": [
+            {
+                "name": "start",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "end",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "arr",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getApprovedExecutorsCount",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCollateralContractsForMarket",
+        "inputs": [
+            {
+                "name": "marketAddress",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "startIndex",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "endIndex",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "arr",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCollateralContractsForMarket",
+        "inputs": [
+            {
+                "name": "marketAddress",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCollateralContractsForMarketCount",
+        "inputs": [
+            {
+                "name": "marketAddress",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getCollateralParameters",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "parameters",
+                "type": "tuple",
+                "internalType": "struct CollateralParameters",
+                "components": [
+                    {
+                        "name": "borrower",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "collateralToken",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "associatedMarket",
+                        "type": "address",
+                        "internalType": "address"
+                    }
+                ]
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "isApprovedExchange",
+        "inputs": [
+            {
+                "name": "_exchange",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "isApprovedExecutor",
+        "inputs": [
+            {
+                "name": "_executor",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "name",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "stateMutability": "pure"
+    },
+    {
+        "type": "function",
+        "name": "removeExchange",
+        "inputs": [
+            {
+                "name": "_exchange",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "removeExecutor",
+        "inputs": [
+            {
+                "name": "_executor",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "event",
+        "name": "CollateralContractCreated",
+        "inputs": [
+            {
+                "name": "collateralContract",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "collateralToken",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "associatedMarket",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ExchangeApproved",
+        "inputs": [
+            {
+                "name": "exchange",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ExchangeRemoved",
+        "inputs": [
+            {
+                "name": "exchange",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ExecutorApproved",
+        "inputs": [
+            {
+                "name": "executor",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ExecutorRemoved",
+        "inputs": [
+            {
+                "name": "executor",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "CallerNotArchControllerOwner",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "CallerNotOwner",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "CollateralContractAlreadyExists",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "MarketNotRegistered",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotBorrower",
+        "inputs": []
+    }
+]

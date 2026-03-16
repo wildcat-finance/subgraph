@@ -1,3 +1,4 @@
+import { Bytes } from "@graphprotocol/graph-ts";
 import {
   createBorrowerRegistrationChange,
   createControllerAdded,
@@ -18,7 +19,7 @@ import {
   getMarket,
   getOrInitializeArchController,
   getRegisteredBorrower,
-  getOrInitializeRegisteredBorrower
+  getOrInitializeRegisteredBorrower,
 } from "../generated/UncrashableEntityHelpers";
 import {
   BorrowerAdded as BorrowerAddedEvent,
@@ -35,6 +36,7 @@ import {
 } from "../generated/WildcatArchController/WildcatArchController";
 import { WildcatMarketControllerFactory } from "../generated/WildcatArchController/WildcatMarketControllerFactory";
 import {
+  ControllerFactory,
   OwnershipHandoverCanceled,
   OwnershipHandoverRequested,
   OwnershipTransferred,
@@ -66,6 +68,7 @@ export function handleBorrowerAdded(event: BorrowerAddedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
 }
 
@@ -84,19 +87,24 @@ export function handleBorrowerRemoved(event: BorrowerRemovedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
 }
 
 export function handleControllerAdded(event: ControllerAddedEvent): void {
-  createControllerAdded(generateEventId(event), {
-    controllerFactory: generateControllerFactoryId(
-      event.params.controllerFactory
-    ),
-    controller: generateControllerId(event.params.controller),
-    blockNumber: event.block.number.toI32(),
-    blockTimestamp: event.block.timestamp.toI32(),
-    transactionHash: event.transaction.hash,
-  });
+  const controllerFactoryId = generateControllerFactoryId(
+    event.params.controllerFactory
+  );
+  if (ControllerFactory.load(controllerFactoryId) != null) {
+    createControllerAdded(generateEventId(event), {
+      controllerFactory: controllerFactoryId,
+      controller: generateControllerId(event.params.controller),
+      blockNumber: event.block.number.toI32(),
+      blockTimestamp: event.block.timestamp.toI32(),
+      transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
+    });
+  }
 }
 
 export function handleControllerFactoryAdded(
@@ -105,6 +113,7 @@ export function handleControllerFactoryAdded(
   getOrInitializeArchController(event.address.toHex(), {});
   let controllerFactory = event.params.controllerFactory;
   let factoryContract = WildcatMarketControllerFactory.bind(controllerFactory);
+
   let constraintsResult = factoryContract.try_getParameterConstraints();
   if (!constraintsResult.reverted) {
     let constraintsValue = constraintsResult.value;
@@ -124,12 +133,13 @@ export function handleControllerFactoryAdded(
         maximumAnnualInterestBips: constraintsValue.maximumAnnualInterestBips,
       }
     );
-  
+
     createControllerFactory(generateControllerFactoryId(controllerFactory), {
       constraints: constraints.id,
       sentinel: factoryContract.sentinel(),
       isRegistered: true,
       archController: event.address.toHex(),
+      originationFeeAsset: null
     });
     createControllerFactoryAdded(generateEventId(event), {
       controllerFactory: generateControllerFactoryId(
@@ -138,7 +148,9 @@ export function handleControllerFactoryAdded(
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
     });
+  } else {
   }
 }
 
@@ -155,6 +167,7 @@ export function handleControllerFactoryRemoved(
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
 }
 
@@ -167,6 +180,7 @@ export function handleControllerRemoved(event: ControllerRemovedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
 }
 
@@ -177,6 +191,7 @@ export function handleMarketAdded(event: MarketAddedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
 }
 
@@ -189,6 +204,7 @@ export function handleMarketRemoved(event: MarketRemovedEvent): void {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
+    blockLogIndex: event.logIndex.toI32(),
   });
 }
 
@@ -201,7 +217,7 @@ export function handleOwnershipHandoverCanceled(
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
-
+  entity.blockLogIndex = event.logIndex.toI32();
   entity.save();
 }
 
@@ -214,7 +230,7 @@ export function handleOwnershipHandoverRequested(
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
-
+  entity.blockLogIndex = event.logIndex.toI32();
   entity.save();
 }
 
@@ -228,6 +244,6 @@ export function handleOwnershipTransferred(
   entity.blockNumber = event.block.number.toI32();
   entity.blockTimestamp = event.block.timestamp.toI32();
   entity.transactionHash = event.transaction.hash;
-
+  entity.blockLogIndex = event.logIndex.toI32();
   entity.save();
 }
