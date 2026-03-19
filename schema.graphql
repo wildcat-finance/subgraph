@@ -3,6 +3,11 @@ enum MarketVersion {
   V2
 }
 
+enum MarketType {
+  Legacy
+  Revolving
+}
+
 enum HooksKind {
   OpenTerm
   FixedTerm
@@ -25,6 +30,7 @@ type ArchController @entity {
   controllers: [Controller!]! @derivedFrom(field: "archController")
   markets: [Market!]! @derivedFrom(field: "archController")
   borrowers: [RegisteredBorrower!]! @derivedFrom(field: "archController")
+  hooksFactories: [HooksFactory!]! @derivedFrom(field: "archController")
   hooksFactory: HooksFactory @derivedFrom(field: "archController")
 }
 
@@ -521,6 +527,7 @@ type HooksFactory @entity {
   hooksTemplates: [HooksTemplate!]! @derivedFrom(field: "hooksFactory")
   hooksInstances: [HooksInstance!]! @derivedFrom(field: "hooksFactory")
   archController: ArchController!
+  marketType: MarketType
   isRegistered: Boolean!
   eventIndex: Int!
   sentinel: Bytes! # address
@@ -768,6 +775,7 @@ type Market @entity {
   archController: ArchController!
   isRegistered: Boolean!
   version: MarketVersion!
+  marketType: MarketType
   # ---------------------------------- Config -------------------------------- #
   controller: Controller
   hooksFactory: HooksFactory
@@ -806,8 +814,12 @@ type Market @entity {
   timeDelinquent: Int!
   # Annual interest rate accrued to lenders, in basis points
   annualInterestBips: Int!
+  # Revolving-only annual commitment fee rate, in basis points
+  commitmentFeeBips: BigInt
   # Percentage of outstanding balance that must be held in liquid reserves
   reserveRatioBips: Int!
+  # Revolving-only drawn principal amount
+  drawnAmount: BigInt
   # Ratio between internal balances and underlying token amounts
   scaleFactor: BigInt!
   lastInterestAccruedTimestamp: Int!
