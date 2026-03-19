@@ -9,6 +9,76 @@ let subgraphTemplateYamlName = 'subgraph.template.yaml';
 if (networkId.toLowerCase().includes("plasma")) {
   subgraphTemplateYamlName = "plasma-subgraph.template.yaml";
 }
+
+function buildHooksFactoryRevolvingDataSource(network, contracts) {
+  const revolvingFactory = contracts.HooksFactoryRevolving;
+  if (!revolvingFactory) {
+    return "";
+  }
+
+  return `  - kind: ethereum
+    name: HooksFactoryRevolving
+    network: ${network}
+    source:
+      address: "${revolvingFactory.address}"
+      abi: HooksFactory
+      startBlock: ${revolvingFactory.startBlock}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LenderHooksAccess
+        - HooksInstance
+        - RoleProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - HooksFactory
+        - HooksTemplate
+        - HooksInstanceDeployed
+        - HooksTemplateAdded
+        - HooksTemplateDisabled
+        - HooksTemplateFeesUpdated
+        - LenderAccount
+      abis:
+        - name: HooksFactory
+          file: ./abis/HooksFactory.json
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+        - name: OpenTermHooks
+          file: ./abis/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./abis/FixedTermHooks.json
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
+        - event: HooksInstanceDeployed(address,address)
+          handler: handleHooksInstanceDeployed
+        - event: HooksTemplateAdded(address,string,address,address,uint80,uint16)
+          handler: handleHooksTemplateAdded
+        - event: HooksTemplateDisabled(address)
+          handler: handleHooksTemplateDisabled
+        - event: HooksTemplateFeesUpdated(address,address,address,uint80,uint16)
+          handler: handleHooksTemplateFeesUpdated
+        - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleMarketDeployed
+      file: ./src/hooks-factory.ts
+`;
+}
+
 function setNetworkAddresses() {
   const { name: network, contracts } = networks[networkId];
   let subgraph = fs
@@ -29,6 +99,11 @@ function setNetworkAddresses() {
       .replace(new RegExp(`{{${contract}Address}}`, "g"), address)
       .replace(new RegExp(`{{${contract}StartBlock}}`, "g"), startBlock);
   }
+
+  subgraph = subgraph.replace(
+    new RegExp(`{{HooksFactoryRevolvingDataSource}}`, "g"),
+    buildHooksFactoryRevolvingDataSource(network, contracts)
+  );
 
   fs.writeFileSync(path.join(__dirname, "../subgraph.yaml"), subgraph);
   fs.writeFileSync(
