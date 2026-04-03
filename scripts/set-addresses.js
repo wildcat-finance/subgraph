@@ -75,7 +75,7 @@ function buildHooksFactoryRevolvingDataSource(network, contracts) {
           handler: handleHooksTemplateFeesUpdated
         - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
-      file: ./src/hooks-factory.ts
+      file: ./src/hooks-factory-revolving.ts
 `;
 }
 

@@ -57,7 +57,10 @@ function generateRecordId(id: string, eventIndex: number): string {
   return "RECORD" + "-" + id + "-" + eventIndex.toString();
 }
 
-function getOrCreateHooksFactory(address: Address): HooksFactory {
+function getOrCreateHooksFactory(
+  address: Address,
+  marketType: string
+): HooksFactory {
   let hooksFactory = HooksFactory.load(address.toHex());
   if (hooksFactory == null) {
     let hooksFactoryContract = HooksFactoryContract.bind(address);
@@ -65,7 +68,12 @@ function getOrCreateHooksFactory(address: Address): HooksFactory {
       isRegistered: true,
       sentinel: hooksFactoryContract.sanctionsSentinel(),
       archController: hooksFactoryContract.archController().toHex(),
+      marketType: marketType,
     });
+  }
+  if (hooksFactory.marketType == null || hooksFactory.marketType != marketType) {
+    hooksFactory.marketType = marketType;
+    hooksFactory.save();
   }
   return hooksFactory;
 }
@@ -76,12 +84,14 @@ export function handleChangedSpherexEngineAddress(
 export function handleChangedSpherexOperator(
   event: ChangedSpherexOperatorEvent
 ): void {}
-export function handleHooksInstanceDeployed(
-  event: HooksInstanceDeployedEvent
+export function handleHooksInstanceDeployedForMarketType(
+  event: ethereum.Event,
+  hooksInstance: Address,
+  hooksTemplateAddress: Address,
+  marketType: string
 ): void {
-  let hooksFactory = getOrCreateHooksFactory(event.address);
-  let hooksInstance = event.params.hooksInstance;
-  let hooksTemplateId = generateHooksTemplateId(event.params.hooksTemplate);
+  let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
+  let hooksTemplateId = generateHooksTemplateId(hooksTemplateAddress);
   let hooksInstanceId = generateHooksInstanceId(hooksInstance);
   let hooksTemplate = getHooksTemplate(hooksTemplateId);
   log.warning("Hooks Template: {}", [hooksTemplateId]);
@@ -167,6 +177,17 @@ export function handleHooksInstanceDeployed(
   CombinedHooksTemplate.create(hooksInstance);
 }
 
+export function handleHooksInstanceDeployed(
+  event: HooksInstanceDeployedEvent
+): void {
+  handleHooksInstanceDeployedForMarketType(
+    event,
+    event.params.hooksInstance,
+    event.params.hooksTemplate,
+    "Legacy"
+  );
+}
+
 function createTokenIfNotExists(asset: Address): Token | null {
   if (isNullAddress(asset)) {
     return null;
@@ -196,9 +217,17 @@ function getOrCreateTokenId(asset: Address): string | null {
   return token.id;
 }
 
-export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
-  let hooksFactory = getOrCreateHooksFactory(event.address);
-  let hooksTemplate = event.params.hooksTemplate;
+export function handleHooksTemplateAddedForMarketType(
+  event: ethereum.Event,
+  hooksTemplate: Address,
+  name: string,
+  feeRecipient: Address,
+  originationFeeAsset: Address,
+  originationFeeAmount: BigInt,
+  protocolFeeBips: i32,
+  marketType: string
+): void {
+  let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
   let hooksTemplateId = generateHooksTemplateId(hooksTemplate);
   createHooksTemplateAdded(
     generateHooksTemplateAddedId(hooksTemplate, hooksFactory.eventIndex),
@@ -208,33 +237,55 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
       hooksTemplate: hooksTemplateId,
-      feeRecipient: event.params.feeRecipient,
-      originationFeeAmount: event.params.originationFeeAmount,
-      originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
+      feeRecipient: feeRecipient,
+      originationFeeAmount: originationFeeAmount,
+      originationFeeAsset: getOrCreateTokenId(originationFeeAsset),
       // originationFeeAsset: event.params.originationFeeAsset,
-      protocolFeeBips: event.params.protocolFeeBips,
+      protocolFeeBips: protocolFeeBips,
     }
   );
 
   createHooksTemplate(hooksTemplateId, {
-    feeRecipient: event.params.feeRecipient,
-    originationFeeAmount: event.params.originationFeeAmount,
+    feeRecipient: feeRecipient,
+    originationFeeAmount: originationFeeAmount,
     // originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
 
     // originationFeeAsset: event.params.originationFeeAsset,
-    originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
-    protocolFeeBips: event.params.protocolFeeBips,
+    originationFeeAsset: getOrCreateTokenId(originationFeeAsset),
+    protocolFeeBips: protocolFeeBips,
     hooksFactory: hooksFactory.id,
-    name: event.params.name,
+    name: name,
   });
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
 }
+export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
+  handleHooksTemplateAddedForMarketType(
+    event,
+    event.params.hooksTemplate,
+    event.params.name,
+    event.params.feeRecipient,
+    event.params.originationFeeAsset,
+    event.params.originationFeeAmount,
+    event.params.protocolFeeBips,
+    "Legacy"
+  );
+}
 export function handleHooksTemplateDisabled(
   event: HooksTemplateDisabledEvent
 ): void {
-  let hooksFactory = getOrCreateHooksFactory(event.address);
-  let hooksTemplate = event.params.hooksTemplate;
+  handleHooksTemplateDisabledForMarketType(
+    event,
+    event.params.hooksTemplate,
+    "Legacy"
+  );
+}
+export function handleHooksTemplateDisabledForMarketType(
+  event: ethereum.Event,
+  hooksTemplate: Address,
+  marketType: string
+): void {
+  let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
   let hooksTemplateId = generateHooksTemplateId(hooksTemplate);
   createHooksTemplateDisabled(
     generateHooksTemplateDisabledId(hooksTemplate, hooksFactory.eventIndex),
@@ -252,11 +303,16 @@ export function handleHooksTemplateDisabled(
   hooksTemplateEntity.disabled = true;
   hooksTemplateEntity.save();
 }
-export function handleHooksTemplateFeesUpdated(
-  event: HooksTemplateFeesUpdatedEvent
+export function handleHooksTemplateFeesUpdatedForMarketType(
+  event: ethereum.Event,
+  hooksTemplate: Address,
+  feeRecipient: Address,
+  originationFeeAsset: Address,
+  originationFeeAmount: BigInt,
+  protocolFeeBips: i32,
+  marketType: string
 ): void {
-  let hooksFactory = getOrCreateHooksFactory(event.address);
-  let hooksTemplate = event.params.hooksTemplate;
+  let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
   let hooksTemplateId = generateHooksTemplateId(hooksTemplate);
   let hooksTemplateEntity = getHooksTemplate(hooksTemplateId);
   createHooksTemplateFeesUpdated(
@@ -267,21 +323,32 @@ export function handleHooksTemplateFeesUpdated(
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
       hooksTemplate: hooksTemplateId,
-      feeRecipient: event.params.feeRecipient,
-      originationFeeAmount: event.params.originationFeeAmount,
-      originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
-      protocolFeeBips: event.params.protocolFeeBips,
+      feeRecipient: feeRecipient,
+      originationFeeAmount: originationFeeAmount,
+      originationFeeAsset: getOrCreateTokenId(originationFeeAsset),
+      protocolFeeBips: protocolFeeBips,
     }
   );
-  hooksTemplateEntity.feeRecipient = event.params.feeRecipient;
-  hooksTemplateEntity.originationFeeAmount = event.params.originationFeeAmount;
-  hooksTemplateEntity.originationFeeAsset = getOrCreateTokenId(
-    event.params.originationFeeAsset
-  );
-  hooksTemplateEntity.protocolFeeBips = event.params.protocolFeeBips;
+  hooksTemplateEntity.feeRecipient = feeRecipient;
+  hooksTemplateEntity.originationFeeAmount = originationFeeAmount;
+  hooksTemplateEntity.originationFeeAsset = getOrCreateTokenId(originationFeeAsset);
+  hooksTemplateEntity.protocolFeeBips = protocolFeeBips;
   hooksTemplateEntity.save();
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
+}
+export function handleHooksTemplateFeesUpdated(
+  event: HooksTemplateFeesUpdatedEvent
+): void {
+  handleHooksTemplateFeesUpdatedForMarketType(
+    event,
+    event.params.hooksTemplate,
+    event.params.feeRecipient,
+    event.params.originationFeeAsset,
+    event.params.originationFeeAmount,
+    event.params.protocolFeeBips,
+    "Legacy"
+  );
 }
 function decodeAndCreateRoleProvider(
   event: ethereum.Event,
@@ -430,12 +497,25 @@ function decodeAndCreateHooksConfig(
   });
 }
 
-export function handleMarketDeployed(event: MarketDeployedEvent): void {
-  let params = event.params;
-  let asset = createTokenIfNotExists(params.asset);
+export function handleMarketDeployedForMarketType(
+  event: ethereum.Event,
+  market: Address,
+  hooksConfigValue: BigInt,
+  name: string,
+  symbol: string,
+  assetAddress: Address,
+  maxTotalSupply: BigInt,
+  annualInterestBips: BigInt,
+  delinquencyFeeBips: BigInt,
+  withdrawalBatchDuration: BigInt,
+  reserveRatioBips: BigInt,
+  delinquencyGracePeriod: BigInt,
+  marketType: string
+): void {
+  let asset = createTokenIfNotExists(assetAddress);
   if (asset != null) {
-    let marketId = generateMarketId(params.market);
-    MarketTemplate.create(params.market);
+    let marketId = generateMarketId(market);
+    MarketTemplate.create(market);
     let marketDeployedId = generateEventId(event);
     createMarketDeployed(marketDeployedId, {
       blockNumber: event.block.number.toI32(),
@@ -445,9 +525,9 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       market: marketId,
     });
     let hooksConfig = decodeAndCreateHooksConfig(
-      params.market,
+      market,
       marketId,
-      params.hooks
+      hooksConfigValue
     );
     let hooks = HooksInstance.load(hooksConfig.hooks);
     if (hooks == null) {
@@ -458,34 +538,35 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     if (hooksTemplate == null) {
       return;
     }
-    let hooksFactory = getOrCreateHooksFactory(event.address);
+    let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
     let version = "V2";
 
     createMarket(marketId, {
-      name: params.name,
-      symbol: params.symbol,
+      name: name,
+      symbol: symbol,
       asset: asset.id,
       borrower: hooks.borrower,
       controller: null,
-      annualInterestBips: params.annualInterestBips.toI32(),
+      annualInterestBips: annualInterestBips.toI32(),
       decimals: asset.decimals,
-      delinquencyGracePeriod: params.delinquencyGracePeriod.toI32(),
-      delinquencyFeeBips: params.delinquencyFeeBips.toI32(),
+      delinquencyGracePeriod: delinquencyGracePeriod.toI32(),
+      delinquencyFeeBips: delinquencyFeeBips.toI32(),
       feeRecipient: hooksTemplate.feeRecipient,
       protocolFeeBips: hooksTemplate.protocolFeeBips,
       sentinel: hooksFactory.sentinel,
       scaleFactor: BigInt.fromI32(10).pow(27),
-      maxTotalSupply: params.maxTotalSupply,
+      maxTotalSupply: maxTotalSupply,
       lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
       lastInterestAccruedBlockNumber: event.block.number.toI32(),
-      reserveRatioBips: params.reserveRatioBips.toI32(),
-      withdrawalBatchDuration: params.withdrawalBatchDuration.toI32(),
+      reserveRatioBips: reserveRatioBips.toI32(),
+      withdrawalBatchDuration: withdrawalBatchDuration.toI32(),
       isRegistered: true,
       archController: hooksFactory.archController,
       deployedEvent: marketDeployedId,
       createdAt: event.block.timestamp.toI32(),
       hooks: hooks.id,
       hooksFactory: hooksFactory.id,
+      marketType: hooksFactory.marketType,
       version: version,
       numCollateralContracts: 0,
     });
@@ -493,4 +574,21 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
   }
+}
+export function handleMarketDeployed(event: MarketDeployedEvent): void {
+  handleMarketDeployedForMarketType(
+    event,
+    event.params.market,
+    event.params.hooks,
+    event.params.name,
+    event.params.symbol,
+    event.params.asset,
+    event.params.maxTotalSupply,
+    event.params.annualInterestBips,
+    event.params.delinquencyFeeBips,
+    event.params.withdrawalBatchDuration,
+    event.params.reserveRatioBips,
+    event.params.delinquencyGracePeriod,
+    "Legacy"
+  );
 }
