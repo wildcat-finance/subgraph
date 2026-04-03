@@ -38,6 +38,7 @@ import {
 import { OpenTermHooks as IOpenTermHooks } from "../generated/HooksFactory/OpenTermHooks";
 import { FixedTermHooks as IFixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
 import { CombinedHooks } from "../generated/HooksFactory/CombinedHooks";
+import { IWildcatMarketRevolving } from "../generated/HooksFactory/IWildcatMarketRevolving";
 import { IERC20 } from "../generated/HooksFactory/IERC20";
 import {
   HooksInstance,
@@ -540,6 +541,20 @@ export function handleMarketDeployedForMarketType(
     }
     let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
     let version = "V2";
+    let commitmentFeeBips: BigInt | null = null;
+    let drawnAmount: BigInt | null = null;
+    if (marketType == "Revolving") {
+      let revolvingMarket = IWildcatMarketRevolving.bind(market);
+      let commitmentFeeBipsResult = revolvingMarket.try_commitmentFeeBips();
+      if (!commitmentFeeBipsResult.reverted) {
+        commitmentFeeBips = commitmentFeeBipsResult.value;
+      }
+
+      let drawnAmountResult = revolvingMarket.try_drawnAmount();
+      if (!drawnAmountResult.reverted) {
+        drawnAmount = drawnAmountResult.value;
+      }
+    }
 
     createMarket(marketId, {
       name: name,
@@ -567,6 +582,8 @@ export function handleMarketDeployedForMarketType(
       hooks: hooks.id,
       hooksFactory: hooksFactory.id,
       marketType: hooksFactory.marketType,
+      commitmentFeeBips: commitmentFeeBips,
+      drawnAmount: drawnAmount,
       version: version,
       numCollateralContracts: 0,
     });

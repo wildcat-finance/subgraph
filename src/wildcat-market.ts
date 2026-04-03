@@ -26,6 +26,7 @@ import {
   ProtocolFeeBipsUpdated as ProtocolFeeBipsUpdatedEvent,
   ForceBuyBack as ForceBuyBackEvent,
 } from "../generated/templates/WildcatMarket/WildcatMarket";
+import { IWildcatMarketRevolving } from "../generated/templates/WildcatMarket/IWildcatMarketRevolving";
 import { IERC20 } from "../generated/templates/WildcatMarket/IERC20";
 import {
   GetOrCreateReturn,
@@ -117,6 +118,23 @@ function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): GetOrCr
     totalBorrowed: BigInt.fromI32(0),
     totalRepaid: BigInt.fromI32(0),
   });
+}
+
+function syncRevolvingMarketState(market: Market, marketAddress: Address): void {
+  if (market.marketType == null || market.marketType != "Revolving") {
+    return;
+  }
+
+  let revolvingMarket = IWildcatMarketRevolving.bind(marketAddress);
+  let commitmentFeeBips = revolvingMarket.try_commitmentFeeBips();
+  if (!commitmentFeeBips.reverted) {
+    market.commitmentFeeBips = commitmentFeeBips.value;
+  }
+
+  let drawnAmount = revolvingMarket.try_drawnAmount();
+  if (!drawnAmount.reverted) {
+    market.drawnAmount = drawnAmount.value;
+  }
 }
 
 // function getOrCreateLenderAccount(
@@ -236,6 +254,7 @@ export function handleBorrow(event: BorrowEvent): void {
   market.borrowIndex = market.borrowIndex + 1;
   market.eventIndex = market.eventIndex + 1;
   market.totalBorrowed = market.totalBorrowed.plus(event.params.assetAmount);
+  syncRevolvingMarketState(market, event.address);
   market.save();
 
   let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
@@ -259,6 +278,7 @@ export function handleDebtRepaid(event: DebtRepaidEvent): void {
   market.debtRepaidIndex = market.debtRepaidIndex + 1;
   market.eventIndex = market.eventIndex + 1;
   market.totalRepaid = market.totalRepaid.plus(event.params.assetAmount);
+  syncRevolvingMarketState(market, event.address);
   market.save();
   let marketDailyStats = getOrCreateMarketDailyStats(market, event.block.timestamp).entity;
   marketDailyStats.totalRepaid = marketDailyStats.totalRepaid.plus(event.params.assetAmount);
@@ -586,6 +606,7 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
       market.delinquencyStatusChangedIndex + 1;
     market.eventIndex = market.eventIndex + 1;
   }
+  syncRevolvingMarketState(market, event.address);
   market.save();
 }
 

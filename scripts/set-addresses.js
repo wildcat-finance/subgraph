@@ -52,6 +52,8 @@ function buildHooksFactoryRevolvingDataSource(network, contracts) {
           file: ./abis/HooksFactory.json
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
