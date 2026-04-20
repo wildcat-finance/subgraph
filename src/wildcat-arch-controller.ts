@@ -16,7 +16,6 @@ import {
   generateParameterConstraintsId,
   getController,
   getControllerFactory,
-  getMarket,
   getOrInitializeArchController,
   getRegisteredBorrower,
   getOrInitializeRegisteredBorrower,
@@ -42,7 +41,7 @@ import {
   OwnershipTransferred,
 } from "../generated/schema";
 import { WildcatMarketControllerFactory as ControllerFactoryTemplate } from "../generated/templates";
-import { generateEventId } from "./utils";
+import { generateEventId, loadExistingMarket } from "./utils";
 
 export function handleBorrowerAdded(event: BorrowerAddedEvent): void {
   let borrower = event.params.borrower;
@@ -196,7 +195,13 @@ export function handleMarketAdded(event: MarketAddedEvent): void {
 }
 
 export function handleMarketRemoved(event: MarketRemovedEvent): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleMarketRemoved"
+  );
+  if (market == null) {
+    return;
+  }
   market.isRegistered = false;
   market.save();
   createMarketRemoved(generateEventId(event), {

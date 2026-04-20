@@ -9,7 +9,6 @@ import {
   generateTokenId,
   getController,
   getControllerFactory,
-  getMarket,
   getOrInitializeLenderAuthorization,
   getOrInitializeToken,
 } from "../generated/UncrashableEntityHelpers";
@@ -24,6 +23,7 @@ import {
   TemporaryExcessReserveRatioUpdated,
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId } from "./utils";
+import { loadExistingMarket } from "./utils";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -143,7 +143,13 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
 export function handleTemporaryExcessReserveRatioActivated(
   event: TemporaryExcessReserveRatioActivated
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioActivated"
+  );
+  if (market == null) {
+    return;
+  }
   market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
@@ -154,7 +160,13 @@ export function handleTemporaryExcessReserveRatioActivated(
 export function handleTemporaryExcessReserveRatioUpdated(
   event: TemporaryExcessReserveRatioUpdated
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioUpdated"
+  );
+  if (market == null) {
+    return;
+  }
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.save();
 }
@@ -162,7 +174,13 @@ export function handleTemporaryExcessReserveRatioUpdated(
 export function handleTemporaryExcessReserveRatioExpired(
   event: TemporaryExcessReserveRatioExpired
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioExpired"
+  );
+  if (market == null) {
+    return;
+  }
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
@@ -173,7 +191,13 @@ export function handleTemporaryExcessReserveRatioExpired(
 export function handleTemporaryExcessReserveRatioCanceled(
   event: TemporaryExcessReserveRatioCanceled
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioCanceled"
+  );
+  if (market == null) {
+    return;
+  }
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;

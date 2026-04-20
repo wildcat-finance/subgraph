@@ -1,8 +1,8 @@
 import { BigInt } from "@graphprotocol/graph-ts";
 import { ApprovedLiquidator, Token } from "../generated/schema";
-import { createSimpleCollateralContract, createToken, generateTokenId, createLiquidatorApproved, createLiquidatorRemoved,  getApprovedLiquidator, getOrInitializeApprovedLiquidator, getOrInitializeSimpleCollateralFactory, generateMarketId, getMarket, getOrInitializeApprovedCollateralExchange, createCollateralExchangeApproved, createCollateralExchangeRemoved, getApprovedCollateralExchange } from "../generated/UncrashableEntityHelpers";
+import { createSimpleCollateralContract, createToken, generateTokenId, createLiquidatorApproved, createLiquidatorRemoved,  getApprovedLiquidator, getOrInitializeApprovedLiquidator, getOrInitializeSimpleCollateralFactory, generateMarketId, getOrInitializeApprovedCollateralExchange, createCollateralExchangeApproved, createCollateralExchangeRemoved, getApprovedCollateralExchange } from "../generated/UncrashableEntityHelpers";
 import { CollateralContractCreated, ExecutorApproved, ExecutorRemoved, ExchangeRemoved, ExchangeApproved } from "../generated/WildcatMarketCollateralFactory/WildcatMarketCollateralFactory";
-import { generateEventId } from "./utils";
+import { generateEventId, loadExistingMarket } from "./utils";
 import { IERC20 } from "../generated/templates/SimpleMarketCollateralMultiParty/IERC20";
 import { SimpleMarketCollateralMultiParty } from "../generated/templates/SimpleMarketCollateralMultiParty/SimpleMarketCollateralMultiParty";
 import { SimpleMarketCollateralMultiParty as SimpleMarketCollateralMultiPartyTemplate } from "../generated/templates";
@@ -22,7 +22,13 @@ export function handleCollateralContractCreated(event: CollateralContractCreated
         isMock: isMock
       });
     }
-    let market = getMarket(generateMarketId(event.params.associatedMarket));
+    let market = loadExistingMarket(
+      generateMarketId(event.params.associatedMarket),
+      "handleCollateralContractCreated"
+    );
+    if (market == null) {
+      return;
+    }
     market.numCollateralContracts = market.numCollateralContracts + 1;
     market.save();
     let collateralContract = SimpleMarketCollateralMultiParty.bind(event.params.collateralContract);

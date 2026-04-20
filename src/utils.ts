@@ -1,4 +1,4 @@
-import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
 import { LenderAccount, LenderHooksAccess, Market, WithdrawalBatch } from "../generated/schema";
 import { generateLenderAccountId, generateLenderAuthorizationId, generateLenderHooksAccessId, GetOrCreateReturn, getOrInitializeLenderAccount, getOrInitializeLenderAuthorization } from "../generated/UncrashableEntityHelpers";
 
@@ -92,6 +92,17 @@ export function satSub(a: BigInt, b: BigInt): BigInt {
 
 export function isNullAddress(address: Address): bool {
   return address.equals(Address.zero());
+}
+
+export function loadExistingMarket(
+  marketId: string,
+  handlerName: string
+): Market | null {
+  let market = Market.load(marketId);
+  if (market == null) {
+    log.warning("{}: skipping unknown market {}", [handlerName, marketId]);
+  }
+  return market;
 }
 
 export function getOrCreateLenderAccount(
