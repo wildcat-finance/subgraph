@@ -22,8 +22,7 @@ import {
   TemporaryExcessReserveRatioExpired,
   TemporaryExcessReserveRatioUpdated,
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
-import { generateEventId } from "./utils";
-import { loadExistingMarket } from "./utils";
+import { generateEventId, loadExistingMarket } from "./utils";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -133,6 +132,8 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     createdAt: event.block.timestamp.toI32(),
     hooks: null,
     hooksFactory: null,
+    commitmentFeeBips: null,
+    drawnAmount: null,
     version: version,
     numCollateralContracts: 0,
   });

@@ -8,9 +8,9 @@ import {
 } from "matchstick-as/assembly/index";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { handleMarketDeployedForMarketType } from "../src/hooks-factory";
-import { handleBorrow, handleDebtRepaid, handleStateUpdated } from "../src/wildcat-market";
+import { handleBorrow, handleDebtRepaid, handleMarketClosed, handleStateUpdated } from "../src/wildcat-market";
 import { MarketDeployed } from "../generated/HooksFactory/HooksFactory";
-import { Borrow, DebtRepaid, StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
+import { Borrow, DebtRepaid, MarketClosed, StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
   ArchController,
   HooksFactory,
@@ -22,6 +22,7 @@ import {
 import {
   createBorrowEvent,
   createDebtRepaidEvent,
+  createMarketClosedEvent,
   createStateUpdatedEvent,
 } from "./wildcat-market-utils";
 
@@ -112,7 +113,7 @@ function seedMarket(address: Address, marketType: string | null): void {
   market.maxTotalSupply = BigInt.fromI32(1_000_000);
   market.pendingProtocolFees = BigInt.zero();
   market.normalizedUnclaimedWithdrawals = BigInt.zero();
-  market.scaledTotalSupply = BigInt.zero();
+  market.scaledTotalSupply = BigInt.fromI32(10_000);
   market.scaledPendingWithdrawals = BigInt.zero();
   market.pendingWithdrawalExpiry = BigInt.zero();
   market.isDelinquent = false;
@@ -346,11 +347,11 @@ describe("RCF v2 subgraph regression coverage", () => {
     assert.notNull(market);
     if (market != null) {
       assert.notNull(market.marketType);
-      assert.notNull(market.commitmentFeeBips);
-      assert.notNull(market.drawnAmount);
       if (market.marketType != null) {
         assert.stringEquals(market.marketType, "Revolving");
       }
+      assert.notNull(market.commitmentFeeBips);
+      assert.notNull(market.drawnAmount);
       if (market.commitmentFeeBips != null) {
         assert.bigIntEquals(market.commitmentFeeBips, BigInt.fromI32(125));
       }
@@ -436,6 +437,42 @@ describe("RCF v2 subgraph regression coverage", () => {
     if (market != null) {
       assert.booleanEquals(market.commitmentFeeBips == null, true);
       assert.booleanEquals(market.drawnAmount == null, true);
+    }
+
+    resetStore();
+  });
+
+  test("market close clears revolving drawn amount and APR weighting", () => {
+    resetStore();
+    seedArchController();
+    seedToken(ASSET_ADDRESS);
+    seedMarket(REVOLVING_MARKET_ADDRESS, "Revolving");
+    mockRevolvingState(REVOLVING_MARKET_ADDRESS, 150, 0);
+
+    let market = Market.load(REVOLVING_MARKET_ADDRESS.toHexString());
+    if (market != null) {
+      market.commitmentFeeBips = BigInt.fromI32(150);
+      market.drawnAmount = BigInt.fromI32(4000);
+      market.save();
+    }
+
+    let event = createMarketClosedEvent(BigInt.fromI32(2)) as MarketClosed;
+    event.address = REVOLVING_MARKET_ADDRESS;
+
+    handleMarketClosed(event);
+
+    let closedMarket = Market.load(REVOLVING_MARKET_ADDRESS.toHexString());
+    assert.notNull(closedMarket);
+    if (closedMarket != null) {
+      assert.booleanEquals(closedMarket.isClosed, true);
+      assert.notNull(closedMarket.drawnAmount);
+      if (closedMarket.drawnAmount != null) {
+        assert.bigIntEquals(closedMarket.drawnAmount, BigInt.zero());
+      }
+      assert.notNull(closedMarket.commitmentFeeBips);
+      if (closedMarket.commitmentFeeBips != null) {
+        assert.bigIntEquals(closedMarket.commitmentFeeBips, BigInt.fromI32(150));
+      }
     }
 
     resetStore();

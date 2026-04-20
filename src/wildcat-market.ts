@@ -409,6 +409,7 @@ export function handleMarketClosed(event: MarketClosedEvent): void {
     blockLogIndex: event.logIndex.toI32(),
   });
   market.eventIndex = market.eventIndex + 1;
+  syncRevolvingMarketState(market, event.address);
   market.save();
 }
 

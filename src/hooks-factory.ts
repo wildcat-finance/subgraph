@@ -587,7 +587,6 @@ export function handleMarketDeployedForMarketType(
       version: version,
       numCollateralContracts: 0,
     });
-
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
   }
