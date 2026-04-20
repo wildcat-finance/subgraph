@@ -450,7 +450,7 @@ function decodeAndCreateHooksConfig(
     depositRequiresAccess = hookedMarket.depositRequiresAccess;
     transferRequiresAccess = hookedMarket.transferRequiresAccess;
     transfersDisabled = hookedMarket.transfersDisabled;
-    allowForceBuyBacks = false;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
     minimumDeposit = hookedMarket.minimumDeposit;
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
   } else {
@@ -469,7 +469,7 @@ function decodeAndCreateHooksConfig(
     allowTermReduction = hookedMarket.allowTermReduction;
     fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
     minimumDeposit = hookedMarket.minimumDeposit;
-    allowForceBuyBacks = false;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
   }
 
   return createHooksConfig(generateHooksConfigId(market), {

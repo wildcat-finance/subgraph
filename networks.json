@@ -32,8 +32,12 @@
         "startBlock": 4796511
       },
       "HooksFactory": {
-        "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
+        "address": "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88",
         "startBlock": 7124440
+      },
+      "HooksFactoryRevolving": {
+        "address": "0xdC33aC1661263a1f143ab978741D24B46CAEEaE4",
+        "startBlock": 10679014
       },
       "CollateralFactory": {
         "address": "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0",
