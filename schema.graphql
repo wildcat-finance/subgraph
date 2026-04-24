@@ -264,6 +264,7 @@ type HooksInstance @entity {
   kind: HooksKind!
   borrower: Bytes! # address
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   markets: [Market!]! @derivedFrom(field: "hooks")
   providers: [RoleProvider!]! @derivedFrom(field: "hooks")
   hooksFactory: HooksFactory!
@@ -525,6 +526,8 @@ type AccountAccessRevoked @entity(immutable: true) {
 type HooksFactory @entity {
   id: ID!
   hooksTemplates: [HooksTemplate!]! @derivedFrom(field: "hooksFactory")
+  factoryHooksTemplates: [FactoryHooksTemplate!]!
+    @derivedFrom(field: "hooksFactory")
   hooksInstances: [HooksInstance!]! @derivedFrom(field: "hooksFactory")
   archController: ArchController!
   marketType: MarketType
@@ -537,6 +540,8 @@ type HooksFactory @entity {
 # Current workaround is to only bind a hooks instance if it is an HooksInstance instance.
 type HooksTemplate @entity {
   id: ID! # address
+  factoryHooksTemplates: [FactoryHooksTemplate!]!
+    @derivedFrom(field: "hooksTemplate")
   name: String!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
@@ -548,10 +553,27 @@ type HooksTemplate @entity {
   disabled: Boolean!
 }
 
+type FactoryHooksTemplate @entity {
+  id: ID! # factory-template
+  hooksFactory: HooksFactory!
+  hooksTemplate: HooksTemplate!
+  templateAddress: Bytes! # address
+  name: String!
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Token
+  originationFeeAmount: BigInt!
+  deployedInstances: [HooksInstanceDeployed!]!
+    @derivedFrom(field: "factoryHooksTemplate")
+  hooksInstances: [HooksInstance!]! @derivedFrom(field: "factoryHooksTemplate")
+  disabled: Boolean!
+}
+
 # event HooksInstanceDeployed(address hooksInstance, address hooksTemplate);
 type HooksInstanceDeployed @entity(immutable: true) {
   id: ID!
   hooksTemplate: HooksTemplate!
+  factoryHooksTemplate: FactoryHooksTemplate!
   hooks: HooksInstance! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -568,8 +590,9 @@ type HooksInstanceDeployed @entity(immutable: true) {
 #   uint16 protocolFeeBips
 # );
 type HooksTemplateAdded @entity(immutable: true) {
-  id: ID! # TEMPLATEADD-template-eventIndex
+  id: ID! # TEMPLATEADD-factory-template-eventIndex
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
   originationFeeAsset: Token
@@ -582,8 +605,9 @@ type HooksTemplateAdded @entity(immutable: true) {
 
 # event HooksTemplateDisabled(address hooksTemplate);
 type HooksTemplateDisabled @entity(immutable: true) {
-  id: ID! # TEMPLATEDISABLE-template-eventIndex
+  id: ID! # TEMPLATEDISABLE-factory-template-eventIndex
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -598,8 +622,9 @@ type HooksTemplateDisabled @entity(immutable: true) {
 #   uint16 protocolFeeBips
 # );
 type HooksTemplateFeesUpdated @entity(immutable: true) {
-  id: ID! # TEMPLATEFEEUPDATE-template-eventIndex
+  id: ID! # TEMPLATEFEEUPDATE-factory-template-eventIndex
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
   originationFeeAsset: Token

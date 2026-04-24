@@ -7,12 +7,16 @@ import {
   test,
 } from "matchstick-as/assembly/index";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
-import { handleMarketDeployedForMarketType } from "../src/hooks-factory";
+import {
+  handleHooksTemplateAddedForMarketType,
+  handleMarketDeployedForMarketType,
+} from "../src/hooks-factory";
 import { handleBorrow, handleDebtRepaid, handleMarketClosed, handleStateUpdated } from "../src/wildcat-market";
 import { MarketDeployed } from "../generated/HooksFactory/HooksFactory";
 import { Borrow, DebtRepaid, MarketClosed, StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
   ArchController,
+  FactoryHooksTemplate,
   HooksFactory,
   HooksInstance,
   HooksTemplate,
@@ -38,6 +42,10 @@ const REPAYER_ADDRESS = addressFrom("0x8000000000000000000000000000000000000008"
 
 function addressFrom(hex: string): Address {
   return Address.fromBytes(Bytes.fromHexString(hex));
+}
+
+function getFactoryHooksTemplateId(factoryAddress: Address): string {
+  return factoryAddress.toHexString() + "-" + HOOKS_TEMPLATE_ADDRESS.toHexString();
 }
 
 function resetStore(): void {
@@ -80,12 +88,29 @@ function seedHooksTemplate(): void {
   hooksTemplate.save();
 }
 
+function seedFactoryHooksTemplate(factoryAddress: Address, protocolFeeBips: i32): void {
+  let factoryHooksTemplate = new FactoryHooksTemplate(
+    getFactoryHooksTemplateId(factoryAddress)
+  );
+  factoryHooksTemplate.hooksFactory = factoryAddress.toHexString();
+  factoryHooksTemplate.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
+  factoryHooksTemplate.templateAddress = HOOKS_TEMPLATE_ADDRESS;
+  factoryHooksTemplate.name = "OpenTermHooks";
+  factoryHooksTemplate.feeRecipient = factoryAddress;
+  factoryHooksTemplate.protocolFeeBips = protocolFeeBips;
+  factoryHooksTemplate.originationFeeAmount = BigInt.zero();
+  factoryHooksTemplate.originationFeeAsset = null;
+  factoryHooksTemplate.disabled = false;
+  factoryHooksTemplate.save();
+}
+
 function seedHooksInstance(factoryAddress: Address): void {
   let hooksInstance = new HooksInstance(ZERO_ADDRESS.toHexString());
   hooksInstance.name = "OpenTermHooks";
   hooksInstance.kind = "OpenTerm";
   hooksInstance.borrower = factoryAddress;
   hooksInstance.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
+  hooksInstance.factoryHooksTemplate = getFactoryHooksTemplateId(factoryAddress);
   hooksInstance.hooksFactory = factoryAddress.toHexString();
   hooksInstance.eventIndex = 0;
   hooksInstance.numMarkets = 0;
@@ -270,10 +295,114 @@ function seedDeployContext(factoryAddress: Address, marketType: string): void {
   seedToken(ASSET_ADDRESS);
   seedHooksFactory(factoryAddress, marketType);
   seedHooksTemplate();
+  seedFactoryHooksTemplate(factoryAddress, 25);
   seedHooksInstance(factoryAddress);
 }
 
 describe("RCF v2 subgraph regression coverage", () => {
+  test("shared template address keeps factory-scoped fee state", () => {
+    resetStore();
+    seedArchController();
+    seedHooksFactory(LEGACY_FACTORY_ADDRESS, "Legacy");
+    seedHooksFactory(REVOLVING_FACTORY_ADDRESS, "Revolving");
+
+    let legacyEvent = newMockEvent();
+    legacyEvent.address = LEGACY_FACTORY_ADDRESS;
+    handleHooksTemplateAddedForMarketType(
+      legacyEvent,
+      HOOKS_TEMPLATE_ADDRESS,
+      "OpenTermHooks",
+      LEGACY_FACTORY_ADDRESS,
+      ZERO_ADDRESS,
+      BigInt.zero(),
+      25,
+      "Legacy"
+    );
+
+    let revolvingEvent = newMockEvent();
+    revolvingEvent.address = REVOLVING_FACTORY_ADDRESS;
+    handleHooksTemplateAddedForMarketType(
+      revolvingEvent,
+      HOOKS_TEMPLATE_ADDRESS,
+      "OpenTermHooks",
+      REVOLVING_FACTORY_ADDRESS,
+      ZERO_ADDRESS,
+      BigInt.zero(),
+      125,
+      "Revolving"
+    );
+
+    let legacyScopedTemplate = FactoryHooksTemplate.load(
+      getFactoryHooksTemplateId(LEGACY_FACTORY_ADDRESS)
+    );
+    let revolvingScopedTemplate = FactoryHooksTemplate.load(
+      getFactoryHooksTemplateId(REVOLVING_FACTORY_ADDRESS)
+    );
+
+    assert.notNull(legacyScopedTemplate);
+    assert.notNull(revolvingScopedTemplate);
+    if (legacyScopedTemplate != null && revolvingScopedTemplate != null) {
+      assert.stringEquals(
+        legacyScopedTemplate.hooksFactory,
+        LEGACY_FACTORY_ADDRESS.toHexString()
+      );
+      assert.i32Equals(legacyScopedTemplate.protocolFeeBips, 25);
+      assert.stringEquals(
+        revolvingScopedTemplate.hooksFactory,
+        REVOLVING_FACTORY_ADDRESS.toHexString()
+      );
+      assert.i32Equals(revolvingScopedTemplate.protocolFeeBips, 125);
+    }
+
+    resetStore();
+  });
+
+  test("market deploy uses factory-scoped template fee state", () => {
+    resetStore();
+    seedArchController();
+    seedToken(ASSET_ADDRESS);
+    seedHooksFactory(REVOLVING_FACTORY_ADDRESS, "Revolving");
+    seedHooksTemplate();
+    seedFactoryHooksTemplate(REVOLVING_FACTORY_ADDRESS, 125);
+    seedHooksInstance(REVOLVING_FACTORY_ADDRESS);
+    mockOpenTermHooks(REVOLVING_MARKET_ADDRESS);
+    mockRevolvingState(REVOLVING_MARKET_ADDRESS, 125, 4000);
+
+    let event = createHooksMarketDeployedEvent(
+      REVOLVING_FACTORY_ADDRESS,
+      REVOLVING_MARKET_ADDRESS,
+      ASSET_ADDRESS
+    );
+
+    handleMarketDeployedForMarketType(
+      event,
+      event.params.market,
+      event.params.hooks,
+      event.params.name,
+      event.params.symbol,
+      event.params.asset,
+      event.params.maxTotalSupply,
+      event.params.annualInterestBips,
+      event.params.delinquencyFeeBips,
+      event.params.withdrawalBatchDuration,
+      event.params.reserveRatioBips,
+      event.params.delinquencyGracePeriod,
+      "Revolving"
+    );
+
+    let market = Market.load(REVOLVING_MARKET_ADDRESS.toHexString());
+    assert.notNull(market);
+    if (market != null) {
+      assert.i32Equals(market.protocolFeeBips, 125);
+      assert.stringEquals(
+        market.feeRecipient.toHexString(),
+        REVOLVING_FACTORY_ADDRESS.toHexString()
+      );
+    }
+
+    resetStore();
+  });
+
   test("legacy deploy leaves revolving fields unset", () => {
     resetStore();
     seedDeployContext(LEGACY_FACTORY_ADDRESS, "Legacy");
