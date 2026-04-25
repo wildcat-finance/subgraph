@@ -1,4 +1,4 @@
-import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   ChangedSpherexEngineAddress as ChangedSpherexEngineAddressEvent,
   ChangedSpherexOperator as ChangedSpherexOperatorEvent,
@@ -102,12 +102,6 @@ export function handleHooksInstanceDeployedForMarketType(
     hooksFactory,
     hooksTemplateAddress
   );
-  log.warning("Hooks Template: {}", [hooksTemplateId]);
-  log.warning("Hooks Instance: {}", [hooksInstanceId]);
-  log.warning("Hooks name: {}", [factoryHooksTemplate.name]);
-  log.warning("Hooks name is ACH: {}", [
-    factoryHooksTemplate.name == "OpenTermHooks" ? "true" : "false",
-  ]);
   let hooksContract = CombinedHooks.bind(hooksInstance);
   let borrower = hooksContract.borrower();
   let name = hooksContract.name();
@@ -548,10 +542,8 @@ function decodeAndCreateHooksConfig(
   let useOnSetAnnualInterestAndReserveRatioBips = ((secondByte >> 6) & 1) == 1;
   let useOnSetProtocolFeeBips = ((secondByte >> 5) & 1) == 1;
   let hooksContract = CombinedHooks.bind(Address.fromBytes(hooksAddress));
-  log.warning("Hooks Config: {}", [hooksConfigBytes]);
-  log.warning("Hooks Address: {}", [hooksAddress.toHex()]);
-  log.warning("Market: {}", [market.toHex()]);
-  let versionString = hooksContract.version();
+  let versionResult = hooksContract.try_version();
+  let versionString = versionResult.reverted ? "Unknown" : versionResult.value;
   let depositRequiresAccess: boolean = false;
   let transferRequiresAccess: boolean = false;
   let queueWithdrawalRequiresAccess: boolean = false;
@@ -574,8 +566,7 @@ function decodeAndCreateHooksConfig(
     allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
     minimumDeposit = hookedMarket.minimumDeposit;
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
-  } else {
-    // @todo handle unknown hooks kind
+  } else if (versionString == "FixedTermHooks") {
     let fixedTermHooksContract = IFixedTermHooks.bind(
       Address.fromBytes(hooksAddress)
     );

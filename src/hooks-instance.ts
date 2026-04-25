@@ -47,7 +47,6 @@ import {
   FixedTermUpdated as FixedTermUpdatedEvent,
   NameUpdated as NameUpdatedEvent,
 } from "../generated/templates/CombinedHooks/CombinedHooks";
-import { log } from '@graphprotocol/graph-ts'
 function generateHooksInstanceEventId(hooks: HooksInstance): string {
   return "RECORD" + "-" + hooks.id + "-" + hooks.eventIndex.toString();
 }
@@ -252,7 +251,6 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
   let market = Market.load(marketId);
   if (market != null) {
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
-    log.warning("handleFixedTermUpdated: {} market event index: {}", [event.params.market.toHex(), market.eventIndex.toString()]);
     createFixedTermUpdated(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
       market: market.id,

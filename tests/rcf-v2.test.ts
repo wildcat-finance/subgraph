@@ -272,6 +272,12 @@ function mockOpenTermHooks(marketAddress: Address): void {
     .returns([ethereum.Value.fromTuple(hookedMarket)]);
 }
 
+function mockUnknownHooks(): void {
+  createMockedFunction(ZERO_ADDRESS, "version", "version():(string)").returns([
+    ethereum.Value.fromString("AuctionHooks"),
+  ]);
+}
+
 function mockRevolvingState(
   marketAddress: Address,
   commitmentFeeBips: i32,
@@ -603,6 +609,49 @@ describe("RCF v2 subgraph regression coverage", () => {
         assert.bigIntEquals(closedMarket.commitmentFeeBips, BigInt.fromI32(150));
       }
     }
+
+    resetStore();
+  });
+
+  test("unknown hook versions do not decode as fixed term hooks", () => {
+    resetStore();
+    seedDeployContext(LEGACY_FACTORY_ADDRESS, "Legacy");
+    mockUnknownHooks();
+
+    let event = createHooksMarketDeployedEvent(
+      LEGACY_FACTORY_ADDRESS,
+      LEGACY_MARKET_ADDRESS,
+      ASSET_ADDRESS
+    );
+
+    handleMarketDeployedForMarketType(
+      event,
+      event.params.market,
+      event.params.hooks,
+      event.params.name,
+      event.params.symbol,
+      event.params.asset,
+      event.params.maxTotalSupply,
+      event.params.annualInterestBips,
+      event.params.delinquencyFeeBips,
+      event.params.withdrawalBatchDuration,
+      event.params.reserveRatioBips,
+      event.params.delinquencyGracePeriod,
+      "Legacy"
+    );
+
+    assert.fieldEquals(
+      "HooksConfig",
+      "HOOKSCONFIG-" + LEGACY_MARKET_ADDRESS.toHexString(),
+      "queueWithdrawalRequiresAccess",
+      "false"
+    );
+    assert.fieldEquals(
+      "HooksConfig",
+      "HOOKSCONFIG-" + LEGACY_MARKET_ADDRESS.toHexString(),
+      "fixedTermEndTime",
+      "0"
+    );
 
     resetStore();
   });

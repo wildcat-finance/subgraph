@@ -82,7 +82,7 @@ export function handleBorrowerRemoved(event: BorrowerRemovedEvent): void {
 
   createBorrowerRegistrationChange(generateEventId(event), {
     registration: borrowerStatus.id,
-    isRegistered: true,
+    isRegistered: false,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
