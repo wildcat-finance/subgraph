@@ -5,9 +5,91 @@ const networkId = process.argv[2];
 if (!networks[networkId]) {
   throw Error(`No deployments for network: ${networkId}`);
 }
-let subgraphTemplateYamlName = 'subgraph.template.yaml';
+let subgraphTemplateYamlName = "subgraph.template.yaml";
 if (networkId.toLowerCase().includes("plasma")) {
   subgraphTemplateYamlName = "plasma-subgraph.template.yaml";
+}
+
+function legacyHooksFactoriesFromContracts(contracts) {
+  const hooksFactories = [];
+  if (contracts.HooksFactory) {
+    hooksFactories.push({
+      name: "HooksFactory",
+      marketType: "legacy",
+      address: contracts.HooksFactory.address,
+      startBlock: contracts.HooksFactory.startBlock,
+      indexed: true,
+    });
+  }
+  if (contracts.HooksFactoryRevolving) {
+    hooksFactories.push({
+      name: "HooksFactoryRevolving",
+      marketType: "revolving",
+      address: contracts.HooksFactoryRevolving.address,
+      startBlock: contracts.HooksFactoryRevolving.startBlock,
+      indexed: true,
+    });
+  }
+  return hooksFactories;
+}
+
+function validateHooksFactory(hooksFactory, index) {
+  const label = `hooksFactories[${index}]`;
+  if (!hooksFactory.name) {
+    throw new Error(`${label}.name is required`);
+  }
+  if (!hooksFactory.marketType) {
+    throw new Error(`${label}.marketType is required`);
+  }
+  if (!hooksFactory.address) {
+    throw new Error(`${label}.address is required`);
+  }
+  if (!Number.isInteger(Number(hooksFactory.startBlock))) {
+    throw new Error(`${label}.startBlock must be an integer`);
+  }
+}
+
+function getIndexedHooksFactories(networkConfig) {
+  const hooksFactories = Array.isArray(networkConfig.hooksFactories)
+    ? networkConfig.hooksFactories
+    : legacyHooksFactoriesFromContracts(networkConfig.contracts);
+  const indexedHooksFactories = hooksFactories.filter(
+    (hooksFactory) => hooksFactory.indexed !== false
+  );
+  const names = new Set();
+  const addresses = new Set();
+
+  indexedHooksFactories.forEach((hooksFactory, index) => {
+    validateHooksFactory(hooksFactory, index);
+    if (names.has(hooksFactory.name)) {
+      throw new Error(`Duplicate indexed hooks factory name: ${hooksFactory.name}`);
+    }
+    names.add(hooksFactory.name);
+
+    const address = hooksFactory.address.toLowerCase();
+    if (addresses.has(address)) {
+      throw new Error(`Duplicate indexed hooks factory address: ${hooksFactory.address}`);
+    }
+    addresses.add(address);
+  });
+
+  return indexedHooksFactories;
+}
+
+function normalizeNetworkConfig(networkConfig) {
+  const hooksFactories = getIndexedHooksFactories(networkConfig);
+  const contracts = { ...networkConfig.contracts };
+
+  for (const hooksFactory of hooksFactories) {
+    if (hooksFactory.name === "HooksFactory" || hooksFactory.name === "HooksFactoryRevolving") {
+      contracts[hooksFactory.name] = {
+        address: hooksFactory.address,
+        startBlock: hooksFactory.startBlock,
+      };
+    }
+  }
+
+  return { ...networkConfig, contracts, hooksFactories };
 }
 
 function buildHooksFactoryRevolvingDataSource(network, contracts) {
@@ -82,7 +164,7 @@ function buildHooksFactoryRevolvingDataSource(network, contracts) {
 }
 
 function setNetworkAddresses() {
-  const { name: network, contracts } = networks[networkId];
+  const { name: network, contracts } = normalizeNetworkConfig(networks[networkId]);
   let subgraph = fs
     .readFileSync(path.join(__dirname, `../${subgraphTemplateYamlName}`), "utf8")
     .replace(new RegExp(`{{NetworkName}}`, "g"), network);
