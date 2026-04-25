@@ -92,19 +92,29 @@ function normalizeNetworkConfig(networkConfig) {
   return { ...networkConfig, contracts, hooksFactories };
 }
 
-function buildHooksFactoryRevolvingDataSource(network, contracts) {
-  const revolvingFactory = contracts.HooksFactoryRevolving;
-  if (!revolvingFactory) {
-    return "";
+function hooksFactoryMappingFile(hooksFactory) {
+  if (hooksFactory.marketType === "legacy") {
+    if (hooksFactory.name !== "HooksFactory") {
+      throw new Error(
+        `Legacy hooks factory ${hooksFactory.name} needs a generated wrapper before it can be rendered`
+      );
+    }
+    return "./src/hooks-factory.ts";
   }
+  if (hooksFactory.marketType === "revolving") {
+    return "./src/hooks-factory-revolving.ts";
+  }
+  throw new Error(`Unsupported hooks factory market type: ${hooksFactory.marketType}`);
+}
 
+function buildHooksFactoryDataSource(network, hooksFactory) {
   return `  - kind: ethereum
-    name: HooksFactoryRevolving
+    name: ${hooksFactory.name}
     network: ${network}
     source:
-      address: "${revolvingFactory.address}"
+      address: "${hooksFactory.address}"
       abi: HooksFactory
-      startBlock: ${revolvingFactory.startBlock}
+      startBlock: ${hooksFactory.startBlock}
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -159,12 +169,19 @@ function buildHooksFactoryRevolvingDataSource(network, contracts) {
           handler: handleHooksTemplateFeesUpdated
         - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
-      file: ./src/hooks-factory-revolving.ts
+      file: ${hooksFactoryMappingFile(hooksFactory)}
 `;
 }
 
+function buildAdditionalHooksFactoryDataSources(network, hooksFactories) {
+  return hooksFactories
+    .filter((hooksFactory) => hooksFactory.name !== "HooksFactory")
+    .map((hooksFactory) => buildHooksFactoryDataSource(network, hooksFactory))
+    .join("");
+}
+
 function setNetworkAddresses() {
-  const { name: network, contracts } = normalizeNetworkConfig(networks[networkId]);
+  const { name: network, contracts, hooksFactories } = normalizeNetworkConfig(networks[networkId]);
   let subgraph = fs
     .readFileSync(path.join(__dirname, `../${subgraphTemplateYamlName}`), "utf8")
     .replace(new RegExp(`{{NetworkName}}`, "g"), network);
@@ -186,7 +203,7 @@ function setNetworkAddresses() {
 
   subgraph = subgraph.replace(
     new RegExp(`{{HooksFactoryRevolvingDataSource}}`, "g"),
-    buildHooksFactoryRevolvingDataSource(network, contracts)
+    buildAdditionalHooksFactoryDataSources(network, hooksFactories)
   );
 
   fs.writeFileSync(path.join(__dirname, "../subgraph.yaml"), subgraph);
