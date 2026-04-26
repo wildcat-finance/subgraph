@@ -107,6 +107,15 @@ function hooksFactoryMappingFile(hooksFactory) {
   throw new Error(`Unsupported hooks factory market type: ${hooksFactory.marketType}`);
 }
 
+function hooksAbiDir() {
+  const networkAbisDir = path.join(
+    __dirname,
+    "../network-specific-abis",
+    networkId
+  );
+  return fs.existsSync(networkAbisDir) ? `./network-specific-abis/${networkId}` : "./abis";
+}
+
 function buildHooksFactoryDataSource(network, hooksFactory) {
   return `  - kind: ethereum
     name: ${hooksFactory.name}
@@ -147,9 +156,9 @@ function buildHooksFactoryDataSource(network, hooksFactory) {
         - name: IWildcatMarketRevolving
           file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ${hooksAbiDir()}/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ${hooksAbiDir()}/FixedTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -184,7 +193,8 @@ function setNetworkAddresses() {
   const { name: network, contracts, hooksFactories } = normalizeNetworkConfig(networks[networkId]);
   let subgraph = fs
     .readFileSync(path.join(__dirname, `../${subgraphTemplateYamlName}`), "utf8")
-    .replace(new RegExp(`{{NetworkName}}`, "g"), network);
+    .replace(new RegExp(`{{NetworkName}}`, "g"), network)
+    .replace(new RegExp(`{{HooksAbiDir}}`, "g"), hooksAbiDir());
   let uncrashable = fs
     .readFileSync(
       path.join(__dirname, "../uncrashable-config.template.yaml"),
@@ -213,42 +223,4 @@ function setNetworkAddresses() {
   );
 }
 
-function replaceNetworkAbis() {
-  const networkAbisDir = path.join(
-    __dirname,
-    "../network-specific-abis",
-    networkId
-  );
-  const abisDir = path.join(__dirname, "../abis");
-  if (!fs.existsSync(networkAbisDir)) {
-    throw new Error(`Network ${networkId} not found in network-specific-abis`);
-  }
-  const abiFiles = fs.readdirSync(networkAbisDir);
-
-  for (const abiFile of abiFiles) {
-    const abi = fs.readFileSync(path.join(networkAbisDir, abiFile), "utf8");
-    const abiPath = path.join(abisDir, abiFile);
-    fs.writeFileSync(abiPath, abi);
-  }
-}
-
-function replaceRefsToForceBuyBacks() {
-  const hooksFactoryPath = path.join(__dirname, "../src/hooks-factory.ts");
-  let hooksFactory = fs.readFileSync(hooksFactoryPath, "utf8");
-  if (networkId !== "sepolia") {
-    hooksFactory = hooksFactory.replaceAll(
-      "allowForceBuyBacks = hookedMarket.allowForceBuyBacks;",
-      "allowForceBuyBacks = false;"
-    );
-  } else {
-    hooksFactory = hooksFactory.replaceAll(
-      "allowForceBuyBacks = false;",
-      "allowForceBuyBacks = hookedMarket.allowForceBuyBacks;"
-    );
-  }
-  fs.writeFileSync(hooksFactoryPath, hooksFactory);
-}
-
 setNetworkAddresses();
-replaceNetworkAbis();
-replaceRefsToForceBuyBacks();

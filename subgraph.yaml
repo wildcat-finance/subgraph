@@ -82,9 +82,9 @@ dataSources:
         - name: IWildcatMarketRevolving
           file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -144,9 +144,9 @@ dataSources:
         - name: IWildcatMarketRevolving
           file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -206,9 +206,9 @@ dataSources:
         - name: IWildcatMarketRevolving
           file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -562,9 +562,9 @@ templates:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted
