@@ -26,7 +26,7 @@ import { generateEventId, loadExistingMarket } from "./utils";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
-import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
+import { readTokenMetadata } from "./token-metadata";
 
 export function handleLenderAuthorized(event: LenderAuthorizedEvent): void {
   let controller = getController(generateControllerId(event.address));
@@ -84,14 +84,12 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
   let contract = WildcatMarket.bind(event.params.market);
   let assetId = generateTokenId(event.params.asset);
   if (Token.load(assetId) == null) {
-    let erc20 = IERC20.bind(event.params.asset);
-    let result = erc20.try_isMock();
-    // let isMock = !result.reverted && result.value;
+    let metadata = readTokenMetadata(event.params.asset);
     createToken(assetId, {
       address: event.params.asset,
-      name: erc20.name(),
-      symbol: erc20.symbol(),
-      decimals: erc20.decimals(),
+      name: metadata.name,
+      symbol: metadata.symbol,
+      decimals: metadata.decimals,
       isMock: true,
     });
   }

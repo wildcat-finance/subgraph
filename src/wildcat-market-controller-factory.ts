@@ -13,7 +13,7 @@ import {
 } from "../generated/templates/WildcatMarketControllerFactory/WildcatMarketControllerFactory";
 import { WildcatMarketController as WildcatMarketControllerTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
-import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
+import { readTokenMetadata } from "./token-metadata";
 import { isNullAddress } from "./utils";
 
 function createTokenIfNotExists(asset: Address): string | null {
@@ -23,15 +23,13 @@ function createTokenIfNotExists(asset: Address): string | null {
   let assetId = generateTokenId(asset);
   let token = Token.load(assetId);
   if (token == null) {
-    let erc20 = IERC20.bind(asset);
-    let result = erc20.try_isMock();
-    let isMock = !result.reverted && result.value;
+    let metadata = readTokenMetadata(asset);
     return createToken(assetId, {
       address: asset,
-      name: erc20.name(),
-      symbol: erc20.symbol(),
-      decimals: erc20.decimals(),
-      isMock: isMock,
+      name: metadata.name,
+      symbol: metadata.symbol,
+      decimals: metadata.decimals,
+      isMock: metadata.isMock,
     }).id;
   }
   return token.id;

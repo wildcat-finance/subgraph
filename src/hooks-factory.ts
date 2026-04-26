@@ -41,7 +41,6 @@ import { OpenTermHooks as IOpenTermHooks } from "../generated/HooksFactory/OpenT
 import { FixedTermHooks as IFixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
 import { CombinedHooks } from "../generated/HooksFactory/CombinedHooks";
 import { IWildcatMarketRevolving } from "../generated/HooksFactory/IWildcatMarketRevolving";
-import { IERC20 } from "../generated/HooksFactory/IERC20";
 import {
   HooksInstance,
   HooksConfig,
@@ -51,6 +50,7 @@ import {
   RoleProvider,
   Token,
 } from "../generated/schema";
+import { readTokenMetadata } from "./token-metadata";
 import { generateEventId, isNullAddress } from "./utils";
 import {
   CombinedHooks as CombinedHooksTemplate,
@@ -201,15 +201,13 @@ function createTokenIfNotExists(asset: Address): Token | null {
   let assetId = generateTokenId(asset);
   let token = Token.load(assetId);
   if (token == null) {
-    let erc20 = IERC20.bind(asset);
-    let result = erc20.try_isMock();
-    let isMock = !result.reverted && result.value;
+    let metadata = readTokenMetadata(asset);
     return createToken(assetId, {
       address: asset,
-      name: erc20.name(),
-      symbol: erc20.symbol(),
-      decimals: erc20.decimals(),
-      isMock: isMock,
+      name: metadata.name,
+      symbol: metadata.symbol,
+      decimals: metadata.decimals,
+      isMock: metadata.isMock,
     });
   }
   return token;
