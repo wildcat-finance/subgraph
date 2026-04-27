@@ -280,6 +280,10 @@ function createOrUpdateFactoryHooksTemplate(
     });
   }
 
+  factoryHooksTemplate.hooksFactory = hooksFactory.id;
+  factoryHooksTemplate.hooksTemplate = hooksTemplateId;
+  factoryHooksTemplate.templateAddress = hooksTemplateAddress;
+  factoryHooksTemplate.name = name;
   factoryHooksTemplate.feeRecipient = feeRecipient;
   factoryHooksTemplate.originationFeeAmount = originationFeeAmount;
   factoryHooksTemplate.originationFeeAsset = originationFeeAssetId;

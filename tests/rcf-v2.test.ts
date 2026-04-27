@@ -363,6 +363,54 @@ describe("RCF v2 subgraph regression coverage", () => {
     resetStore();
   });
 
+  test("template add repairs placeholder factory-scoped template metadata", () => {
+    resetStore();
+    seedArchController();
+    seedHooksFactory(LEGACY_FACTORY_ADDRESS, "Legacy");
+
+    let placeholder = new FactoryHooksTemplate(
+      getFactoryHooksTemplateId(LEGACY_FACTORY_ADDRESS)
+    );
+    placeholder.hooksFactory = LEGACY_FACTORY_ADDRESS.toHexString();
+    placeholder.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
+    placeholder.templateAddress = HOOKS_TEMPLATE_ADDRESS;
+    placeholder.name = "";
+    placeholder.feeRecipient = ZERO_ADDRESS;
+    placeholder.protocolFeeBips = 0;
+    placeholder.originationFeeAmount = BigInt.zero();
+    placeholder.originationFeeAsset = null;
+    placeholder.disabled = false;
+    placeholder.save();
+
+    let event = newMockEvent();
+    event.address = LEGACY_FACTORY_ADDRESS;
+    handleHooksTemplateAddedForMarketType(
+      event,
+      HOOKS_TEMPLATE_ADDRESS,
+      "OpenTermHooks",
+      LEGACY_FACTORY_ADDRESS,
+      ZERO_ADDRESS,
+      BigInt.zero(),
+      25,
+      "Legacy"
+    );
+
+    let repaired = FactoryHooksTemplate.load(
+      getFactoryHooksTemplateId(LEGACY_FACTORY_ADDRESS)
+    );
+    assert.notNull(repaired);
+    if (repaired != null) {
+      assert.stringEquals(repaired.name, "OpenTermHooks");
+      assert.stringEquals(
+        repaired.hooksFactory,
+        LEGACY_FACTORY_ADDRESS.toHexString()
+      );
+      assert.i32Equals(repaired.protocolFeeBips, 25);
+    }
+
+    resetStore();
+  });
+
   test("market deploy uses factory-scoped template fee state", () => {
     resetStore();
     seedArchController();
