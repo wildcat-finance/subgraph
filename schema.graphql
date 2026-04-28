@@ -811,6 +811,7 @@ type Wildcat4626Wrapper @entity {
   factory: Wildcat4626WrapperFactory!
   market: Market
   marketAddress: Bytes!
+  marketToken: Token!
   token: Token!
   deployedEvent: Wildcat4626WrapperDeployed @derivedFrom(field: "wrapper")
   blockNumber: Int!
@@ -925,7 +926,7 @@ type Market @entity {
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
   collateralContracts: [SimpleCollateralContract!]!
     @derivedFrom(field: "market")
-  tokenWrapper: Wildcat4626Wrapper @derivedFrom(field: "market")
+  tokenWrapper: Wildcat4626Wrapper
   numCollateralContracts: Int!
 
   createdAt: Int!

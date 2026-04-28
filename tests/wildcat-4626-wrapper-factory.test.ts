@@ -128,6 +128,7 @@ describe("Wildcat4626WrapperFactory", () => {
     clearStore();
     seedArchController();
     seedToken(ASSET_ADDRESS, "Mock Asset", "MOCK");
+    seedToken(MARKET_ADDRESS, "Mock Market", "mMOCK");
     seedToken(WRAPPER_ADDRESS, "Wrapped Mock Market", "wmMOCK");
     seedMarket();
 
@@ -170,6 +171,12 @@ describe("Wildcat4626WrapperFactory", () => {
       wrapperId,
       "marketAddress",
       MARKET_ADDRESS.toHexString()
+    );
+    assert.fieldEquals(
+      "Wildcat4626Wrapper",
+      wrapperId,
+      "marketToken",
+      generateTokenId(MARKET_ADDRESS)
     );
     assert.fieldEquals(
       "Wildcat4626Wrapper",

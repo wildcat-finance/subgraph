@@ -75,6 +75,9 @@ export function handleWrapperDeployed(event: WrapperDeployedEvent): void {
       wrapperId,
       marketId,
     ]);
+  } else {
+    market.tokenWrapper = wrapperId;
+    market.save();
   }
 
   let wrapper = Wildcat4626Wrapper.load(wrapperId);
@@ -83,8 +86,9 @@ export function handleWrapperDeployed(event: WrapperDeployedEvent): void {
   }
   wrapper.address = wrapperAddress;
   wrapper.factory = factory.id;
-  wrapper.market = market == null ? null : market.id;
+  wrapper.market = marketId;
   wrapper.marketAddress = marketAddress;
+  wrapper.marketToken = getOrCreateToken(marketAddress).id;
   wrapper.token = getOrCreateToken(wrapperAddress).id;
   wrapper.blockNumber = event.block.number.toI32();
   wrapper.blockTimestamp = event.block.timestamp.toI32();
@@ -94,7 +98,7 @@ export function handleWrapperDeployed(event: WrapperDeployedEvent): void {
 
   let deployed = new Wildcat4626WrapperDeployed(generateEventId(event));
   deployed.factory = factory.id;
-  deployed.market = market == null ? null : market.id;
+  deployed.market = marketId;
   deployed.marketAddress = marketAddress;
   deployed.wrapper = wrapper.id;
   deployed.wrapperAddress = wrapperAddress;
