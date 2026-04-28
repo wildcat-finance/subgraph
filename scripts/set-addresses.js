@@ -184,6 +184,41 @@ function buildAdditionalHooksFactoryDataSources(network, hooksFactories) {
     .join("");
 }
 
+function buildWildcat4626WrapperFactoryDataSource(network, contracts) {
+  const wrapperFactory = contracts.Wildcat4626WrapperFactory;
+  if (!wrapperFactory) {
+    return "";
+  }
+  return `  - kind: ethereum
+    name: Wildcat4626WrapperFactory
+    network: ${network}
+    source:
+      address: "${wrapperFactory.address}"
+      abi: Wildcat4626WrapperFactory
+      startBlock: ${wrapperFactory.startBlock}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Market
+        - Token
+        - Wildcat4626WrapperFactory
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperDeployed
+      abis:
+        - name: Wildcat4626WrapperFactory
+          file: ./abis/Wildcat4626WrapperFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: WrapperDeployed(indexed address,indexed address)
+          handler: handleWrapperDeployed
+      file: ./src/wildcat-4626-wrapper-factory.ts
+`;
+}
+
 function setNetworkAddresses() {
   const { name: network, contracts, hooksFactories } = normalizeNetworkConfig(networks[networkId]);
   let subgraph = fs
@@ -209,6 +244,10 @@ function setNetworkAddresses() {
   subgraph = subgraph.replace(
     new RegExp(`{{HooksFactoryRevolvingDataSource}}`, "g"),
     buildAdditionalHooksFactoryDataSources(network, hooksFactories)
+  );
+  subgraph = subgraph.replace(
+    new RegExp(`{{Wildcat4626WrapperFactoryDataSource}}`, "g"),
+    buildWildcat4626WrapperFactoryDataSource(network, contracts)
   );
 
   fs.writeFileSync(path.join(__dirname, "../subgraph.yaml"), subgraph);

@@ -17,6 +17,10 @@
       "CollateralFactory": {
         "address": "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c",
         "startBlock": 23167811
+      },
+      "Wildcat4626WrapperFactory": {
+        "address": "0xEA6DE11f8F3F83c79bD9d8Db5517fCFDf2Bb148a",
+        "startBlock": 24750455
       }
     },
     "hooksFactories": [
@@ -51,6 +55,10 @@
       "CollateralFactory": {
         "address": "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0",
         "startBlock": 9751444
+      },
+      "Wildcat4626WrapperFactory": {
+        "address": "0x0566Fe57682164af689f1440cb3BCEedEe3bf843",
+        "startBlock": 10534112
       }
     },
     "hooksFactories": [

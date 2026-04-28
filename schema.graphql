@@ -795,6 +795,43 @@ type Token @entity(immutable: true) {
   isMock: Boolean!
 }
 
+type Wildcat4626WrapperFactory @entity {
+  id: ID!
+  address: Bytes!
+  archController: ArchController!
+  eventIndex: Int!
+  wrappers: [Wildcat4626Wrapper!]! @derivedFrom(field: "factory")
+  deployedEvents: [Wildcat4626WrapperDeployed!]!
+    @derivedFrom(field: "factory")
+}
+
+type Wildcat4626Wrapper @entity {
+  id: ID!
+  address: Bytes!
+  factory: Wildcat4626WrapperFactory!
+  market: Market
+  marketAddress: Bytes!
+  token: Token!
+  deployedEvent: Wildcat4626WrapperDeployed @derivedFrom(field: "wrapper")
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type Wildcat4626WrapperDeployed @entity(immutable: true) {
+  id: ID!
+  factory: Wildcat4626WrapperFactory!
+  market: Market
+  marketAddress: Bytes!
+  wrapper: Wildcat4626Wrapper!
+  wrapperAddress: Bytes!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
 type Market @entity {
   id: ID!
   archController: ArchController!
@@ -888,6 +925,7 @@ type Market @entity {
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
   collateralContracts: [SimpleCollateralContract!]!
     @derivedFrom(field: "market")
+  tokenWrapper: Wildcat4626Wrapper @derivedFrom(field: "market")
   numCollateralContracts: Int!
 
   createdAt: Int!

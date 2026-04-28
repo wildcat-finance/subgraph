@@ -44,6 +44,34 @@ dataSources:
           handler: handleExchangeRemoved
       file: ./src/simple-collateral-factory.ts
   - kind: ethereum
+    name: Wildcat4626WrapperFactory
+    network: sepolia
+    source:
+      address: "0x0566Fe57682164af689f1440cb3BCEedEe3bf843"
+      abi: Wildcat4626WrapperFactory
+      startBlock: 10534112
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Market
+        - Token
+        - Wildcat4626WrapperFactory
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperDeployed
+      abis:
+        - name: Wildcat4626WrapperFactory
+          file: ./abis/Wildcat4626WrapperFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: WrapperDeployed(indexed address,indexed address)
+          handler: handleWrapperDeployed
+      file: ./src/wildcat-4626-wrapper-factory.ts
+
+  - kind: ethereum
     name: HooksFactory
     network: sepolia
     source:

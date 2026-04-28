@@ -43,6 +43,7 @@ dataSources:
         - event: ExchangeRemoved(address)
           handler: handleExchangeRemoved
       file: ./src/simple-collateral-factory.ts
+{{Wildcat4626WrapperFactoryDataSource}}
   - kind: ethereum
     name: HooksFactory
     network: {{NetworkName}}
