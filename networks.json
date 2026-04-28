@@ -62,6 +62,13 @@
         "indexed": true
       },
       {
+        "name": "HooksFactoryLegacy_20240730",
+        "marketType": "legacy",
+        "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
+        "startBlock": 7124440,
+        "indexed": true
+      },
+      {
         "name": "HooksFactoryRevolving_20260419_233246",
         "marketType": "revolving",
         "address": "0xF4564015E524cf5629828E61F45ed339D998D85f",

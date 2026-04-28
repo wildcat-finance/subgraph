@@ -94,11 +94,6 @@ function normalizeNetworkConfig(networkConfig) {
 
 function hooksFactoryMappingFile(hooksFactory) {
   if (hooksFactory.marketType === "legacy") {
-    if (hooksFactory.name !== "HooksFactory") {
-      throw new Error(
-        `Legacy hooks factory ${hooksFactory.name} needs a generated wrapper before it can be rendered`
-      );
-    }
     return "./src/hooks-factory.ts";
   }
   if (hooksFactory.marketType === "revolving") {
