@@ -103,6 +103,14 @@ export function handleHooksInstanceDeployed(
       hooksTemplate: hooksTemplateId,
       kind: "OpenTerm",
     });
+  } else if (hooksTemplate.name == "PeriodicTermHooks") {
+    hooksWithProvider = createHooksInstance(hooksInstanceId, {
+      borrower: borrower,
+      name: name,
+      hooksFactory: hooksFactory.id,
+      hooksTemplate: hooksTemplateId,
+      kind: "PeriodicTerm",
+    });
   } else if (hooksTemplate.name == "FixedTermHooks") {
     hooksWithProvider = createHooksInstance(hooksInstanceId, {
       borrower: borrower,
