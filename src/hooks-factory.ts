@@ -54,7 +54,7 @@ import {
   WildcatMarket as MarketTemplate,
 } from "../generated/templates";
 
-function generateRecordId(id: string, eventIndex: number): string {
+function generateRecordId(id: string, eventIndex: i32): string {
   return "RECORD" + "-" + id + "-" + eventIndex.toString();
 }
 
@@ -296,7 +296,7 @@ function decodeAndCreateRoleProvider(
   event: ethereum.Event,
   hooksAddress: Bytes,
   hooksInstanceId: string,
-  eventIndex: number,
+  eventIndex: i32,
   encodedRoleProvider: BigInt
 ): RoleProvider {
   let nullProviderIndex = 2 ** 24 - 1;
@@ -305,14 +305,10 @@ function decodeAndCreateRoleProvider(
     .replace("0x", "")
     .padStart(64, "0");
 
-  let timeToLive = Bytes.fromHexString(hooksConfigBytes.slice(0, 8)).toI32();
+  let timeToLive = parseBigEndianHexToI32(hooksConfigBytes.slice(0, 8));
   let providerAddress = Bytes.fromHexString(hooksConfigBytes.slice(8, 48));
-  let pullProviderIndex = Bytes.fromHexString(
-    hooksConfigBytes.slice(48, 54)
-  ).toI32();
-  let pushProviderIndex = Bytes.fromHexString(
-    hooksConfigBytes.slice(54, 60)
-  ).toI32();
+  let pullProviderIndex = parseBigEndianHexToI32(hooksConfigBytes.slice(48, 54));
+  let pushProviderIndex = parseBigEndianHexToI32(hooksConfigBytes.slice(54, 60));
   let isPullProvider = pullProviderIndex !== nullProviderIndex;
   let isPushProvider = pushProviderIndex !== nullProviderIndex;
   let providerId = generateRoleProviderId(hooksAddress, providerAddress);
@@ -340,6 +336,23 @@ function decodeAndCreateRoleProvider(
     timeToLive: timeToLive,
     providerAddress: providerAddress,
   });
+}
+
+function parseBigEndianHexToI32(hex: string): i32 {
+  let value: i32 = 0;
+  for (let i = 0; i < hex.length; i++) {
+    let code = hex.charCodeAt(i);
+    let nibble: i32 = 0;
+    if (code >= 48 && code <= 57) {
+      nibble = code - 48;
+    } else if (code >= 65 && code <= 70) {
+      nibble = code - 55;
+    } else if (code >= 97 && code <= 102) {
+      nibble = code - 87;
+    }
+    value = value * 16 + nibble;
+  }
+  return value;
 }
 
 function decodeAndCreateHooksConfig(

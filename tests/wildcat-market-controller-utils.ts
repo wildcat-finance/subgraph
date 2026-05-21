@@ -4,7 +4,7 @@ import {
   LenderAuthorized,
   LenderDeauthorized,
   MarketDeployed
-} from "../generated/WildcatMarketController/WildcatMarketController"
+} from "../generated/templates/WildcatMarketController/WildcatMarketController"
 
 export function createLenderAuthorizedEvent(param0: Address): LenderAuthorized {
   let lenderAuthorizedEvent = changetype<LenderAuthorized>(newMockEvent())

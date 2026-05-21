@@ -7,42 +7,49 @@ import {
   afterAll
 } from "matchstick-as/assembly/index"
 import { Address } from "@graphprotocol/graph-ts"
-import { BorrowerAdded } from "../generated/schema"
-import { BorrowerAdded as BorrowerAddedEvent } from "../generated/WildcatArchController/WildcatArchController"
+import { generateRegisteredBorrowerId } from "../generated/UncrashableEntityHelpers"
 import { handleBorrowerAdded } from "../src/wildcat-arch-controller"
 import { createBorrowerAddedEvent } from "./wildcat-arch-controller-utils"
 
-// Tests structure (matchstick-as >=0.5.0)
-// https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
+function archControllerAddress(): Address {
+  return Address.fromString("0x0000000000000000000000000000000000000100")
+}
 
-describe("Describe entity assertions", () => {
+function borrowerAddress(): Address {
+  return Address.fromString("0x0000000000000000000000000000000000000001")
+}
+
+describe("WildcatArchController", () => {
   beforeAll(() => {
-    let borrower = Address.fromString(
-      "0x0000000000000000000000000000000000000001"
-    )
-    let newBorrowerAddedEvent = createBorrowerAddedEvent(borrower)
-    handleBorrowerAdded(newBorrowerAddedEvent)
+    let event = createBorrowerAddedEvent(borrowerAddress())
+    event.address = archControllerAddress()
+
+    handleBorrowerAdded(event)
   })
 
   afterAll(() => {
     clearStore()
   })
 
-  // For more test scenarios, see:
-  // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
+  test("records borrower registration state and history", () => {
+    let registrationId = generateRegisteredBorrowerId(
+      archControllerAddress(),
+      borrowerAddress()
+    )
 
-  test("BorrowerAdded created and stored", () => {
-    assert.entityCount("BorrowerAdded", 1)
-
-    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
+    assert.entityCount("RegisteredBorrower", 1)
+    assert.entityCount("BorrowerRegistrationChange", 1)
     assert.fieldEquals(
-      "BorrowerAdded",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
+      "RegisteredBorrower",
+      registrationId,
       "borrower",
       "0x0000000000000000000000000000000000000001"
     )
-
-    // More assert options:
-    // https://thegraph.com/docs/en/developer/matchstick/#asserts
+    assert.fieldEquals(
+      "RegisteredBorrower",
+      registrationId,
+      "isRegistered",
+      "true"
+    )
   })
 })

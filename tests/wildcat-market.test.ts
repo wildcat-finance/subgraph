@@ -7,42 +7,105 @@ import {
   afterAll
 } from "matchstick-as/assembly/index"
 import { BigInt, Address } from "@graphprotocol/graph-ts"
-import { AnnualInterestBipsUpdated } from "../generated/schema"
-import { AnnualInterestBipsUpdated as AnnualInterestBipsUpdatedEvent } from "../generated/WildcatMarket/WildcatMarket"
+import {
+  createMarket,
+  createToken,
+  generateMarketId,
+  generateTokenId
+} from "../generated/UncrashableEntityHelpers"
 import { handleAnnualInterestBipsUpdated } from "../src/wildcat-market"
 import { createAnnualInterestBipsUpdatedEvent } from "./wildcat-market-utils"
 
-// Tests structure (matchstick-as >=0.5.0)
-// https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
+function archControllerAddress(): Address {
+  return Address.fromString("0x0000000000000000000000000000000000000100")
+}
 
-describe("Describe entity assertions", () => {
+function borrowerAddress(): Address {
+  return Address.fromString("0x0000000000000000000000000000000000000001")
+}
+
+function marketAddress(): Address {
+  return Address.fromString("0x0000000000000000000000000000000000000002")
+}
+
+function assetAddress(): Address {
+  return Address.fromString("0x0000000000000000000000000000000000000003")
+}
+
+describe("WildcatMarket", () => {
   beforeAll(() => {
-    let annualInterestBipsUpdated = BigInt.fromI32(234)
-    let newAnnualInterestBipsUpdatedEvent = createAnnualInterestBipsUpdatedEvent(
-      annualInterestBipsUpdated
-    )
-    handleAnnualInterestBipsUpdated(newAnnualInterestBipsUpdatedEvent)
+    let asset = assetAddress()
+    let market = marketAddress()
+
+    createToken(generateTokenId(asset), {
+      address: asset,
+      name: "Mock Asset",
+      symbol: "MOCK",
+      decimals: 18,
+      isMock: true
+    })
+    createMarket(generateMarketId(market), {
+      archController: archControllerAddress().toHex(),
+      isRegistered: true,
+      version: "V2",
+      controller: null,
+      hooksFactory: null,
+      hooks: null,
+      borrower: borrowerAddress(),
+      sentinel: Address.fromString("0x0000000000000000000000000000000000000004"),
+      feeRecipient: Address.fromString("0x0000000000000000000000000000000000000005"),
+      name: "Wildcat Mock",
+      symbol: "WMOCK",
+      decimals: 18,
+      protocolFeeBips: 50,
+      delinquencyGracePeriod: 604800,
+      delinquencyFeeBips: 200,
+      asset: generateTokenId(asset),
+      withdrawalBatchDuration: 86400,
+      maxTotalSupply: BigInt.fromI32(1000000),
+      annualInterestBips: 1200,
+      reserveRatioBips: 1000,
+      scaleFactor: BigInt.fromI32(10).pow(27),
+      lastInterestAccruedTimestamp: 1700000000,
+      lastInterestAccruedBlockNumber: 1,
+      numCollateralContracts: 0,
+      createdAt: 1700000000,
+      deployedEvent: "market-deployed"
+    })
+
+    let event = createAnnualInterestBipsUpdatedEvent(BigInt.fromI32(234))
+    event.address = market
+
+    handleAnnualInterestBipsUpdated(event)
   })
 
   afterAll(() => {
     clearStore()
   })
 
-  // For more test scenarios, see:
-  // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
+  test("records APR update history and current market APR", () => {
+    let marketId = generateMarketId(marketAddress())
+    let recordId = "RECORD-" + marketId + "-0"
 
-  test("AnnualInterestBipsUpdated created and stored", () => {
     assert.entityCount("AnnualInterestBipsUpdated", 1)
-
-    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
     assert.fieldEquals(
       "AnnualInterestBipsUpdated",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "annualInterestBipsUpdated",
+      recordId,
+      "market",
+      marketId
+    )
+    assert.fieldEquals(
+      "AnnualInterestBipsUpdated",
+      recordId,
+      "oldAnnualInterestBips",
+      "1200"
+    )
+    assert.fieldEquals(
+      "AnnualInterestBipsUpdated",
+      recordId,
+      "newAnnualInterestBips",
       "234"
     )
-
-    // More assert options:
-    // https://thegraph.com/docs/en/developer/matchstick/#asserts
+    assert.fieldEquals("Market", marketId, "annualInterestBips", "234")
   })
 })
