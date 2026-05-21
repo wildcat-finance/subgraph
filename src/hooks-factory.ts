@@ -385,7 +385,7 @@ function decodeAndCreateHooksConfig(
   let periodicTermClosed: boolean = false;
   let minimumDeposit: BigInt | null = null;
   let versionResult = hooksContract.try_version();
-  let versionString = versionResult.reverted ? "" : versionResult.value;
+  let versionString = versionResult.reverted ? "Unknown" : versionResult.value;
 
   if (versionString == "OpenTermHooks") {
     let openTermHooksContract = IOpenTermHooks.bind(

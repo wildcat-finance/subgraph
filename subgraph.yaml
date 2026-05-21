@@ -472,4 +472,8 @@ templates:
           handler: handleTemporaryExcessReserveRatioUpdated
         - event: FixedTermUpdated(address,uint32)
           handler: handleFixedTermUpdated
+        - event: PeriodicTermClosed(address)
+          handler: handlePeriodicTermClosed
+        - event: AnnualInterestBipsReductionProposed(indexed address,uint16,uint32,uint32,uint32)
+          handler: handleAnnualInterestBipsReductionProposed
       file: ./src/hooks-instance.ts

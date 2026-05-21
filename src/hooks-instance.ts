@@ -5,11 +5,13 @@ import {
   createAccountBlockedFromDeposits,
   createAccountMadeFirstDeposit,
   createAccountUnblockedFromDeposits,
+  createAnnualInterestBipsReductionProposed,
   createDisabledForceBuyBacks,
   createFixedTermUpdated,
   createHooksNameUpdated,
   createKnownLenderStatus,
   createMinimumDepositUpdated,
+  createPeriodicTermClosed,
   createRoleProviderAdded,
   createRoleProviderRemoved,
   createRoleProviderUpdated,
@@ -37,6 +39,8 @@ import {
   AccountMadeFirstDeposit as AccountMadeFirstDepositEvent,
   AccountUnblockedFromDeposits as AccountUnblockedFromDepositsEvent,
   MinimumDepositUpdated as MinimumDepositUpdatedEvent,
+  PeriodicTermClosed as PeriodicTermClosedEvent,
+  AnnualInterestBipsReductionProposed as AnnualInterestBipsReductionProposedEvent,
   RoleProviderAdded as RoleProviderAddedEvent,
   RoleProviderRemoved as RoleProviderRemovedEvent,
   RoleProviderUpdated as RoleProviderUpdatedEvent,
@@ -265,6 +269,59 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
     market.fixedTermUpdatedIndex = market.fixedTermUpdatedIndex + 1;
     market.save();
     hooksConfig.save();
+  }
+}
+
+export function handlePeriodicTermClosed(
+  event: PeriodicTermClosedEvent
+): void {
+  let marketId = generateMarketId(event.params.market);
+  let market = Market.load(marketId);
+  if (market != null) {
+    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+    createPeriodicTermClosed(generateMarketEventId(market), {
+      hooks: generateHooksInstanceId(event.address),
+      market: market.id,
+      blockNumber: event.block.number.toI32(),
+      transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
+      blockTimestamp: event.block.timestamp.toI32(),
+      eventIndex: market.eventIndex,
+    });
+    hooksConfig.periodicTermClosed = true;
+    market.eventIndex = market.eventIndex + 1;
+    hooksConfig.save();
+    market.save();
+  }
+}
+
+export function handleAnnualInterestBipsReductionProposed(
+  event: AnnualInterestBipsReductionProposedEvent
+): void {
+  let marketId = generateMarketId(event.params.market);
+  let market = Market.load(marketId);
+  if (market != null) {
+    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+    createAnnualInterestBipsReductionProposed(generateMarketEventId(market), {
+      hooks: generateHooksInstanceId(event.address),
+      market: market.id,
+      annualInterestBips: event.params.annualInterestBips,
+      proposalTimestamp: event.params.proposalTimestamp.toI32(),
+      responseWindowStart: event.params.responseWindowStart.toI32(),
+      responseWindowEnd: event.params.responseWindowEnd.toI32(),
+      blockNumber: event.block.number.toI32(),
+      transactionHash: event.transaction.hash,
+      blockLogIndex: event.logIndex.toI32(),
+      blockTimestamp: event.block.timestamp.toI32(),
+      eventIndex: market.eventIndex,
+    });
+    hooksConfig.pendingAnnualInterestBips = event.params.annualInterestBips;
+    hooksConfig.pendingAnnualInterestProposalTimestamp = event.params.proposalTimestamp.toI32();
+    hooksConfig.pendingAnnualInterestResponseWindowStart = event.params.responseWindowStart.toI32();
+    hooksConfig.pendingAnnualInterestResponseWindowEnd = event.params.responseWindowEnd.toI32();
+    market.eventIndex = market.eventIndex + 1;
+    hooksConfig.save();
+    market.save();
   }
 }
 
