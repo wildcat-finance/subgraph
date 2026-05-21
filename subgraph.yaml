@@ -83,6 +83,8 @@ dataSources:
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./abis/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -435,6 +437,8 @@ templates:
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./abis/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted
