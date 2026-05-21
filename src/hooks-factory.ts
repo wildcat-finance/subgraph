@@ -37,6 +37,7 @@ import {
 } from "../generated/UncrashableEntityHelpers";
 import { OpenTermHooks as IOpenTermHooks } from "../generated/HooksFactory/OpenTermHooks";
 import { FixedTermHooks as IFixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
+import { PeriodicTermHooks as IPeriodicTermHooks } from "../generated/HooksFactory/PeriodicTermHooks";
 import { CombinedHooks } from "../generated/HooksFactory/CombinedHooks";
 import { IERC20 } from "../generated/HooksFactory/IERC20";
 import {
@@ -370,7 +371,6 @@ function decodeAndCreateHooksConfig(
   log.warning("Hooks Config: {}", [hooksConfigBytes]);
   log.warning("Hooks Address: {}", [hooksAddress.toHex()]);
   log.warning("Market: {}", [market.toHex()]);
-  let versionString = hooksContract.version();
   let depositRequiresAccess: boolean = false;
   let transferRequiresAccess: boolean = false;
   let queueWithdrawalRequiresAccess: boolean = false;
@@ -379,7 +379,14 @@ function decodeAndCreateHooksConfig(
   let allowForceBuyBacks: boolean = false;
   let allowTermReduction: boolean = false;
   let fixedTermEndTime: i32 = 0;
+  let firstWithdrawalWindowStart: i32 = 0;
+  let periodDuration: i32 = 0;
+  let withdrawalWindowDuration: i32 = 0;
+  let periodicTermClosed: boolean = false;
   let minimumDeposit: BigInt | null = null;
+  let versionResult = hooksContract.try_version();
+  let versionString = versionResult.reverted ? "" : versionResult.value;
+
   if (versionString == "OpenTermHooks") {
     let openTermHooksContract = IOpenTermHooks.bind(
       Address.fromBytes(hooksAddress)
@@ -393,8 +400,7 @@ function decodeAndCreateHooksConfig(
     allowForceBuyBacks = false;
     minimumDeposit = hookedMarket.minimumDeposit;
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
-  } else {
-    // @todo handle unknown hooks kind
+  } else if (versionString == "FixedTermHooks") {
     let fixedTermHooksContract = IFixedTermHooks.bind(
       Address.fromBytes(hooksAddress)
     );
@@ -410,9 +416,25 @@ function decodeAndCreateHooksConfig(
     fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
     minimumDeposit = hookedMarket.minimumDeposit;
     allowForceBuyBacks = false;
+  } else if (versionString == "PeriodicTermHooks") {
+    let periodicTermHooksContract = IPeriodicTermHooks.bind(
+      Address.fromBytes(hooksAddress)
+    );
+    let hookedMarket = periodicTermHooksContract.getHookedMarket(
+      Address.fromBytes(market)
+    );
+    depositRequiresAccess = hookedMarket.depositRequiresAccess;
+    transferRequiresAccess = hookedMarket.transferRequiresAccess;
+    queueWithdrawalRequiresAccess = hookedMarket.withdrawalRequiresAccess;
+    transfersDisabled = hookedMarket.transfersDisabled;
+    minimumDeposit = hookedMarket.minimumDeposit;
+    firstWithdrawalWindowStart = hookedMarket.firstWithdrawalWindowStart.toI32();
+    periodDuration = hookedMarket.periodDuration.toI32();
+    withdrawalWindowDuration = hookedMarket.withdrawalWindowDuration.toI32();
+    periodicTermClosed = hookedMarket.isClosed;
   }
 
-  return createHooksConfig(generateHooksConfigId(market), {
+  let hooksConfigEntity = createHooksConfig(generateHooksConfigId(market), {
     hooks: hooksAddress.toHex(),
     market: marketId,
     useOnDeposit: useOnDeposit,
@@ -436,6 +458,13 @@ function decodeAndCreateHooksConfig(
     fixedTermEndTime: fixedTermEndTime,
     minimumDeposit: minimumDeposit,
   });
+  hooksConfigEntity.firstWithdrawalWindowStart = firstWithdrawalWindowStart;
+  hooksConfigEntity.periodDuration = periodDuration;
+  hooksConfigEntity.withdrawalWindowDuration = withdrawalWindowDuration;
+  hooksConfigEntity.periodicTermClosed = periodicTermClosed;
+  hooksConfigEntity.save();
+
+  return hooksConfigEntity;
 }
 
 export function handleMarketDeployed(event: MarketDeployedEvent): void {
