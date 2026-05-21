@@ -6,6 +6,7 @@ enum MarketVersion {
 enum HooksKind {
   OpenTerm
   FixedTerm
+  PeriodicTerm
   Unknown
 }
 
@@ -328,6 +329,15 @@ type HooksConfig @entity {
   fixedTermEndTime: Int!
   allowClosureBeforeTerm: Boolean!
   allowTermReduction: Boolean!
+  # PeriodicTermHooks config values
+  firstWithdrawalWindowStart: Int!
+  periodDuration: Int!
+  withdrawalWindowDuration: Int!
+  periodicTermClosed: Boolean!
+  pendingAnnualInterestBips: Int!
+  pendingAnnualInterestProposalTimestamp: Int!
+  pendingAnnualInterestResponseWindowStart: Int!
+  pendingAnnualInterestResponseWindowEnd: Int!
 }
 
 type FixedTermUpdated @entity {
@@ -342,6 +352,32 @@ type FixedTermUpdated @entity {
   blockLogIndex: Int!
   eventIndex: Int!
   fixedTermUpdatedIndex: Int!
+}
+
+type PeriodicTermClosed @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+type AnnualInterestBipsReductionProposed @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  annualInterestBips: Int!
+  proposalTimestamp: Int!
+  responseWindowStart: Int!
+  responseWindowEnd: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
 }
 
 # event RoleProviderAdded(
@@ -880,6 +916,10 @@ type Market @entity {
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
 
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
+  periodicTermClosedRecords: [PeriodicTermClosed!]!
+    @derivedFrom(field: "market")
+  annualInterestBipsReductionProposedRecords: [AnnualInterestBipsReductionProposed!]!
+    @derivedFrom(field: "market")
   minimumDepositUpdateRecords: [MinimumDepositUpdated!]!
     @derivedFrom(field: "market")
   accountMadeFirstDepositRecords: [AccountMadeFirstDeposit!]!

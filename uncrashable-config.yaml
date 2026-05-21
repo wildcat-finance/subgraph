@@ -253,6 +253,10 @@ entitySettings:
         type: Int
   FixedTermUpdated:
     useDefault: {}
+  PeriodicTermClosed:
+    useDefault: {}
+  AnnualInterestBipsReductionProposed:
+    useDefault: {}
   FeesCollected:
     useDefault: {}
     entityId:
@@ -393,7 +397,15 @@ entitySettings:
       - name: providerAddress
         type: Bytes
   HooksConfig:
-    useDefault: {}
+    useDefault:
+      firstWithdrawalWindowStart: {}
+      periodDuration: {}
+      withdrawalWindowDuration: {}
+      periodicTermClosed: {}
+      pendingAnnualInterestBips: {}
+      pendingAnnualInterestProposalTimestamp: {}
+      pendingAnnualInterestResponseWindowStart: {}
+      pendingAnnualInterestResponseWindowEnd: {}
     entityId:
       - type: constant
         value: "HOOKSCONFIG"
