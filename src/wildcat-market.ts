@@ -55,6 +55,7 @@ import {
   generateDebtRepaidId,
   generateDepositId,
   generateFeesCollectedId,
+  generateHooksConfigId,
   generateLenderAccountId,
   generateLenderAuthorizationId,
   generateLenderHooksAccessId,
@@ -78,6 +79,8 @@ import {
 } from "../generated/UncrashableEntityHelpers";
 import {
   Approval,
+  HooksConfig,
+  HooksInstance,
   SanctionedAccountAssetsSentToEscrow,
   SanctionedAccountWithdrawalSentToEscrow,
   LenderAccount,
@@ -189,6 +192,18 @@ export function handleAnnualInterestBipsUpdated(
     market.annualInterestBipsUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
   market.save();
+
+  let hooksConfig = HooksConfig.load(generateHooksConfigId(event.address));
+  if (hooksConfig != null) {
+    let hooks = HooksInstance.load(hooksConfig.hooks);
+    if (hooks != null && hooks.kind == "PeriodicTerm") {
+      hooksConfig.pendingAnnualInterestBips = 0;
+      hooksConfig.pendingAnnualInterestProposalTimestamp = 0;
+      hooksConfig.pendingAnnualInterestResponseWindowStart = 0;
+      hooksConfig.pendingAnnualInterestResponseWindowEnd = 0;
+      hooksConfig.save();
+    }
+  }
 }
 
 export function handleApproval(event: ApprovalEvent): void {
