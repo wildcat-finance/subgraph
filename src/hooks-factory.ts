@@ -410,7 +410,7 @@ function decodeAndCreateHooksConfig(
     depositRequiresAccess = hookedMarket.depositRequiresAccess;
     transferRequiresAccess = hookedMarket.transferRequiresAccess;
     transfersDisabled = hookedMarket.transfersDisabled;
-    allowForceBuyBacks = false;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
     minimumDeposit = hookedMarket.minimumDeposit;
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
   } else if (versionString == "FixedTermHooks") {
@@ -428,7 +428,7 @@ function decodeAndCreateHooksConfig(
     allowTermReduction = hookedMarket.allowTermReduction;
     fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
     minimumDeposit = hookedMarket.minimumDeposit;
-    allowForceBuyBacks = false;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
   } else if (versionString == "PeriodicTermHooks") {
     let periodicTermHooksContract = IPeriodicTermHooks.bind(
       Address.fromBytes(hooksAddress)
