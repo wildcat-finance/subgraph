@@ -6,9 +6,9 @@ dataSources:
     name: WildcatMarketCollateralFactory
     network: sepolia
     source:
-      address: "0xe11E41e9162ad07F1a9853c3123c33B7e9Cf59D6"
+      address: "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0"
       abi: WildcatMarketCollateralFactory
-      startBlock: 9010415
+      startBlock: 9751444
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -344,6 +344,7 @@ templates:
         - HooksTemplateAdded
         - HooksTemplateDisabled
         - HooksTemplateFeesUpdated
+        - MarketDailyStats
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
