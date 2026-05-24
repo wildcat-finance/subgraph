@@ -1,76 +1,44 @@
+import { assert, clearStore, describe, test } from "matchstick-as/assembly";
+import { Address } from "@graphprotocol/graph-ts";
 import {
-  assert,
-  describe,
-  test,
-  clearStore,
-  beforeAll,
-  afterAll
-} from "matchstick-as/assembly/index"
-import { Address, BigInt } from "@graphprotocol/graph-ts"
-import { NewController } from "../generated/schema"
-import { NewController as NewControllerEvent } from "../generated/WildcatMarketControllerFactory/WildcatMarketControllerFactory"
-import { handleNewController } from "../src/wildcat-market-controller-factory"
-import { createNewControllerEvent } from "./wildcat-market-controller-factory-utils"
+  createControllerFactory,
+  generateControllerFactoryId,
+  generateControllerId,
+} from "../generated/UncrashableEntityHelpers";
+import { handleNewController } from "../src/wildcat-market-controller-factory";
+import { createNewControllerEvent } from "./wildcat-market-controller-factory-utils";
 
-// Tests structure (matchstick-as >=0.5.0)
-// https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
+let borrower = Address.fromString(
+  "0x0000000000000000000000000000000000000001"
+);
+let controller = Address.fromString(
+  "0x0000000000000000000000000000000000000002"
+);
 
-describe("Describe entity assertions", () => {
-  beforeAll(() => {
-    let borrower = Address.fromString(
-      "0x0000000000000000000000000000000000000001"
-    )
-    let controller = Address.fromString(
-      "0x0000000000000000000000000000000000000001"
-    )
-    let namePrefix = "Example string value"
-    let symbolPrefix = "Example string value"
-    let newNewControllerEvent = createNewControllerEvent(
-      borrower,
-      controller,
-      namePrefix,
-      symbolPrefix
-    )
-    handleNewController(newNewControllerEvent)
-  })
+describe("wildcat market controller factory", () => {
+  test("creates controllers from new controller events", () => {
+    clearStore();
 
-  afterAll(() => {
-    clearStore()
-  })
+    let event = createNewControllerEvent(borrower, controller, "Wildcat ", "WLD");
+    createControllerFactory(generateControllerFactoryId(event.address), {
+      sentinel: Address.zero(),
+      originationFeeAsset: null,
+      constraints: "constraints",
+      archController: "arch-controller",
+      isRegistered: true,
+    });
 
-  // For more test scenarios, see:
-  // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
+    handleNewController(event);
 
-  test("NewController created and stored", () => {
-    assert.entityCount("NewController", 1)
-
-    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
+    let controllerId = generateControllerId(controller);
+    assert.entityCount("Controller", 1);
+    assert.fieldEquals("Controller", controllerId, "borrower", borrower.toHex());
     assert.fieldEquals(
-      "NewController",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "borrower",
-      "0x0000000000000000000000000000000000000001"
-    )
-    assert.fieldEquals(
-      "NewController",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "controller",
-      "0x0000000000000000000000000000000000000001"
-    )
-    assert.fieldEquals(
-      "NewController",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "namePrefix",
-      "Example string value"
-    )
-    assert.fieldEquals(
-      "NewController",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "symbolPrefix",
-      "Example string value"
-    )
-
-    // More assert options:
-    // https://thegraph.com/docs/en/developer/matchstick/#asserts
-  })
-})
+      "Controller",
+      controllerId,
+      "controllerFactory",
+      generateControllerFactoryId(event.address)
+    );
+    assert.fieldEquals("Controller", controllerId, "isRegistered", "true");
+  });
+});

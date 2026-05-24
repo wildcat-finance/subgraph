@@ -55,6 +55,7 @@ import {
   generateDebtRepaidId,
   generateDepositId,
   generateFeesCollectedId,
+  generateHooksConfigId,
   generateLenderAccountId,
   generateLenderAuthorizationId,
   generateLenderHooksAccessId,
@@ -85,6 +86,7 @@ import {
   WithdrawalBatch,
   LenderHooksAccess,
   MarketDailyStats,
+  HooksConfig,
 } from "../generated/schema";
 import {
   calculateBatchInterestEarned,
@@ -188,6 +190,14 @@ export function handleAnnualInterestBipsUpdated(
   market.annualInterestBipsUpdatedIndex =
     market.annualInterestBipsUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
+  let hooksConfig = HooksConfig.load(generateHooksConfigId(event.address));
+  if (hooksConfig != null) {
+    hooksConfig.pendingAprChangeAnnualInterestBips = 0;
+    hooksConfig.pendingAprChangeProposalTimestamp = 0;
+    hooksConfig.pendingAprChangeResponseWindowStart = 0;
+    hooksConfig.pendingAprChangeResponseWindowEnd = 0;
+    hooksConfig.save();
+  }
   market.save();
 }
 
