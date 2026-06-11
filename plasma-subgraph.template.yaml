@@ -406,4 +406,8 @@ templates:
           handler: handlePeriodicTermClosed
         - event: AnnualInterestBipsReductionProposed(indexed address,uint16,uint32,uint32,uint32)
           handler: handleAnnualInterestBipsReductionProposed
+        - event: AnnualInterestBipsReductionProposalCancelled(indexed address)
+          handler: handleAnnualInterestBipsReductionProposalCancelled
+        - event: AnnualInterestBipsReductionExecuted(indexed address,uint16)
+          handler: handleAnnualInterestBipsReductionExecuted
       file: ./src/hooks-instance.ts
