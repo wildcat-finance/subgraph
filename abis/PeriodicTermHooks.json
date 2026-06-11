@@ -37,6 +37,38 @@
     "anonymous": false
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      }
+    ],
+    "name": "AnnualInterestBipsReductionProposalCancelled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "market",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "annualInterestBips",
+        "type": "uint16"
+      }
+    ],
+    "name": "AnnualInterestBipsReductionExecuted",
+    "type": "event"
+  },
+  {
     "type": "event",
     "name": "PeriodicTermClosed",
     "inputs": [

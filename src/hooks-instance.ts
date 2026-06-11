@@ -31,7 +31,9 @@ import {
   getOrInitializeRoleProvider,
   getRoleProvider,
 } from "../generated/UncrashableEntityHelpers";
-import { HooksInstance, Market } from "../generated/schema";
+import { Address } from "@graphprotocol/graph-ts";
+
+import { HooksConfig, HooksInstance, Market } from "../generated/schema";
 import {
   CombinedHooks as CombinedHooksContract,
   AccountAccessGranted as AccountAccessGrantedEvent,
@@ -39,6 +41,8 @@ import {
   AccountBlockedFromDeposits as AccountBlockedFromDepositsEvent,
   AccountMadeFirstDeposit as AccountMadeFirstDepositEvent,
   AccountUnblockedFromDeposits as AccountUnblockedFromDepositsEvent,
+  AnnualInterestBipsReductionExecuted as AnnualInterestBipsReductionExecutedEvent,
+  AnnualInterestBipsReductionProposalCancelled as AnnualInterestBipsReductionProposalCancelledEvent,
   AnnualInterestBipsReductionProposed as AnnualInterestBipsReductionProposedEvent,
   MinimumDepositUpdated as MinimumDepositUpdatedEvent,
   PeriodicTermClosed as PeriodicTermClosedEvent,
@@ -323,6 +327,37 @@ export function handlePeriodicTermClosed(event: PeriodicTermClosedEvent): void {
     market.save();
     hooksConfig.save();
   }
+}
+
+function clearPendingAprChange(market: Address): void {
+  let hooksConfig = HooksConfig.load(generateHooksConfigId(market));
+  if (hooksConfig != null) {
+    hooksConfig.pendingAprChangeAnnualInterestBips = 0;
+    hooksConfig.pendingAprChangeProposalTimestamp = 0;
+    hooksConfig.pendingAprChangeResponseWindowStart = 0;
+    hooksConfig.pendingAprChangeResponseWindowEnd = 0;
+    hooksConfig.save();
+  }
+}
+
+// Emitted by PeriodicTermHooks templates with proposal lifecycle events when a
+// pending APR reduction proposal is deleted by an APR increase or replaced by
+// a new proposal. Authoritative for new template versions; older instances
+// are covered by the apr-changed heuristic in handleAnnualInterestBipsUpdated
+// (wildcat-market.ts).
+export function handleAnnualInterestBipsReductionProposalCancelled(
+  event: AnnualInterestBipsReductionProposalCancelledEvent
+): void {
+  clearPendingAprChange(event.params.market);
+}
+
+// Emitted when a proposed APR reduction executes. The market-level
+// AnnualInterestBipsUpdated handler also clears these fields; this handler
+// makes the clearing exact for new template versions.
+export function handleAnnualInterestBipsReductionExecuted(
+  event: AnnualInterestBipsReductionExecutedEvent
+): void {
+  clearPendingAprChange(event.params.market);
 }
 
 export function handleAnnualInterestBipsReductionProposed(
