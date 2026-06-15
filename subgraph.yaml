@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: WildcatMarketCollateralFactory
-    network: mainnet
+    network: sepolia
     source:
-      address: "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c"
+      address: "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0"
       abi: WildcatMarketCollateralFactory
-      startBlock: 23167811
+      startBlock: 9751444
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -49,11 +49,11 @@ dataSources:
       file: ./src/simple-collateral-factory.ts
   - kind: ethereum
     name: HooksFactory
-    network: mainnet
+    network: sepolia
     source:
-      address: "0xdd7dd3b5076cf89440d05585ff56d246386207be"
+      address: "0x10A64ABa0159720F8a23E1A552800CA4eb21576C"
       abi: HooksFactory
-      startBlock: 21788182
+      startBlock: 7124440
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -87,6 +87,8 @@ dataSources:
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./abis/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -113,11 +115,11 @@ dataSources:
       file: ./src/hooks-factory.ts
   - kind: ethereum
     name: WildcatArchController
-    network: mainnet
+    network: sepolia
     source:
-      address: "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4"
+      address: "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
       abi: WildcatArchController
-      startBlock: 18686645
+      startBlock: 4796511
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -173,11 +175,11 @@ dataSources:
       file: ./src/wildcat-arch-controller.ts
   - kind: ethereum
     name: WildcatSanctionsSentinel
-    network: mainnet
+    network: sepolia
     source:
-      address: "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A"
+      address: "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B"
       abi: WildcatSanctionsSentinel
-      startBlock: 18686645
+      startBlock: 4796511
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -200,7 +202,7 @@ dataSources:
 templates:
   - kind: ethereum
     name: SimpleMarketCollateralMultiParty
-    network: mainnet
+    network: sepolia
     source:
       abi: SimpleMarketCollateralMultiParty
     mapping:
@@ -234,7 +236,7 @@ templates:
       file: ./src/simple-collateral.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
-    network: mainnet
+    network: sepolia
     source:
       abi: WildcatMarketControllerFactory
     mapping:
@@ -264,7 +266,7 @@ templates:
       file: ./src/wildcat-market-controller-factory.ts
   - kind: ethereum
     name: WildcatMarketController
-    network: mainnet
+    network: sepolia
     source:
       abi: WildcatMarketController
     mapping:
@@ -305,7 +307,7 @@ templates:
       file: ./src/wildcat-market-controller.ts
   - kind: ethereum
     name: WildcatMarket
-    network: mainnet
+    network: sepolia
     source:
       abi: WildcatMarket
     mapping:
@@ -424,7 +426,7 @@ templates:
       file: ./src/wildcat-market.ts
   - kind: ethereum
     name: CombinedHooks
-    network: mainnet
+    network: sepolia
     source:
       abi: CombinedHooks
     mapping:
@@ -449,6 +451,9 @@ templates:
         - HooksConfig
         - DisabledForceBuyBacks
         - FixedTermUpdated
+        - PeriodicTermUpdated
+        - PeriodicTermClosed
+        - AnnualInterestBipsReductionProposed
       abis:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
@@ -456,6 +461,8 @@ templates:
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./abis/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted
@@ -489,4 +496,14 @@ templates:
           handler: handleTemporaryExcessReserveRatioUpdated
         - event: FixedTermUpdated(address,uint32)
           handler: handleFixedTermUpdated
+        - event: PeriodicTermUpdated(address,uint32,uint32,uint32)
+          handler: handlePeriodicTermUpdated
+        - event: PeriodicTermClosed(address)
+          handler: handlePeriodicTermClosed
+        - event: AnnualInterestBipsReductionProposed(indexed address,uint16,uint32,uint32,uint32)
+          handler: handleAnnualInterestBipsReductionProposed
+        - event: AnnualInterestBipsReductionProposalCancelled(indexed address)
+          handler: handleAnnualInterestBipsReductionProposalCancelled
+        - event: AnnualInterestBipsReductionExecuted(indexed address,uint16)
+          handler: handleAnnualInterestBipsReductionExecuted
       file: ./src/hooks-instance.ts

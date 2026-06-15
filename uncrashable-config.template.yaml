@@ -269,6 +269,12 @@ entitySettings:
         type: Int
   FixedTermUpdated:
     useDefault: {}
+  PeriodicTermUpdated:
+    useDefault: {}
+  PeriodicTermClosed:
+    useDefault: {}
+  AnnualInterestBipsReductionProposed:
+    useDefault: {}
   FeesCollected:
     useDefault: {}
     entityId:

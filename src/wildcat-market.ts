@@ -55,6 +55,7 @@ import {
   generateDebtRepaidId,
   generateDepositId,
   generateFeesCollectedId,
+  generateHooksConfigId,
   generateLenderAccountId,
   generateLenderAuthorizationId,
   generateLenderHooksAccessId,
@@ -87,6 +88,7 @@ import {
   WithdrawalBatch,
   LenderHooksAccess,
   MarketDailyStats,
+  HooksConfig,
 } from "../generated/schema";
 import {
   calculateBatchInterestEarned,
@@ -115,6 +117,8 @@ import {
   updateBorrowerActiveMarketCount,
   updateLenderActiveMarketCount,
   getOrCreateMarketDailyStats,
+  setMarketTotalDebtUSD,
+  updateMarketTotalDebtUSD,
 } from "./daily-stats";
 
 export function handleAnnualInterestBipsUpdated(
@@ -122,6 +126,13 @@ export function handleAnnualInterestBipsUpdated(
 ): void {
   let newAnnualInterestBips = event.params.annualInterestBipsUpdated.toI32();
   let market = getMarket(generateMarketId(event.address));
+  // PeriodicTermHooks deletes a pending APR reduction proposal when the APR is
+  // increased and when a proposed reduction executes — both change the APR.
+  // Setting the APR to its current value emits this event but does NOT delete
+  // the proposal on-chain, so only clear the mirrored fields when the APR
+  // actually changed. (Must be evaluated before market.annualInterestBips is
+  // overwritten below.)
+  let aprChanged = newAnnualInterestBips != market.annualInterestBips;
   createAnnualInterestBipsUpdated(generateMarketEventId(market), {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -137,6 +148,16 @@ export function handleAnnualInterestBipsUpdated(
   market.annualInterestBipsUpdatedIndex =
     market.annualInterestBipsUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
+  if (aprChanged) {
+    let hooksConfig = HooksConfig.load(generateHooksConfigId(event.address));
+    if (hooksConfig != null) {
+      hooksConfig.pendingAprChangeAnnualInterestBips = 0;
+      hooksConfig.pendingAprChangeProposalTimestamp = 0;
+      hooksConfig.pendingAprChangeResponseWindowStart = 0;
+      hooksConfig.pendingAprChangeResponseWindowEnd = 0;
+      hooksConfig.save();
+    }
+  }
   market.save();
 }
 
@@ -358,6 +379,7 @@ export function handleDeposit(event: DepositEvent): void {
   market.totalDeposited = market.totalDeposited.plus(event.params.assetAmount);
 
   let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  setMarketTotalDebtUSD(market, priceMul);
 
   let hasPrice = !priceMul.equals(BigDecimal.zero());
   let ps = getOrCreateProtocolStats();
@@ -423,6 +445,7 @@ export function handleFeesCollected(event: FeesCollectedEvent): void {
   market.feesCollectedIndex = market.feesCollectedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
 
+  updateMarketTotalDebtUSD(market, event.block.timestamp);
   market.save();
 }
 
@@ -629,6 +652,7 @@ export function handleInterestAndFeesAccrued(
 
   // Single price lookup for all three USD conversions
   let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  setMarketTotalDebtUSD(market, priceMul);
   let hasPrice = !priceMul.equals(BigDecimal.zero());
   
   if (hasPrice) {
@@ -943,6 +967,7 @@ export function handleWithdrawalBatchPayment(
   // Withdrawal batch payment burns market tokens
   let prevSupply = market.scaledTotalSupply;
   market.scaledTotalSupply = market.scaledTotalSupply.minus(scaledAmountBurned);
+  updateMarketTotalDebtUSD(market, event.block.timestamp);
   market.save();
 
   // Borrower active count: supply may go to 0
@@ -1003,6 +1028,7 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
   );
 
   let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  setMarketTotalDebtUSD(market, priceMul);
   let hasPrice = !priceMul.equals(BigDecimal.zero());
 
   market.totalWithdrawalsExecuted = market.totalWithdrawalsExecuted.plus(normalizedAmount);

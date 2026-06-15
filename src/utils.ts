@@ -47,6 +47,12 @@ export function calculateLiquidityRequired(market: Market): BigInt {
     .plus(market.normalizedUnclaimedWithdrawals);
 }
 
+export function calculateTotalDebt(market: Market): BigInt {
+  return rayMul(market.scaledTotalSupply, market.scaleFactor)
+    .plus(market.normalizedUnclaimedWithdrawals)
+    .plus(market.pendingProtocolFees);
+}
+
 export function calculateNormalizedBalance(
   lender: LenderAccount,
   market: Market
@@ -147,4 +153,3 @@ export function getOrCreateLenderAccount(
     addedTimestamp: addedTimestamp.toI32(),
   });
 }
-

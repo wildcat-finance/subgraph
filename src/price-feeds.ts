@@ -1,4 +1,4 @@
-import { Address, BigDecimal, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, Bytes, dataSource } from "@graphprotocol/graph-ts";
 import { ChainlinkFeedRegistry } from "../generated/templates/WildcatMarket/ChainlinkFeedRegistry";
 import { ChainlinkAggregator } from "../generated/templates/WildcatMarket/ChainlinkAggregator";
 import { Token, TokenDailyPrice } from "../generated/schema";
@@ -37,6 +37,51 @@ const SOL = "0xd31a59c85ae9d8edefec411d448f90841571b89c";
 
 const ONE_E8 = new BigDecimal(BigInt.fromI64(100000000)); // 10^8
 const SECONDS_PER_DAY: i64 = 86400;
+const SEPOLIA_NETWORK = "sepolia";
+const SYNTHETIC_PRICE_NONE: i32 = 0;
+const SYNTHETIC_PRICE_STABLECOIN: i32 = 1;
+const SYNTHETIC_PRICE_WETH: i32 = 2;
+const SYNTHETIC_PRICE_WBTC: i32 = 3;
+const SYNTHETIC_PRICE_ZRX: i32 = 4;
+
+function isSepolia(): boolean {
+  return dataSource.network() == SEPOLIA_NETWORK;
+}
+
+function getSyntheticPriceKind(token: Token): i32 {
+  if (!isSepolia()) {
+    return SYNTHETIC_PRICE_NONE;
+  }
+
+  let symbol = token.symbol;
+  if (symbol == "USDC" || symbol == "USDT" || symbol == "DAI") {
+    return SYNTHETIC_PRICE_STABLECOIN;
+  }
+  if (symbol == "WETH") {
+    return SYNTHETIC_PRICE_WETH;
+  }
+  if (symbol == "WBTC") {
+    return SYNTHETIC_PRICE_WBTC;
+  }
+  if (symbol == "ZRX") {
+    return SYNTHETIC_PRICE_ZRX;
+  }
+
+  return SYNTHETIC_PRICE_NONE;
+}
+
+function getSyntheticPriceUSD(kind: i32): BigDecimal {
+  if (kind == SYNTHETIC_PRICE_WETH) {
+    return BigDecimal.fromString("2000");
+  }
+  if (kind == SYNTHETIC_PRICE_WBTC) {
+    return BigDecimal.fromString("70000");
+  }
+  if (kind == SYNTHETIC_PRICE_ZRX) {
+    return BigDecimal.fromString("0.10");
+  }
+  return BigDecimal.fromString("1");
+}
 
 /**
  * Called once per token at creation time to discover Chainlink price feed paths.
@@ -45,6 +90,26 @@ const SECONDS_PER_DAY: i64 = 86400;
 export function setupTokenPriceFeeds(token: Token): void {
   let addr = token.address.toHexString();
   log.warning("Setting up token price feeds for token: {}", [addr]);
+  let syntheticPriceKind = getSyntheticPriceKind(token);
+
+  if (syntheticPriceKind == SYNTHETIC_PRICE_STABLECOIN) {
+    token.isUsdStablecoin = true;
+    token.save();
+    return;
+  }
+
+  if (syntheticPriceKind != SYNTHETIC_PRICE_NONE) {
+    return;
+  }
+
+  if (isSepolia()) {
+    log.warning("No synthetic Sepolia price configured for token {} ({})", [
+      token.symbol,
+      addr,
+    ]);
+    return;
+  }
+
   // Stablecoins
   if (addr == USDC || addr == USDT) {
     token.isUsdStablecoin = true;
@@ -153,11 +218,6 @@ export function ensureTokenDailyPrice(
     return null;
   }
 
-  let feed0 = token.priceFeed0;
-  if (!feed0) {
-    return null;
-  }
-
   // Daily cache
   let dayTimestamp = timestamp
     .div(BigInt.fromI64(SECONDS_PER_DAY))
@@ -171,6 +231,21 @@ export function ensureTokenDailyPrice(
   let cached = TokenDailyPrice.load(cacheId);
   if (cached) {
     return cached;
+  }
+
+  let syntheticPriceKind = getSyntheticPriceKind(token);
+  if (syntheticPriceKind != SYNTHETIC_PRICE_NONE) {
+    let daily = new TokenDailyPrice(cacheId);
+    daily.token = tokenId;
+    daily.timestamp = dayTimestamp.toI32();
+    daily.priceUSD = getSyntheticPriceUSD(syntheticPriceKind);
+    daily.save();
+    return daily;
+  }
+
+  let feed0 = token.priceFeed0;
+  if (!feed0) {
+    return null;
   }
 
   // Query first feed

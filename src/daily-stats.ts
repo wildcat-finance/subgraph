@@ -23,6 +23,7 @@ import {
   getOrInitializeMarketDailyStats,
 } from "../generated/UncrashableEntityHelpers";
 import { ensureTokenDailyPrice } from "./price-feeds";
+import { calculateTotalDebt } from "./utils";
 
 // -------------------------------------------------------------------------- //
 //                            Price helpers                                    //
@@ -74,6 +75,26 @@ export function computeUsdDelta(
   let m = getTokenPriceMultiplier(decimals, tokenId, timestamp);
   if (m.equals(BigDecimal.zero())) return BigDecimal.zero();
   return amount.toBigDecimal().times(m);
+}
+
+export function setMarketTotalDebtUSD(
+  market: Market,
+  priceMul: BigDecimal
+): void {
+  let totalDebt = calculateTotalDebt(market);
+  market.totalDebtUSD = priceMul.equals(BigDecimal.zero())
+    ? BigDecimal.zero()
+    : amountToUSD(totalDebt, priceMul);
+}
+
+export function updateMarketTotalDebtUSD(
+  market: Market,
+  timestamp: BigInt
+): void {
+  setMarketTotalDebtUSD(
+    market,
+    getTokenPriceMultiplier(market.decimals, market.asset, timestamp)
+  );
 }
 
 // -------------------------------------------------------------------------- //

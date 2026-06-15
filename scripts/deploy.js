@@ -42,14 +42,12 @@ switch (provider) {
       console.error("DEV_DEPLOY_KEY, DEV_NODE_URL, and DEV_IPFS_URL must be set");
       process.exit(1);
     }
-    // Graph name can't contain periods or hyphens
-    const deployId = `${subgraphName}_${version.replaceAll(/[.\-]/g, '_')}`;
     // Try to create subgraph if it doesn't exist
     try {
-      run(`graph create --node ${devNodeUrl} --access-token ${devDeployKey} ${deployId}`);
+      run(`graph create --node ${devNodeUrl} --access-token ${devDeployKey} ${subgraphName}`);
     } catch (err) {}
-    run(`graph deploy --node ${devNodeUrl} --ipfs ${devIpfsUrl} --deploy-key ${devDeployKey} --headers '{"Authorization": "Bearer ${devDeployKey}"}' --version-label ${version} ${deployId}`);
-    console.log(`Deployed ${subgraphName}@${version} to dev with name ${deployId}`);
+    run(`graph deploy --node ${devNodeUrl} --ipfs ${devIpfsUrl} --deploy-key ${devDeployKey} --headers '{"Authorization": "Bearer ${devDeployKey}"}' --version-label ${version} ${subgraphName}`);
+    console.log(`Deployed ${subgraphName}@${version} to dev`);
     break;
   case "thegraph":
     run(
