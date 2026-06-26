@@ -6,6 +6,7 @@ enum MarketVersion {
 enum HooksKind {
   OpenTerm
   FixedTerm
+  PeriodicTerm
   Unknown
 }
 
@@ -328,6 +329,15 @@ type HooksConfig @entity {
   fixedTermEndTime: Int!
   allowClosureBeforeTerm: Boolean!
   allowTermReduction: Boolean!
+  # PeriodicTermHooks config values
+  firstWithdrawalWindowStart: Int!
+  periodDuration: Int!
+  withdrawalWindowDuration: Int!
+  periodicTermClosed: Boolean!
+  pendingAprChangeAnnualInterestBips: Int!
+  pendingAprChangeProposalTimestamp: Int!
+  pendingAprChangeResponseWindowStart: Int!
+  pendingAprChangeResponseWindowEnd: Int!
 }
 
 type FixedTermUpdated @entity {
@@ -342,6 +352,72 @@ type FixedTermUpdated @entity {
   blockLogIndex: Int!
   eventIndex: Int!
   fixedTermUpdatedIndex: Int!
+}
+
+type PeriodicTermUpdated @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  oldFirstWithdrawalWindowStart: Int!
+  oldPeriodDuration: Int!
+  oldWithdrawalWindowDuration: Int!
+  newFirstWithdrawalWindowStart: Int!
+  newPeriodDuration: Int!
+  newWithdrawalWindowDuration: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+type PeriodicTermClosed @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+type AnnualInterestBipsReductionProposed @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  annualInterestBips: Int!
+  proposalTimestamp: Int!
+  responseWindowStart: Int!
+  responseWindowEnd: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+type AnnualInterestBipsReductionProposalCancelled @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
+}
+
+type AnnualInterestBipsReductionExecuted @entity(immutable: true) {
+  id: ID! # RECORD-marketAddress-marketEventIndex
+  hooks: HooksInstance! # address
+  market: Market! # address
+  annualInterestBips: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+  eventIndex: Int!
 }
 
 # event RoleProviderAdded(
@@ -880,6 +956,15 @@ type Market @entity {
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
 
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
+  periodicTermUpdatedRecords: [PeriodicTermUpdated!]!
+    @derivedFrom(field: "market")
+  periodicTermClosedRecord: PeriodicTermClosed @derivedFrom(field: "market")
+  annualInterestBipsReductionProposalRecords: [AnnualInterestBipsReductionProposed!]!
+    @derivedFrom(field: "market")
+  annualInterestBipsReductionProposalCancelledRecords: [AnnualInterestBipsReductionProposalCancelled!]!
+    @derivedFrom(field: "market")
+  annualInterestBipsReductionExecutionRecords: [AnnualInterestBipsReductionExecuted!]!
+    @derivedFrom(field: "market")
   minimumDepositUpdateRecords: [MinimumDepositUpdated!]!
     @derivedFrom(field: "market")
   accountMadeFirstDepositRecords: [AccountMadeFirstDeposit!]!

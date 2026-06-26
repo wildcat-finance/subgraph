@@ -1,48 +1,45 @@
+import { assert, clearStore, describe, test } from "matchstick-as/assembly";
+import { Address } from "@graphprotocol/graph-ts";
 import {
-  assert,
-  describe,
-  test,
-  clearStore,
-  beforeAll,
-  afterAll
-} from "matchstick-as/assembly/index"
-import { Address } from "@graphprotocol/graph-ts"
-import { LenderAuthorized } from "../generated/schema"
-import { LenderAuthorized as LenderAuthorizedEvent } from "../generated/WildcatMarketController/WildcatMarketController"
-import { handleLenderAuthorized } from "../src/wildcat-market-controller"
-import { createLenderAuthorizedEvent } from "./wildcat-market-controller-utils"
+  createController,
+  generateControllerId,
+  generateLenderAuthorizationId,
+} from "../generated/UncrashableEntityHelpers";
+import { handleLenderAuthorized } from "../src/wildcat-market-controller";
+import { createLenderAuthorizedEvent } from "./wildcat-market-controller-utils";
 
-// Tests structure (matchstick-as >=0.5.0)
-// https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
+let lender = Address.fromString(
+  "0x0000000000000000000000000000000000000003"
+);
 
-describe("Describe entity assertions", () => {
-  beforeAll(() => {
-    let param0 = Address.fromString(
-      "0x0000000000000000000000000000000000000001"
-    )
-    let newLenderAuthorizedEvent = createLenderAuthorizedEvent(param0)
-    handleLenderAuthorized(newLenderAuthorizedEvent)
-  })
+describe("wildcat market controller", () => {
+  test("tracks lender authorizations", () => {
+    clearStore();
 
-  afterAll(() => {
-    clearStore()
-  })
+    let event = createLenderAuthorizedEvent(lender);
+    createController(generateControllerId(event.address), {
+      borrower: Address.zero(),
+      controllerFactory: "controller-factory",
+      archController: "arch-controller",
+      isRegistered: true,
+    });
 
-  // For more test scenarios, see:
-  // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
+    handleLenderAuthorized(event);
 
-  test("LenderAuthorized created and stored", () => {
-    assert.entityCount("LenderAuthorized", 1)
-
-    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
+    let authorizationId = generateLenderAuthorizationId(event.address, lender);
+    assert.entityCount("LenderAuthorization", 1);
+    assert.entityCount("LenderAuthorizationChange", 1);
     assert.fieldEquals(
-      "LenderAuthorized",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "param0",
-      "0x0000000000000000000000000000000000000001"
-    )
-
-    // More assert options:
-    // https://thegraph.com/docs/en/developer/matchstick/#asserts
-  })
-})
+      "LenderAuthorization",
+      authorizationId,
+      "authorized",
+      "true"
+    );
+    assert.fieldEquals(
+      "LenderAuthorization",
+      authorizationId,
+      "lender",
+      lender.toHex()
+    );
+  });
+});

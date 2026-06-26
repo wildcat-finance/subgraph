@@ -1,48 +1,68 @@
+import { assert, clearStore, describe, test } from "matchstick-as/assembly";
+import { Address, BigInt } from "@graphprotocol/graph-ts";
 import {
-  assert,
-  describe,
-  test,
-  clearStore,
-  beforeAll,
-  afterAll
-} from "matchstick-as/assembly/index"
-import { BigInt, Address } from "@graphprotocol/graph-ts"
-import { AnnualInterestBipsUpdated } from "../generated/schema"
-import { AnnualInterestBipsUpdated as AnnualInterestBipsUpdatedEvent } from "../generated/WildcatMarket/WildcatMarket"
-import { handleAnnualInterestBipsUpdated } from "../src/wildcat-market"
-import { createAnnualInterestBipsUpdatedEvent } from "./wildcat-market-utils"
+  createMarket,
+  generateMarketId,
+} from "../generated/UncrashableEntityHelpers";
+import { handleAnnualInterestBipsUpdated } from "../src/wildcat-market";
+import { createAnnualInterestBipsUpdatedEvent } from "./wildcat-market-utils";
 
-// Tests structure (matchstick-as >=0.5.0)
-// https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
+describe("wildcat market", () => {
+  test("tracks annual interest bips updates", () => {
+    clearStore();
 
-describe("Describe entity assertions", () => {
-  beforeAll(() => {
-    let annualInterestBipsUpdated = BigInt.fromI32(234)
-    let newAnnualInterestBipsUpdatedEvent = createAnnualInterestBipsUpdatedEvent(
-      annualInterestBipsUpdated
-    )
-    handleAnnualInterestBipsUpdated(newAnnualInterestBipsUpdatedEvent)
-  })
+    let event = createAnnualInterestBipsUpdatedEvent(BigInt.fromI32(900));
+    createMarket(generateMarketId(event.address), {
+      archController: "arch-controller",
+      isRegistered: true,
+      version: "V2",
+      controller: null,
+      hooksFactory: null,
+      hooks: null,
+      borrower: Address.zero(),
+      sentinel: Address.zero(),
+      feeRecipient: Address.zero(),
+      name: "market",
+      symbol: "mkt",
+      decimals: 18,
+      protocolFeeBips: 0,
+      delinquencyGracePeriod: 0,
+      delinquencyFeeBips: 0,
+      asset: "asset",
+      withdrawalBatchDuration: 0,
+      maxTotalSupply: BigInt.zero(),
+      annualInterestBips: 1200,
+      reserveRatioBips: 0,
+      scaleFactor: BigInt.zero(),
+      lastInterestAccruedTimestamp: 0,
+      lastInterestAccruedBlockNumber: 0,
+      numCollateralContracts: 0,
+      createdAt: 0,
+      deployedEvent: "deployed-event",
+    });
 
-  afterAll(() => {
-    clearStore()
-  })
+    handleAnnualInterestBipsUpdated(event);
 
-  // For more test scenarios, see:
-  // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
-
-  test("AnnualInterestBipsUpdated created and stored", () => {
-    assert.entityCount("AnnualInterestBipsUpdated", 1)
-
-    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
+    let updateId = "RECORD-" + generateMarketId(event.address) + "-0";
+    assert.entityCount("AnnualInterestBipsUpdated", 1);
     assert.fieldEquals(
       "AnnualInterestBipsUpdated",
-      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "annualInterestBipsUpdated",
-      "234"
-    )
-
-    // More assert options:
-    // https://thegraph.com/docs/en/developer/matchstick/#asserts
-  })
-})
+      updateId,
+      "oldAnnualInterestBips",
+      "1200"
+    );
+    assert.fieldEquals(
+      "AnnualInterestBipsUpdated",
+      updateId,
+      "newAnnualInterestBips",
+      "900"
+    );
+    assert.fieldEquals("Market", generateMarketId(event.address), "eventIndex", "1");
+    assert.fieldEquals(
+      "Market",
+      generateMarketId(event.address),
+      "annualInterestBips",
+      "900"
+    );
+  });
+});

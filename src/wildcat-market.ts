@@ -55,6 +55,7 @@ import {
   generateDebtRepaidId,
   generateDepositId,
   generateFeesCollectedId,
+  generateHooksConfigId,
   generateLenderAccountId,
   generateLenderAuthorizationId,
   generateLenderHooksAccessId,
@@ -85,6 +86,7 @@ import {
   WithdrawalBatch,
   LenderHooksAccess,
   MarketDailyStats,
+  HooksConfig,
 } from "../generated/schema";
 import {
   calculateBatchInterestEarned,
@@ -173,6 +175,13 @@ export function handleAnnualInterestBipsUpdated(
 ): void {
   let newAnnualInterestBips = event.params.annualInterestBipsUpdated.toI32();
   let market = getMarket(generateMarketId(event.address));
+  // PeriodicTermHooks deletes a pending APR reduction proposal when the APR is
+  // increased and when a proposed reduction executes — both change the APR.
+  // Setting the APR to its current value emits this event but does NOT delete
+  // the proposal on-chain, so only clear the mirrored fields when the APR
+  // actually changed. (Must be evaluated before market.annualInterestBips is
+  // overwritten below.)
+  let aprChanged = newAnnualInterestBips != market.annualInterestBips;
   createAnnualInterestBipsUpdated(generateMarketEventId(market), {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -188,6 +197,16 @@ export function handleAnnualInterestBipsUpdated(
   market.annualInterestBipsUpdatedIndex =
     market.annualInterestBipsUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
+  if (aprChanged) {
+    let hooksConfig = HooksConfig.load(generateHooksConfigId(event.address));
+    if (hooksConfig != null) {
+      hooksConfig.pendingAprChangeAnnualInterestBips = 0;
+      hooksConfig.pendingAprChangeProposalTimestamp = 0;
+      hooksConfig.pendingAprChangeResponseWindowStart = 0;
+      hooksConfig.pendingAprChangeResponseWindowEnd = 0;
+      hooksConfig.save();
+    }
+  }
   market.save();
 }
 
