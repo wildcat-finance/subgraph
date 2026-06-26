@@ -43,6 +43,7 @@ dataSources:
         - event: ExchangeRemoved(address)
           handler: handleExchangeRemoved
       file: ./src/simple-collateral-factory.ts
+{{Wildcat4626WrapperFactoryDataSource}}
   - kind: ethereum
     name: HooksFactory
     network: {{NetworkName}}
@@ -79,12 +80,14 @@ dataSources:
           file: ./abis/HooksFactory.json
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: {{HooksAbiDir}}/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: {{HooksAbiDir}}/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: ./abis/PeriodicTermHooks.json
+          file: {{HooksAbiDir}}/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -105,6 +108,7 @@ dataSources:
         - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
       file: ./src/hooks-factory.ts
+{{HooksFactoryRevolvingDataSource}}
   - kind: ethereum
     name: WildcatArchController
     network: {{NetworkName}}
@@ -348,6 +352,8 @@ templates:
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
         - name: IERC20
           file: ./abis/IERC20.json
       eventHandlers:
@@ -440,11 +446,11 @@ templates:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: {{HooksAbiDir}}/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: {{HooksAbiDir}}/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: ./abis/PeriodicTermHooks.json
+          file: {{HooksAbiDir}}/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted

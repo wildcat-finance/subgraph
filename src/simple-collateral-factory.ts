@@ -1,9 +1,9 @@
 import { BigInt } from "@graphprotocol/graph-ts";
 import { ApprovedLiquidator, Token } from "../generated/schema";
-import { createSimpleCollateralContract, createToken, generateTokenId, createLiquidatorApproved, createLiquidatorRemoved,  getApprovedLiquidator, getOrInitializeApprovedLiquidator, getOrInitializeSimpleCollateralFactory, generateMarketId, getMarket, getOrInitializeApprovedCollateralExchange, createCollateralExchangeApproved, createCollateralExchangeRemoved, getApprovedCollateralExchange } from "../generated/UncrashableEntityHelpers";
+import { createSimpleCollateralContract, createToken, generateTokenId, createLiquidatorApproved, createLiquidatorRemoved,  getApprovedLiquidator, getOrInitializeApprovedLiquidator, getOrInitializeSimpleCollateralFactory, generateMarketId, getOrInitializeApprovedCollateralExchange, createCollateralExchangeApproved, createCollateralExchangeRemoved, getApprovedCollateralExchange } from "../generated/UncrashableEntityHelpers";
 import { CollateralContractCreated, ExecutorApproved, ExecutorRemoved, ExchangeRemoved, ExchangeApproved } from "../generated/WildcatMarketCollateralFactory/WildcatMarketCollateralFactory";
-import { generateEventId } from "./utils";
-import { IERC20 } from "../generated/templates/SimpleMarketCollateralMultiParty/IERC20";
+import { generateEventId, loadExistingMarket } from "./utils";
+import { readTokenMetadata } from "./token-metadata";
 import { SimpleMarketCollateralMultiParty } from "../generated/templates/SimpleMarketCollateralMultiParty/SimpleMarketCollateralMultiParty";
 import { SimpleMarketCollateralMultiParty as SimpleMarketCollateralMultiPartyTemplate } from "../generated/templates";
 
@@ -11,18 +11,22 @@ export function handleCollateralContractCreated(event: CollateralContractCreated
     getOrInitializeSimpleCollateralFactory(event.address.toHex(), {});
     let collateralAssetId = generateTokenId(event.params.collateralToken);
     if (Token.load(collateralAssetId) == null) {
-      let erc20 = IERC20.bind(event.params.collateralToken);
-      let result = erc20.try_isMock();
-      let isMock = !result.reverted && result.value;
+      let metadata = readTokenMetadata(event.params.collateralToken);
       createToken(collateralAssetId, {
         address: event.params.collateralToken,
-        name: erc20.name(),
-        symbol: erc20.symbol(),
-        decimals: erc20.decimals(),
-        isMock: isMock
+        name: metadata.name,
+        symbol: metadata.symbol,
+        decimals: metadata.decimals,
+        isMock: metadata.isMock
       });
     }
-    let market = getMarket(generateMarketId(event.params.associatedMarket));
+    let market = loadExistingMarket(
+      generateMarketId(event.params.associatedMarket),
+      "handleCollateralContractCreated"
+    );
+    if (market == null) {
+      return;
+    }
     market.numCollateralContracts = market.numCollateralContracts + 1;
     market.save();
     let collateralContract = SimpleMarketCollateralMultiParty.bind(event.params.collateralContract);

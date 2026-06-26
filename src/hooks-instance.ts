@@ -1,4 +1,4 @@
-import { generateMarketEventId } from "./utils";
+import { generateMarketEventId, loadExistingMarket } from "./utils";
 import {
   createAccountAccessGranted,
   createAccountAccessRevoked,
@@ -28,7 +28,6 @@ import {
   getHooksConfig,
   getHooksInstance,
   getLenderHooksAccess,
-  getMarket,
   getOrInitializeLenderHooksAccess,
   getOrInitializeRoleProvider,
   getRoleProvider,
@@ -172,7 +171,13 @@ export function handleAccountMadeFirstDeposit(
   // let hooks = getHooksInstance(generateHooksInstanceId(event.address));
   let accountAddress = event.params.accountAddress;
   let marketAddress = event.params.market;
-  let market = getMarket(generateMarketId(marketAddress));
+  let market = loadExistingMarket(
+    generateMarketId(marketAddress),
+    "handleAccountMadeFirstDeposit"
+  );
+  if (market == null) {
+    return;
+  }
   let lenderStatusId = generateLenderHooksAccessId(
     event.address,
     accountAddress
@@ -538,7 +543,13 @@ export function handleRoleProviderUpdated(
 export function handleTemporaryExcessReserveRatioActivated(
   event: TemporaryExcessReserveRatioActivatedEvent
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioActivated"
+  );
+  if (market == null) {
+    return;
+  }
   market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
@@ -549,7 +560,13 @@ export function handleTemporaryExcessReserveRatioActivated(
 export function handleTemporaryExcessReserveRatioCanceled(
   event: TemporaryExcessReserveRatioCanceledEvent
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioCanceled"
+  );
+  if (market == null) {
+    return;
+  }
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
@@ -560,7 +577,13 @@ export function handleTemporaryExcessReserveRatioCanceled(
 export function handleTemporaryExcessReserveRatioExpired(
   event: TemporaryExcessReserveRatioExpiredEvent
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioExpired"
+  );
+  if (market == null) {
+    return;
+  }
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
@@ -571,7 +594,13 @@ export function handleTemporaryExcessReserveRatioExpired(
 export function handleTemporaryExcessReserveRatioUpdated(
   event: TemporaryExcessReserveRatioUpdatedEvent
 ): void {
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleTemporaryExcessReserveRatioUpdated"
+  );
+  if (market == null) {
+    return;
+  }
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.save();
 }
@@ -597,7 +626,13 @@ export function handleDisabledForceBuyBacks(
   event: DisabledForceBuyBacksEvent
 ): void {
   let hooksId = event.address.toHex();
-  let market = getMarket(generateMarketId(event.params.market));
+  let market = loadExistingMarket(
+    generateMarketId(event.params.market),
+    "handleDisabledForceBuyBacks"
+  );
+  if (market == null) {
+    return;
+  }
   createDisabledForceBuyBacks(generateMarketEventId(market), {
     hooks: hooksId,
     market: market.id,

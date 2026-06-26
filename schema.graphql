@@ -3,6 +3,11 @@ enum MarketVersion {
   V2
 }
 
+enum MarketType {
+  Legacy
+  Revolving
+}
+
 enum HooksKind {
   OpenTerm
   FixedTerm
@@ -26,6 +31,7 @@ type ArchController @entity {
   controllers: [Controller!]! @derivedFrom(field: "archController")
   markets: [Market!]! @derivedFrom(field: "archController")
   borrowers: [RegisteredBorrower!]! @derivedFrom(field: "archController")
+  hooksFactories: [HooksFactory!]! @derivedFrom(field: "archController")
   hooksFactory: HooksFactory @derivedFrom(field: "archController")
 }
 
@@ -259,6 +265,7 @@ type HooksInstance @entity {
   kind: HooksKind!
   borrower: Bytes! # address
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   markets: [Market!]! @derivedFrom(field: "hooks")
   providers: [RoleProvider!]! @derivedFrom(field: "hooks")
   hooksFactory: HooksFactory!
@@ -595,8 +602,11 @@ type AccountAccessRevoked @entity(immutable: true) {
 type HooksFactory @entity {
   id: ID!
   hooksTemplates: [HooksTemplate!]! @derivedFrom(field: "hooksFactory")
+  factoryHooksTemplates: [FactoryHooksTemplate!]!
+    @derivedFrom(field: "hooksFactory")
   hooksInstances: [HooksInstance!]! @derivedFrom(field: "hooksFactory")
   archController: ArchController!
+  marketType: MarketType
   isRegistered: Boolean!
   eventIndex: Int!
   sentinel: Bytes! # address
@@ -606,6 +616,8 @@ type HooksFactory @entity {
 # Current workaround is to only bind a hooks instance if it is an HooksInstance instance.
 type HooksTemplate @entity {
   id: ID! # address
+  factoryHooksTemplates: [FactoryHooksTemplate!]!
+    @derivedFrom(field: "hooksTemplate")
   name: String!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
@@ -617,10 +629,27 @@ type HooksTemplate @entity {
   disabled: Boolean!
 }
 
+type FactoryHooksTemplate @entity {
+  id: ID! # factory-template
+  hooksFactory: HooksFactory!
+  hooksTemplate: HooksTemplate!
+  templateAddress: Bytes! # address
+  name: String!
+  feeRecipient: Bytes! # address
+  protocolFeeBips: Int!
+  originationFeeAsset: Token
+  originationFeeAmount: BigInt!
+  deployedInstances: [HooksInstanceDeployed!]!
+    @derivedFrom(field: "factoryHooksTemplate")
+  hooksInstances: [HooksInstance!]! @derivedFrom(field: "factoryHooksTemplate")
+  disabled: Boolean!
+}
+
 # event HooksInstanceDeployed(address hooksInstance, address hooksTemplate);
 type HooksInstanceDeployed @entity(immutable: true) {
   id: ID!
   hooksTemplate: HooksTemplate!
+  factoryHooksTemplate: FactoryHooksTemplate!
   hooks: HooksInstance! # address
   blockNumber: Int!
   blockTimestamp: Int!
@@ -637,8 +666,9 @@ type HooksInstanceDeployed @entity(immutable: true) {
 #   uint16 protocolFeeBips
 # );
 type HooksTemplateAdded @entity(immutable: true) {
-  id: ID! # TEMPLATEADD-template-eventIndex
+  id: ID! # TEMPLATEADD-factory-template-eventIndex
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
   originationFeeAsset: Token
@@ -651,8 +681,9 @@ type HooksTemplateAdded @entity(immutable: true) {
 
 # event HooksTemplateDisabled(address hooksTemplate);
 type HooksTemplateDisabled @entity(immutable: true) {
-  id: ID! # TEMPLATEDISABLE-template-eventIndex
+  id: ID! # TEMPLATEDISABLE-factory-template-eventIndex
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -667,8 +698,9 @@ type HooksTemplateDisabled @entity(immutable: true) {
 #   uint16 protocolFeeBips
 # );
 type HooksTemplateFeesUpdated @entity(immutable: true) {
-  id: ID! # TEMPLATEFEEUPDATE-template-eventIndex
+  id: ID! # TEMPLATEFEEUPDATE-factory-template-eventIndex
   hooksTemplate: HooksTemplate! # address
+  factoryHooksTemplate: FactoryHooksTemplate!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
   originationFeeAsset: Token
@@ -839,11 +871,50 @@ type Token @entity(immutable: true) {
   isMock: Boolean!
 }
 
+type Wildcat4626WrapperFactory @entity {
+  id: ID!
+  address: Bytes!
+  archController: ArchController!
+  eventIndex: Int!
+  wrappers: [Wildcat4626Wrapper!]! @derivedFrom(field: "factory")
+  deployedEvents: [Wildcat4626WrapperDeployed!]!
+    @derivedFrom(field: "factory")
+}
+
+type Wildcat4626Wrapper @entity {
+  id: ID!
+  address: Bytes!
+  factory: Wildcat4626WrapperFactory!
+  market: Market
+  marketAddress: Bytes!
+  marketToken: Token!
+  token: Token!
+  deployedEvent: Wildcat4626WrapperDeployed @derivedFrom(field: "wrapper")
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type Wildcat4626WrapperDeployed @entity(immutable: true) {
+  id: ID!
+  factory: Wildcat4626WrapperFactory!
+  market: Market
+  marketAddress: Bytes!
+  wrapper: Wildcat4626Wrapper!
+  wrapperAddress: Bytes!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
 type Market @entity {
   id: ID!
   archController: ArchController!
   isRegistered: Boolean!
   version: MarketVersion!
+  marketType: MarketType
   # ---------------------------------- Config -------------------------------- #
   controller: Controller
   hooksFactory: HooksFactory
@@ -882,8 +953,12 @@ type Market @entity {
   timeDelinquent: Int!
   # Annual interest rate accrued to lenders, in basis points
   annualInterestBips: Int!
+  # Revolving-only annual commitment fee rate, in basis points
+  commitmentFeeBips: BigInt
   # Percentage of outstanding balance that must be held in liquid reserves
   reserveRatioBips: Int!
+  # Revolving-only drawn principal amount
+  drawnAmount: BigInt
   # Ratio between internal balances and underlying token amounts
   scaleFactor: BigInt!
   lastInterestAccruedTimestamp: Int!
@@ -927,6 +1002,7 @@ type Market @entity {
   lenders: [LenderAccount!]! @derivedFrom(field: "market")
   collateralContracts: [SimpleCollateralContract!]!
     @derivedFrom(field: "market")
+  tokenWrapper: Wildcat4626Wrapper
   numCollateralContracts: Int!
 
   createdAt: Int!

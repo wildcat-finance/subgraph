@@ -1,4 +1,4 @@
-import { BigInt, log } from "@graphprotocol/graph-ts";
+import { BigInt } from "@graphprotocol/graph-ts";
 import { CollateralDeposited, CollateralReclaimed, Liquidation, FullLiquidation, LiquidatedSharesReset } from "../generated/templates/SimpleMarketCollateralMultiParty/SimpleMarketCollateralMultiParty";
 import { createSimpleCollateralContractDeposit, createSimpleCollateralContractLiquidatedSharesReset, createSimpleCollateralContractReclaim, createSimpleCollateralContractFullReset, getOrInitializeSimpleCollateralContractDepositor, getSimpleCollateralContract, getSimpleCollateralContractDepositor, createSimpleCollateralContractLiquidation } from "../generated/UncrashableEntityHelpers";
 import { generateEventId } from "./utils";
@@ -10,7 +10,6 @@ function generateCollateralEventId(collateral: SimpleCollateralContract): string
 
 export function handleCollateralDeposited(event: CollateralDeposited): void {
     let collateralContract = getSimpleCollateralContract(event.address.toHex());
-    log.warning("Collateral deposited: {}", [event.params.depositAmount.toString()]);
     let depositor = getOrInitializeSimpleCollateralContractDepositor(event.params.depositor.toHex(), {
         collateralContract: collateralContract.id,
         totalDeposited: event.params.depositAmount,

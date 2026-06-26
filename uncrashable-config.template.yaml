@@ -332,29 +332,43 @@ entitySettings:
     entityId:
       - name: template
         type: Bytes
+  FactoryHooksTemplate:
+    useDefault:
+      disabled: {}
+    entityId:
+      - name: factory
+        type: Bytes
+      - name: template
+        type: Bytes
   HooksTemplateAdded:
     useDefault: {}
-    entityId: # TEMPLATEADD-template-eventIndex
+    entityId: # TEMPLATEADD-factory-template-eventIndex
       - type: constant
         value: "TEMPLATEADD"
+      - name: factory
+        type: Bytes
       - name: template
         type: Bytes
       - name: eventIndex
         type: Int
   HooksTemplateDisabled:
     useDefault: {}
-    entityId: # TEMPLATEDISABLE-template-eventIndex
+    entityId: # TEMPLATEDISABLE-factory-template-eventIndex
       - type: constant
         value: "TEMPLATEDISABLE"
+      - name: factory
+        type: Bytes
       - name: template
         type: Bytes
       - name: eventIndex
         type: Int
   HooksTemplateFeesUpdated:
     useDefault: {}
-    entityId: # TEMPLATEFEEUPDATE-template-eventIndex
+    entityId: # TEMPLATEFEEUPDATE-factory-template-eventIndex
       - type: constant
         value: "TEMPLATEFEEUPDATE"
+      - name: factory
+        type: Bytes
       - name: template
         type: Bytes
       - name: eventIndex

@@ -44,7 +44,99 @@ dataSources:
           handler: handleExchangeRemoved
       file: ./src/simple-collateral-factory.ts
   - kind: ethereum
+    name: Wildcat4626WrapperFactory
+    network: sepolia
+    source:
+      address: "0x0566Fe57682164af689f1440cb3BCEedEe3bf843"
+      abi: Wildcat4626WrapperFactory
+      startBlock: 10534112
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Market
+        - Token
+        - Wildcat4626WrapperFactory
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperDeployed
+      abis:
+        - name: Wildcat4626WrapperFactory
+          file: ./abis/Wildcat4626WrapperFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: WrapperDeployed(indexed address,indexed address)
+          handler: handleWrapperDeployed
+      file: ./src/wildcat-4626-wrapper-factory.ts
+
+  - kind: ethereum
     name: HooksFactory
+    network: sepolia
+    source:
+      address: "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88"
+      abi: HooksFactory
+      startBlock: 7124440
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LenderHooksAccess
+        - HooksInstance
+        - RoleProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - HooksFactory
+        - HooksTemplate
+        - HooksInstanceDeployed
+        - HooksTemplateAdded
+        - HooksTemplateDisabled
+        - HooksTemplateFeesUpdated
+        - LenderAccount
+      abis:
+        - name: HooksFactory
+          file: ./abis/HooksFactory.json
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
+        - name: OpenTermHooks
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./network-specific-abis/sepolia/PeriodicTermHooks.json
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
+        - event: HooksInstanceDeployed(address,address)
+          handler: handleHooksInstanceDeployed
+        - event: HooksTemplateAdded(address,string,address,address,uint80,uint16)
+          handler: handleHooksTemplateAdded
+        - event: HooksTemplateDisabled(address)
+          handler: handleHooksTemplateDisabled
+        - event: HooksTemplateFeesUpdated(address,address,address,uint80,uint16)
+          handler: handleHooksTemplateFeesUpdated
+        - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleMarketDeployed
+      file: ./src/hooks-factory.ts
+  - kind: ethereum
+    name: HooksFactoryLegacy_20240730
     network: sepolia
     source:
       address: "0x10A64ABa0159720F8a23E1A552800CA4eb21576C"
@@ -79,12 +171,14 @@ dataSources:
           file: ./abis/HooksFactory.json
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: ./abis/PeriodicTermHooks.json
+          file: ./network-specific-abis/sepolia/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -105,6 +199,135 @@ dataSources:
         - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
       file: ./src/hooks-factory.ts
+  - kind: ethereum
+    name: HooksFactoryRevolving_20260419_233246
+    network: sepolia
+    source:
+      address: "0xF4564015E524cf5629828E61F45ed339D998D85f"
+      abi: HooksFactory
+      startBlock: 10695521
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LenderHooksAccess
+        - HooksInstance
+        - RoleProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - HooksFactory
+        - HooksTemplate
+        - HooksInstanceDeployed
+        - HooksTemplateAdded
+        - HooksTemplateDisabled
+        - HooksTemplateFeesUpdated
+        - LenderAccount
+      abis:
+        - name: HooksFactory
+          file: ./abis/HooksFactory.json
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
+        - name: OpenTermHooks
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./network-specific-abis/sepolia/PeriodicTermHooks.json
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
+        - event: HooksInstanceDeployed(address,address)
+          handler: handleHooksInstanceDeployed
+        - event: HooksTemplateAdded(address,string,address,address,uint80,uint16)
+          handler: handleHooksTemplateAdded
+        - event: HooksTemplateDisabled(address)
+          handler: handleHooksTemplateDisabled
+        - event: HooksTemplateFeesUpdated(address,address,address,uint80,uint16)
+          handler: handleHooksTemplateFeesUpdated
+        - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleMarketDeployed
+      file: ./src/hooks-factory-revolving.ts
+  - kind: ethereum
+    name: HooksFactoryRevolving
+    network: sepolia
+    source:
+      address: "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5"
+      abi: HooksFactory
+      startBlock: 10725515
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LenderHooksAccess
+        - HooksInstance
+        - RoleProvider
+        - HooksConfig
+        - RoleProviderUpdated
+        - RoleProviderAdded
+        - RoleProviderRemoved
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - AccountMadeFirstDeposit
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - HooksFactory
+        - HooksTemplate
+        - HooksInstanceDeployed
+        - HooksTemplateAdded
+        - HooksTemplateDisabled
+        - HooksTemplateFeesUpdated
+        - LenderAccount
+      abis:
+        - name: HooksFactory
+          file: ./abis/HooksFactory.json
+        - name: WildcatMarket
+          file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
+        - name: OpenTermHooks
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
+        - name: FixedTermHooks
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./network-specific-abis/sepolia/PeriodicTermHooks.json
+        - name: CombinedHooks
+          file: ./abis/CombinedHooks.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
+        - event: HooksInstanceDeployed(address,address)
+          handler: handleHooksInstanceDeployed
+        - event: HooksTemplateAdded(address,string,address,address,uint80,uint16)
+          handler: handleHooksTemplateAdded
+        - event: HooksTemplateDisabled(address)
+          handler: handleHooksTemplateDisabled
+        - event: HooksTemplateFeesUpdated(address,address,address,uint80,uint16)
+          handler: handleHooksTemplateFeesUpdated
+        - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleMarketDeployed
+      file: ./src/hooks-factory-revolving.ts
+
   - kind: ethereum
     name: WildcatArchController
     network: sepolia
@@ -348,6 +571,8 @@ templates:
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
+        - name: IWildcatMarketRevolving
+          file: ./abis/IWildcatMarketRevolving.json
         - name: IERC20
           file: ./abis/IERC20.json
       eventHandlers:
@@ -440,11 +665,11 @@ templates:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
+          file: ./network-specific-abis/sepolia/OpenTermHooks.json
         - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+          file: ./network-specific-abis/sepolia/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: ./abis/PeriodicTermHooks.json
+          file: ./network-specific-abis/sepolia/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted
