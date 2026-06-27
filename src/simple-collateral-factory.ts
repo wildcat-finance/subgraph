@@ -4,6 +4,7 @@ import { createSimpleCollateralContract, createToken, generateTokenId, createLiq
 import { CollateralContractCreated, ExecutorApproved, ExecutorRemoved, ExchangeRemoved, ExchangeApproved } from "../generated/WildcatMarketCollateralFactory/WildcatMarketCollateralFactory";
 import { generateEventId, loadExistingMarket } from "./utils";
 import { readTokenMetadata } from "./token-metadata";
+import { setupTokenPriceFeeds } from "./price-feeds";
 import { SimpleMarketCollateralMultiParty } from "../generated/templates/SimpleMarketCollateralMultiParty/SimpleMarketCollateralMultiParty";
 import { SimpleMarketCollateralMultiParty as SimpleMarketCollateralMultiPartyTemplate } from "../generated/templates";
 
@@ -12,13 +13,14 @@ export function handleCollateralContractCreated(event: CollateralContractCreated
     let collateralAssetId = generateTokenId(event.params.collateralToken);
     if (Token.load(collateralAssetId) == null) {
       let metadata = readTokenMetadata(event.params.collateralToken);
-      createToken(collateralAssetId, {
+      let newToken = createToken(collateralAssetId, {
         address: event.params.collateralToken,
         name: metadata.name,
         symbol: metadata.symbol,
         decimals: metadata.decimals,
         isMock: metadata.isMock
       });
+      setupTokenPriceFeeds(newToken);
     }
     let market = loadExistingMarket(
       generateMarketId(event.params.associatedMarket),

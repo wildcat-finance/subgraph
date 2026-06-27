@@ -21,7 +21,9 @@
     "deploy:sepolia": "yarn deploy goldsky sepolia",
     "deploy:mainnet": "yarn deploy goldsky mainnet",
     "deploy:plasma-testnet": "yarn deploy goldsky plasma-testnet",
-    "deploy:plasma-mainnet": "yarn deploy goldsky plasma-mainnet"
+    "deploy:plasma-mainnet": "yarn deploy goldsky plasma-mainnet",
+    "deploy:mainnet-analytics": "yarn deploy dev mainnet wildcat_ethereum_mainnet_analytics",
+    "deploy:sepolia-analytics": "yarn deploy dev sepolia wildcat_ethereum_sepolia_analytics"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",

@@ -18,6 +18,7 @@ entitySettings:
       totalNormalizedRequests: {}
       totalInterestEarned: {}
       normalizedAmountClaimed: {}
+      expiration: {}
     entityId:
       - type: constant
         value: "WDBATCH"
@@ -131,6 +132,18 @@ entitySettings:
       totalDelinquencyFeesAccrued: {}
       totalProtocolFeesAccrued: {}
       totalDeposited: {}
+      totalWithdrawalsRequested: {}
+      totalWithdrawalsExecuted: {}
+      totalBorrowedUSD: {}
+      totalRepaidUSD: {}
+      totalBaseInterestAccruedUSD: {}
+      totalDelinquencyFeesAccruedUSD: {}
+      totalProtocolFeesAccruedUSD: {}
+      totalDepositedUSD: {}
+      totalWithdrawalsRequestedUSD: {}
+      totalWithdrawalsExecutedUSD: {}
+      totalDebtUSD: {}
+      tokenDailyPrice: {}
       originalAnnualInterestBips: {}
       temporaryReserveRatioActive: {}
       originalReserveRatioBips: {}
@@ -186,7 +199,10 @@ entitySettings:
       - name: controller
         type: Bytes
   Token:
-    useDefault: {}
+    useDefault:
+      isUsdStablecoin: {}
+      priceFeed0: {}
+      priceFeed1: {}
     entityId:
       - type: constant
         value: "TKN"
@@ -460,6 +476,126 @@ entitySettings:
     useDefault: {}
   SimpleCollateralContractDeposit:
     useDefault: {}
+  # ============================================================================ #
+  #                    Protocol / Borrower / Lender Stats                       #
+  # ============================================================================ #
+  ProtocolStats:
+    useDefault:
+      totalDepositedUSD: {}
+      totalBorrowedUSD: {}
+      totalRepaidUSD: {}
+      totalWithdrawalsRequestedUSD: {}
+      totalWithdrawalsExecutedUSD: {}
+      totalBaseInterestAccruedUSD: {}
+      totalDelinquencyFeesAccruedUSD: {}
+      totalProtocolFeesAccruedUSD: {}
+      numMarkets: {}
+      numActiveMarkets: {}
+      numDelinquentMarkets: {}
+      numClosedMarkets: {}
+      numActiveBorrowers: {}
+      numActiveLenders: {}
+      numActiveLenderAccounts: {}
+    entityId:
+      - type: constant
+        value: "PROTOCOL_STATS"
+  ProtocolDailyStats:
+    useDefault:
+      dayDepositedUSD: {}
+      dayBorrowedUSD: {}
+      dayRepaidUSD: {}
+      dayWithdrawalsRequestedUSD: {}
+      dayWithdrawalsExecutedUSD: {}
+      dayBaseInterestAccruedUSD: {}
+      dayDelinquencyFeesAccruedUSD: {}
+      dayProtocolFeesAccruedUSD: {}
+    entityId:
+      - type: constant
+        value: "PROTOCOL-DAILY-STATS"
+      - name: startTimestamp
+        type: Int
+  BorrowerStats:
+    useDefault:
+      totalDepositedUSD: {}
+      totalBorrowedUSD: {}
+      totalRepaidUSD: {}
+      totalWithdrawalsRequestedUSD: {}
+      totalWithdrawalsExecutedUSD: {}
+      totalBaseInterestAccruedUSD: {}
+      totalDelinquencyFeesAccruedUSD: {}
+      totalProtocolFeesAccruedUSD: {}
+      numMarkets: {}
+      numActiveMarkets: {}
+      numDelinquentMarkets: {}
+      numClosedMarkets: {}
+      numBatchesExpired: {}
+      numBatchesExpiredUnpaid: {}
+      numBatchesPaidLate: {}
+    entityId:
+      - type: constant
+        value: "BORROWER-STATS"
+      - name: borrower
+        type: Bytes
+  BorrowerDailyStats:
+    useDefault:
+      dayDepositedUSD: {}
+      dayBorrowedUSD: {}
+      dayRepaidUSD: {}
+      dayWithdrawalsRequestedUSD: {}
+      dayWithdrawalsExecutedUSD: {}
+      dayBaseInterestAccruedUSD: {}
+      dayDelinquencyFeesAccruedUSD: {}
+      dayProtocolFeesAccruedUSD: {}
+    entityId:
+      - type: constant
+        value: "BORROWER-DAILY-STATS"
+      - name: borrower
+        type: Bytes
+      - name: startTimestamp
+        type: Int
+  MarketDailyStats:
+    useDefault:
+      dayDeposited: {}
+      dayWithdrawalsRequested: {}
+      dayWithdrawalsExecuted: {}
+      dayBorrowed: {}
+      dayRepaid: {}
+      dayBaseInterestAccrued: {}
+      dayDelinquencyFeesAccrued: {}
+      dayProtocolFeesAccrued: {}
+    entityId:
+      - type: constant
+        value: "MARKET-DAILY-STATS"
+      - name: market
+        type: Bytes
+      - name: startTimestamp
+        type: Int
+  LenderStats:
+    useDefault:
+      totalDepositedUSD: {}
+      totalWithdrawalsRequestedUSD: {}
+      totalWithdrawalsExecutedUSD: {}
+      totalInterestEarnedUSD: {}
+      numMarkets: {}
+      numActiveMarkets: {}
+    entityId:
+      - type: constant
+        value: "LENDER-STATS"
+      - name: lender
+        type: Bytes
+  LenderDailyStats:
+    useDefault:
+      dayDepositedUSD: {}
+      dayWithdrawalsRequestedUSD: {}
+      dayWithdrawalsExecutedUSD: {}
+      dayInterestEarnedUSD: {}
+    entityId:
+      - type: constant
+        value: "LENDER-DAILY-STATS"
+      - name: lender
+        type: Bytes
+      - name: startTimestamp
+        type: Int
   SimpleCollateralFactory:
     useDefault: {}
   ApprovedLiquidator:

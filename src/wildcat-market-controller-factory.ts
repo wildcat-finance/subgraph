@@ -15,6 +15,7 @@ import { WildcatMarketController as WildcatMarketControllerTemplate } from "../g
 import { Token } from "../generated/schema";
 import { readTokenMetadata } from "./token-metadata";
 import { isNullAddress } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
 
 function createTokenIfNotExists(asset: Address): string | null {
   if (isNullAddress(asset)) {
@@ -24,13 +25,15 @@ function createTokenIfNotExists(asset: Address): string | null {
   let token = Token.load(assetId);
   if (token == null) {
     let metadata = readTokenMetadata(asset);
-    return createToken(assetId, {
+    let newToken = createToken(assetId, {
       address: asset,
       name: metadata.name,
       symbol: metadata.symbol,
       decimals: metadata.decimals,
       isMock: metadata.isMock,
-    }).id;
+    });
+    setupTokenPriceFeeds(newToken);
+    return newToken.id;
   }
   return token.id;
 }

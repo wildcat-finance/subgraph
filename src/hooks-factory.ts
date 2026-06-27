@@ -53,6 +53,8 @@ import {
 } from "../generated/schema";
 import { readTokenMetadata } from "./token-metadata";
 import { generateEventId, isNullAddress } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
+import { getOrCreateProtocolStats, getOrCreateBorrowerStats } from "./daily-stats";
 import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
@@ -212,13 +214,15 @@ function createTokenIfNotExists(asset: Address): Token | null {
   let token = Token.load(assetId);
   if (token == null) {
     let metadata = readTokenMetadata(asset);
-    return createToken(assetId, {
+    let newToken = createToken(assetId, {
       address: asset,
       name: metadata.name,
       symbol: metadata.symbol,
       decimals: metadata.decimals,
       isMock: metadata.isMock,
     });
+    setupTokenPriceFeeds(newToken);
+    return newToken;
   }
   return token;
 }
@@ -755,6 +759,15 @@ export function handleMarketDeployedForMarketType(
     });
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
+
+    // Update protocol and borrower stats
+    let ps = getOrCreateProtocolStats();
+    ps.numMarkets = ps.numMarkets + 1;
+    ps.save();
+
+    let bs = getOrCreateBorrowerStats(hooks.borrower);
+    bs.numMarkets = bs.numMarkets + 1;
+    bs.save();
   }
 }
 export function handleMarketDeployed(event: MarketDeployedEvent): void {

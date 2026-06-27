@@ -6,7 +6,7 @@ import {
   newMockEvent,
   test,
 } from "matchstick-as/assembly/index";
-import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   handleHooksTemplateAddedForMarketType,
   handleMarketDeployedForMarketType,
@@ -65,6 +65,7 @@ function seedToken(address: Address): void {
   token.symbol = "MOCK";
   token.decimals = 18;
   token.isMock = false;
+  token.isUsdStablecoin = false;
   token.save();
 }
 
@@ -160,6 +161,17 @@ function seedMarket(address: Address, marketType: string | null): void {
   market.totalDelinquencyFeesAccrued = BigInt.zero();
   market.totalProtocolFeesAccrued = BigInt.zero();
   market.totalDeposited = BigInt.zero();
+  market.totalWithdrawalsRequested = BigInt.zero();
+  market.totalWithdrawalsExecuted = BigInt.zero();
+  market.totalBorrowedUSD = BigDecimal.zero();
+  market.totalRepaidUSD = BigDecimal.zero();
+  market.totalBaseInterestAccruedUSD = BigDecimal.zero();
+  market.totalDelinquencyFeesAccruedUSD = BigDecimal.zero();
+  market.totalProtocolFeesAccruedUSD = BigDecimal.zero();
+  market.totalDepositedUSD = BigDecimal.zero();
+  market.totalWithdrawalsRequestedUSD = BigDecimal.zero();
+  market.totalWithdrawalsExecutedUSD = BigDecimal.zero();
+  market.totalDebtUSD = BigDecimal.zero();
   market.eventIndex = 0;
   market.delinquencyStatusChangedIndex = 0;
   market.borrowIndex = 0;

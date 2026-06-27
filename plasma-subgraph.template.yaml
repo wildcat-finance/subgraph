@@ -50,6 +50,10 @@ dataSources:
           file: ./abis/CombinedHooks.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: ChangedSpherexEngineAddress(address,address)
           handler: handleChangedSpherexEngineAddress
@@ -175,6 +179,10 @@ templates:
           file: ./abis/WildcatMarketControllerFactory.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: NewController(address,address)
           handler: handleNewController
@@ -202,6 +210,10 @@ templates:
           file: ./abis/WildcatMarket.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
       eventHandlers:
         - event: LenderAuthorized(address)
           handler: handleLenderAuthorized
@@ -280,6 +292,10 @@ templates:
           file: ./abis/IWildcatMarketRevolving.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
       eventHandlers:
         - event: AnnualInterestBipsUpdated(uint256)
           handler: handleAnnualInterestBipsUpdated
