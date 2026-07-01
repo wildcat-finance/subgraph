@@ -564,6 +564,11 @@
     "type": "error"
   },
   {
+    "type": "error",
+    "name": "AprReductionNotReduction",
+    "inputs": []
+  },
+  {
     "inputs": [],
     "name": "BadLaunchCode",
     "type": "error"
@@ -1017,6 +1022,13 @@
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "type": "function",
+    "name": "executePendingAnnualInterestBipsReduction",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "inputs": [

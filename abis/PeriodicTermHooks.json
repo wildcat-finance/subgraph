@@ -175,6 +175,97 @@
   },
   {
     "type": "function",
+    "name": "executePendingAnnualInterestBipsReduction",
+    "inputs": [
+      {
+        "name": "intermediateState",
+        "type": "tuple",
+        "internalType": "struct MarketState",
+        "components": [
+          {
+            "name": "isClosed",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "accruedProtocolFees",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "normalizedUnclaimedWithdrawals",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "scaledTotalSupply",
+            "type": "uint104",
+            "internalType": "uint104"
+          },
+          {
+            "name": "scaledPendingWithdrawals",
+            "type": "uint104",
+            "internalType": "uint104"
+          },
+          {
+            "name": "pendingWithdrawalExpiry",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "isDelinquent",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "timeDelinquent",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "protocolFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "scaleFactor",
+            "type": "uint112",
+            "internalType": "uint112"
+          },
+          {
+            "name": "lastInterestAccruedTimestamp",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "annualInterestBips",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "factory",
     "inputs": [],
     "outputs": [
