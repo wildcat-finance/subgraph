@@ -274,12 +274,11 @@ function mockOpenTermHooks(marketAddress: Address): void {
   hookedMarket.push(ethereum.Value.fromBoolean(false));
   hookedMarket.push(ethereum.Value.fromUnsignedBigInt(BigInt.zero()));
   hookedMarket.push(ethereum.Value.fromBoolean(false));
-  hookedMarket.push(ethereum.Value.fromBoolean(false));
 
   createMockedFunction(
     ZERO_ADDRESS,
     "getHookedMarket",
-    "getHookedMarket(address):((bool,bool,bool,uint128,bool,bool))"
+    "getHookedMarket(address):((bool,bool,bool,uint128,bool))"
   )
     .withArgs([ethereum.Value.fromAddress(marketAddress)])
     .returns([ethereum.Value.fromTuple(hookedMarket)]);

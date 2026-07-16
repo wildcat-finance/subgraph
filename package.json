@@ -15,7 +15,7 @@
     "local:sepolia": "graph deploy --node $NODE_HOST:$NODE_PORT --ipfs $NODE_HOST:$IPFS_PORT wildcat-test-deployment --version-label v2.0.16",
     "local:mainnet": "graph deploy --node $NODE_HOST:$NODE_PORT --ipfs $NODE_HOST:$IPFS_PORT wildcat-test-mainnet --version-label v2.0.15",
     "test": "graph test",
-    "test:config": "node --test scripts/set-addresses.test.js",
+    "test:config": "node --test scripts/*.test.js",
     "test:rcf-v2": "graph test rcf-v2",
     "netconfig": "node ./scripts/set-addresses",
     "postnetconfig": "yarn codegen",
