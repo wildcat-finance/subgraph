@@ -2,13 +2,6 @@ const fs = require("fs");
 const networks = require("../networks.json");
 const path = require("path");
 const networkId = process.argv[2];
-if (!networks[networkId]) {
-  throw Error(`No deployments for network: ${networkId}`);
-}
-let subgraphTemplateYamlName = "subgraph.template.yaml";
-if (networkId.toLowerCase().includes("plasma")) {
-  subgraphTemplateYamlName = "plasma-subgraph.template.yaml";
-}
 
 function legacyHooksFactoriesFromContracts(contracts) {
   const hooksFactories = [];
@@ -31,6 +24,21 @@ function legacyHooksFactoriesFromContracts(contracts) {
     });
   }
   return hooksFactories;
+}
+
+function legacyWrapperFactoriesFromContracts(contracts) {
+  const wrapperFactory = contracts.Wildcat4626WrapperFactory;
+  if (!wrapperFactory) {
+    return [];
+  }
+  return [
+    {
+      name: "Wildcat4626WrapperFactory",
+      address: wrapperFactory.address,
+      startBlock: wrapperFactory.startBlock,
+      indexed: true,
+    },
+  ];
 }
 
 function validateHooksFactory(hooksFactory, index) {
@@ -76,8 +84,45 @@ function getIndexedHooksFactories(networkConfig) {
   return indexedHooksFactories;
 }
 
+function getIndexedWrapperFactories(networkConfig) {
+  const wrapperFactories = Array.isArray(networkConfig.wrapperFactories)
+    ? networkConfig.wrapperFactories
+    : legacyWrapperFactoriesFromContracts(networkConfig.contracts);
+  const indexedWrapperFactories = wrapperFactories.filter(
+    (wrapperFactory) => wrapperFactory.indexed !== false
+  );
+  const names = new Set();
+  const addresses = new Set();
+
+  indexedWrapperFactories.forEach((wrapperFactory, index) => {
+    const label = `wrapperFactories[${index}]`;
+    if (!wrapperFactory.name) {
+      throw new Error(`${label}.name is required`);
+    }
+    if (!wrapperFactory.address) {
+      throw new Error(`${label}.address is required`);
+    }
+    if (!Number.isInteger(Number(wrapperFactory.startBlock))) {
+      throw new Error(`${label}.startBlock must be an integer`);
+    }
+    if (names.has(wrapperFactory.name)) {
+      throw new Error(`Duplicate indexed wrapper factory name: ${wrapperFactory.name}`);
+    }
+    names.add(wrapperFactory.name);
+
+    const address = wrapperFactory.address.toLowerCase();
+    if (addresses.has(address)) {
+      throw new Error(`Duplicate indexed wrapper factory address: ${wrapperFactory.address}`);
+    }
+    addresses.add(address);
+  });
+
+  return indexedWrapperFactories;
+}
+
 function normalizeNetworkConfig(networkConfig) {
   const hooksFactories = getIndexedHooksFactories(networkConfig);
+  const wrapperFactories = getIndexedWrapperFactories(networkConfig);
   const contracts = { ...networkConfig.contracts };
 
   for (const hooksFactory of hooksFactories) {
@@ -89,7 +134,7 @@ function normalizeNetworkConfig(networkConfig) {
     }
   }
 
-  return { ...networkConfig, contracts, hooksFactories };
+  return { ...networkConfig, contracts, hooksFactories, wrapperFactories };
 }
 
 function hooksFactoryMappingFile(hooksFactory) {
@@ -186,13 +231,9 @@ function buildAdditionalHooksFactoryDataSources(network, hooksFactories) {
     .join("");
 }
 
-function buildWildcat4626WrapperFactoryDataSource(network, contracts) {
-  const wrapperFactory = contracts.Wildcat4626WrapperFactory;
-  if (!wrapperFactory) {
-    return "";
-  }
+function buildWildcat4626WrapperFactoryDataSource(network, wrapperFactory) {
   return `  - kind: ethereum
-    name: Wildcat4626WrapperFactory
+    name: ${wrapperFactory.name}
     network: ${network}
     source:
       address: "${wrapperFactory.address}"
@@ -221,8 +262,23 @@ function buildWildcat4626WrapperFactoryDataSource(network, contracts) {
 `;
 }
 
-function setNetworkAddresses() {
-  const { name: network, contracts, hooksFactories } = normalizeNetworkConfig(networks[networkId]);
+function buildWildcat4626WrapperFactoryDataSources(network, wrapperFactories) {
+  return wrapperFactories
+    .map((wrapperFactory) =>
+      buildWildcat4626WrapperFactoryDataSource(network, wrapperFactory)
+    )
+    .join("");
+}
+
+function setNetworkAddresses(networkId) {
+  if (!networks[networkId]) {
+    throw Error(`No deployments for network: ${networkId}`);
+  }
+  const subgraphTemplateYamlName = networkId.toLowerCase().includes("plasma")
+    ? "plasma-subgraph.template.yaml"
+    : "subgraph.template.yaml";
+  const { name: network, contracts, hooksFactories, wrapperFactories } =
+    normalizeNetworkConfig(networks[networkId]);
   let subgraph = fs
     .readFileSync(path.join(__dirname, `../${subgraphTemplateYamlName}`), "utf8")
     .replace(new RegExp(`{{NetworkName}}`, "g"), network)
@@ -249,7 +305,7 @@ function setNetworkAddresses() {
   );
   subgraph = subgraph.replace(
     new RegExp(`{{Wildcat4626WrapperFactoryDataSource}}`, "g"),
-    buildWildcat4626WrapperFactoryDataSource(network, contracts)
+    buildWildcat4626WrapperFactoryDataSources(network, wrapperFactories)
   );
 
   fs.writeFileSync(path.join(__dirname, "../subgraph.yaml"), subgraph);
@@ -259,4 +315,11 @@ function setNetworkAddresses() {
   );
 }
 
-setNetworkAddresses();
+if (require.main === module) {
+  setNetworkAddresses(networkId);
+}
+
+module.exports = {
+  buildWildcat4626WrapperFactoryDataSources,
+  getIndexedWrapperFactories,
+};
