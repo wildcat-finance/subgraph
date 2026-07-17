@@ -58,7 +58,33 @@
     "wrappers": true
   },
   "pricing": {
-    "mode": "CHAINLINK"
+    "mode": "CHAINLINK",
+    "feedDecimals": 8,
+    "feedRegistry": "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf",
+    "denominations": {
+      "usd": "0x0000000000000000000000000000000000000348",
+      "eth": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      "btc": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+    },
+    "bridgeFeeds": {
+      "ethUsd": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      "btcUsd": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
+    },
+    "stablecoins": [
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "0xdac17f958d2ee523a2206206994597c13d831ec7"
+    ],
+    "directFeeds": [
+      {
+        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "feed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+      },
+      {
+        "token": "0xd31a59c85ae9d8edefec411d448f90841571b89c",
+        "feed": "0x4ffC43a60e009B551865A93d232E33Fce9f01507"
+      }
+    ],
+    "syntheticPrices": []
   },
   "compatibility": {
     "canonicalFactoryByMarketKind": {

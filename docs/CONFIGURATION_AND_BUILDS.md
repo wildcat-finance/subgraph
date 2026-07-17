@@ -35,6 +35,29 @@ These fields deliberately describe different things:
 - `isRegistered` is observed on-chain state and belongs in indexed entities,
   not the chain descriptor.
 
+The schema preserves the same ownership boundary:
+
+- `HooksFactory` combines immutable/configured factory identity with current
+  observed registration state, while retaining the block where that state
+  changed;
+- `FactoryRegistration` and `FactoryRegistrationEvent` are the canonical
+  current state and immutable ArchController add/remove history for controller,
+  hooks, and unknown factory addresses;
+- `HooksTemplate` is bytecode/interface identity only; and
+- `HooksTemplateRegistration` owns the display name, fee configuration,
+  enabled state, timestamps, and immutable change history for one
+  factory/template pair;
+- `HooksInstance` records the exact factory generation, market kind, ABI family,
+  and deployment log that created it;
+- `Market` now records immutable origin and deployment identity; its legacy
+  mutable fields remain during the event-projector migration; and
+- `MarketSnapshot` is the explicitly stamped replacement cache. Lens/RPC
+  remains the live authority for action inputs.
+
+Mappings must not reconstruct a missing template registration from global
+template state. Unknown factories/templates and missing references are recorded
+as `IndexerDiagnostic` entities.
+
 Before deployment addresses exist, `deploymentTargetsReady` must be `false`
 and no factory may set `deploymentTarget`. Once the V2.5 standard, revolving,
 and wrapper addresses are final, set `deploymentTargetsReady` to `true`, select
@@ -80,6 +103,9 @@ blocks:
 1. Verify the protocol factory inventory and deployment files.
 2. Add the standard, revolving, and wrapper V2.5 factory records to the relevant
    chain descriptor with exact generation and ABI-family metadata.
+   On Sepolia, existing pre-V2.5 hooks factories use the
+   `hooks-shared-current` / `FORCE_BUYBACK` tuple family; new V2.5 factories use
+   the `hooks-sepolia-current` / `BASE` tuple family.
 3. Keep every historical factory with markets as `indexed: true`, even if it is
    no longer registered or deployable.
 4. Mark only the new V2.5 standard, revolving, and wrapper factories as
@@ -100,8 +126,14 @@ node scripts/validate-factory-inventory.js \
 
 ## Current transitional constraint
 
-The existing mapping still creates one `CombinedHooks` dynamic template, so all
-indexed hooks factories on a chain must currently share a compatible dynamic
-hooks ABI family. Configuration validation and generator tests fail instead of
-silently mixing incompatible families. Generation-aware dynamic templates and
-mapping context belong to the factory/hooks mapping phase of the refactor.
+Static factory sources carry checked-in factory metadata, and dynamic hooks and
+market sources inherit the originating factory address, generation, market
+kind, ABI family, hooked-market tuple adapter, and template registration through
+data-source context.
+
+The `BASE` and `FORCE_BUYBACK` hooked-market tuple shapes have separate minimal
+ABI bindings, so historical factories and V2.5 factories can coexist on one
+chain without network-wide ABI swapping. The single `CombinedHooks` and market
+dynamic templates still require their core event/call ABIs to match. Config
+validation permits different adapter families but fails if those core ABI paths
+diverge.

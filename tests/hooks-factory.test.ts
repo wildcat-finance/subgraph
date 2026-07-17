@@ -1,13 +1,17 @@
 import { assert, clearStore, describe, test } from "matchstick-as/assembly";
 import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { createMockedFunction } from "matchstick-as";
+import { generateHooksInstanceId } from "../generated/UncrashableEntityHelpers";
 import {
-  createHooksFactory,
-  createHooksTemplate,
-  generateHooksInstanceId,
-  generateHooksTemplateId,
-} from "../generated/UncrashableEntityHelpers";
+  HooksFactory,
+  HooksTemplate,
+  HooksTemplateRegistration,
+} from "../generated/schema";
 import { handleHooksInstanceDeployed } from "../src/hooks-factory";
+import {
+  generateHooksTemplateId,
+  generateHooksTemplateRegistrationId,
+} from "../src/hooks-template-domain";
 import { createHooksInstanceDeployedEvent } from "./hooks-factory-utils";
 
 let hooksInstance = Address.fromString(
@@ -25,19 +29,56 @@ describe("hooks factory", () => {
     clearStore();
 
     let event = createHooksInstanceDeployedEvent(hooksInstance, hooksTemplate);
-    createHooksFactory(event.address.toHex(), {
-      archController: "arch-controller",
-      isRegistered: true,
-      sentinel: Address.zero(),
-    });
-    createHooksTemplate(generateHooksTemplateId(hooksTemplate), {
-      name: "PeriodicTermHooks",
-      feeRecipient: Address.zero(),
-      protocolFeeBips: 0,
-      originationFeeAsset: null,
-      originationFeeAmount: BigInt.zero(),
-      hooksFactory: event.address.toHex(),
-    });
+    let factory = new HooksFactory(event.address.toHex());
+    factory.address = event.address;
+    factory.label = "test";
+    factory.archController = Address.zero().toHexString();
+    factory.marketKind = "STANDARD";
+    factory.generation = "test";
+    factory.abiFamily = "test";
+    factory.hookedMarketAbi = "BASE";
+    factory.configuredStartBlock = BigInt.zero();
+    factory.indexed = true;
+    factory.deploymentTarget = false;
+    factory.lifecycle = "ACTIVE";
+    factory.configured = true;
+    factory.isRegistered = true;
+    factory.eventIndex = 0;
+    factory.sentinel = Address.zero();
+    factory.save();
+
+    let template = new HooksTemplate(generateHooksTemplateId(hooksTemplate));
+    template.address = hooksTemplate;
+    template.kind = "PeriodicTerm";
+    template.version = "PeriodicTermHooks";
+    template.abiFamily = "test";
+    template.save();
+
+    let registration = new HooksTemplateRegistration(
+      generateHooksTemplateRegistrationId(event.address, hooksTemplate)
+    );
+    registration.hooksFactory = factory.id;
+    registration.hooksTemplate = template.id;
+    registration.templateAddress = hooksTemplate;
+    registration.name = "PeriodicTermHooks";
+    registration.feeRecipient = Address.zero();
+    registration.protocolFeeBips = 0;
+    registration.originationFeeAsset = null;
+    registration.originationFeeAmount = BigInt.zero();
+    registration.isEnabled = true;
+    registration.createdAtBlock = BigInt.zero();
+    registration.createdAtTimestamp = BigInt.zero();
+    registration.createdAtTransaction = Address.zero();
+    registration.createdAtLogIndex = BigInt.zero();
+    registration.updatedAtBlock = BigInt.zero();
+    registration.updatedAtTimestamp = BigInt.zero();
+    registration.updatedAtTransaction = Address.zero();
+    registration.updatedAtLogIndex = BigInt.zero();
+    registration.save();
+
+    createMockedFunction(hooksTemplate, "version", "version():(string)")
+      .withArgs([])
+      .returns([ethereum.Value.fromString("PeriodicTermHooks")]);
 
     createMockedFunction(hooksInstance, "borrower", "borrower():(address)")
       .withArgs([])
@@ -77,6 +118,26 @@ describe("hooks factory", () => {
       generateHooksTemplateId(hooksTemplate)
     );
     assert.fieldEquals("HooksInstance", hooksInstanceId, "borrower", borrower.toHex());
+    assert.fieldEquals(
+      "HooksInstance",
+      hooksInstanceId,
+      "address",
+      hooksInstance.toHexString()
+    );
+    assert.fieldEquals(
+      "HooksInstance",
+      hooksInstanceId,
+      "marketKind",
+      "STANDARD"
+    );
+    assert.fieldEquals("HooksInstance", hooksInstanceId, "generation", "test");
+    assert.fieldEquals("HooksInstance", hooksInstanceId, "abiFamily", "test");
+    assert.fieldEquals(
+      "HooksInstance",
+      hooksInstanceId,
+      "deployedAtTransaction",
+      event.transaction.hash.toHexString()
+    );
     assert.fieldEquals("HooksInstance", hooksInstanceId, "eventIndex", "0");
     assert.entityCount("HooksInstanceDeployed", 1);
   });

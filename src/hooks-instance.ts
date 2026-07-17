@@ -35,6 +35,8 @@ import {
 import { Address } from "@graphprotocol/graph-ts";
 
 import { HooksConfig, HooksInstance, Market } from "../generated/schema";
+import { saveMarketAndSnapshot } from "./market-domain";
+import { recordMarketEvent } from "./market-event-domain";
 import {
   CombinedHooks as CombinedHooksContract,
   AccountAccessGranted as AccountAccessGrantedEvent,
@@ -178,6 +180,7 @@ export function handleAccountMadeFirstDeposit(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "ACCOUNT_FIRST_DEPOSIT");
   let lenderStatusId = generateLenderHooksAccessId(
     event.address,
     accountAddress
@@ -237,6 +240,7 @@ export function handleMinimumDepositUpdated(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "MINIMUM_DEPOSIT_UPDATED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
 
     createMinimumDepositUpdated(generateMarketEventId(market), {
@@ -263,6 +267,7 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "FIXED_TERM_UPDATED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
     createFixedTermUpdated(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
@@ -290,6 +295,7 @@ export function handlePeriodicTermUpdated(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "PERIODIC_TERM_UPDATED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
     createPeriodicTermUpdated(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
@@ -319,6 +325,7 @@ export function handlePeriodicTermClosed(event: PeriodicTermClosedEvent): void {
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "PERIODIC_TERM_CLOSED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
     createPeriodicTermClosed(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
@@ -358,6 +365,7 @@ export function handleAnnualInterestBipsReductionProposalCancelled(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "APR_REDUCTION_CANCELLED");
     createAnnualInterestBipsReductionProposalCancelled(
       generateMarketEventId(market),
       {
@@ -385,6 +393,7 @@ export function handleAnnualInterestBipsReductionExecuted(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "APR_REDUCTION_EXECUTED");
     createAnnualInterestBipsReductionExecuted(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
       market: market.id,
@@ -407,6 +416,7 @@ export function handleAnnualInterestBipsReductionProposed(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "APR_REDUCTION_PROPOSED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
     createAnnualInterestBipsReductionProposed(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
@@ -550,11 +560,12 @@ export function handleTemporaryExcessReserveRatioActivated(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_ACTIVATED");
   market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.temporaryReserveRatioActive = true;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioCanceled(
@@ -567,11 +578,12 @@ export function handleTemporaryExcessReserveRatioCanceled(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_CANCELLED");
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioExpired(
@@ -584,11 +596,12 @@ export function handleTemporaryExcessReserveRatioExpired(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_EXPIRED");
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioUpdated(
@@ -601,8 +614,9 @@ export function handleTemporaryExcessReserveRatioUpdated(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_UPDATED");
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleNameUpdated(event: NameUpdatedEvent): void {
@@ -633,6 +647,7 @@ export function handleDisabledForceBuyBacks(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "FORCE_BUYBACK_DISABLED");
   createDisabledForceBuyBacks(generateMarketEventId(market), {
     hooks: hooksId,
     market: market.id,

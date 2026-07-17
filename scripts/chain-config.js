@@ -10,16 +10,16 @@ const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const LABEL_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 const MANIFEST_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
+const PRICE_SYMBOL_PATTERN = /^[A-Za-z0-9._-]+$/;
+const POSITIVE_DECIMAL_PATTERN = /^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 const MARKET_KINDS = ["STANDARD", "REVOLVING"];
 const LIFECYCLES = ["active", "historical", "retired"];
+const HOOKED_MARKET_ABIS = ["BASE", "FORCE_BUYBACK"];
 const PRICING_MODES = ["CHAINLINK", "SYNTHETIC_TESTNET", "NONE"];
 const REQUIRED_HOOKS_ABIS = [
   "HooksFactory",
   "WildcatMarket",
   "IWildcatMarketRevolving",
-  "OpenTermHooks",
-  "FixedTermHooks",
-  "PeriodicTermHooks",
   "CombinedHooks",
   "IERC20",
   "ChainlinkFeedRegistry",
@@ -75,6 +75,13 @@ function assertNonEmptyString(value, context) {
   }
 }
 
+function assertContextSafeString(value, context) {
+  assertNonEmptyString(value, context);
+  if (value.includes("|")) {
+    fail(context, "must not contain the factory-context separator |");
+  }
+}
+
 function assertBoolean(value, context) {
   if (typeof value !== "boolean") {
     fail(context, "must be a boolean");
@@ -99,6 +106,132 @@ function validateAnchor(anchor, context) {
   assertStartBlock(anchor.startBlock, `${context}.startBlock`);
 }
 
+function validatePricing(pricing, context) {
+  assertExactKeys(
+    pricing,
+    [
+      "mode",
+      "feedDecimals",
+      "feedRegistry",
+      "denominations",
+      "bridgeFeeds",
+      "stablecoins",
+      "directFeeds",
+      "syntheticPrices",
+    ],
+    context
+  );
+  if (!PRICING_MODES.includes(pricing.mode)) {
+    fail(`${context}.mode`, `must be one of ${PRICING_MODES.join(", ")}`);
+  }
+  if (!Array.isArray(pricing.stablecoins)) {
+    fail(`${context}.stablecoins`, "must be an array");
+  }
+  if (!Array.isArray(pricing.directFeeds)) {
+    fail(`${context}.directFeeds`, "must be an array");
+  }
+  if (!Array.isArray(pricing.syntheticPrices)) {
+    fail(`${context}.syntheticPrices`, "must be an array");
+  }
+
+  const stablecoins = new Set();
+  pricing.stablecoins.forEach((address, index) => {
+    assertAddress(address, `${context}.stablecoins[${index}]`);
+    const normalized = address.toLowerCase();
+    if (stablecoins.has(normalized)) {
+      fail(`${context}.stablecoins[${index}]`, `duplicates address ${address}`);
+    }
+    stablecoins.add(normalized);
+  });
+
+  const directFeedTokens = new Set();
+  pricing.directFeeds.forEach((entry, index) => {
+    const entryContext = `${context}.directFeeds[${index}]`;
+    assertExactKeys(entry, ["token", "feed"], entryContext);
+    assertAddress(entry.token, `${entryContext}.token`);
+    assertAddress(entry.feed, `${entryContext}.feed`);
+    const normalized = entry.token.toLowerCase();
+    if (directFeedTokens.has(normalized)) {
+      fail(`${entryContext}.token`, `duplicates token ${entry.token}`);
+    }
+    if (stablecoins.has(normalized)) {
+      fail(`${entryContext}.token`, "cannot also be configured as a stablecoin");
+    }
+    directFeedTokens.add(normalized);
+  });
+
+  const syntheticSymbols = new Set();
+  pricing.syntheticPrices.forEach((entry, index) => {
+    const entryContext = `${context}.syntheticPrices[${index}]`;
+    assertExactKeys(entry, ["symbol", "priceUSD", "usdPeg"], entryContext);
+    if (
+      typeof entry.symbol !== "string" ||
+      !PRICE_SYMBOL_PATTERN.test(entry.symbol)
+    ) {
+      fail(`${entryContext}.symbol`, "must be a context-safe token symbol");
+    }
+    if (syntheticSymbols.has(entry.symbol)) {
+      fail(`${entryContext}.symbol`, `duplicates symbol ${entry.symbol}`);
+    }
+    syntheticSymbols.add(entry.symbol);
+    if (
+      typeof entry.priceUSD !== "string" ||
+      !POSITIVE_DECIMAL_PATTERN.test(entry.priceUSD) ||
+      Number(entry.priceUSD) <= 0
+    ) {
+      fail(`${entryContext}.priceUSD`, "must be a positive decimal string");
+    }
+    assertBoolean(entry.usdPeg, `${entryContext}.usdPeg`);
+  });
+
+  if (pricing.mode === "CHAINLINK") {
+    if (!Number.isInteger(pricing.feedDecimals) || pricing.feedDecimals <= 0) {
+      fail(`${context}.feedDecimals`, "must be a positive integer for CHAINLINK");
+    }
+    assertAddress(pricing.feedRegistry, `${context}.feedRegistry`);
+    assertExactKeys(
+      pricing.denominations,
+      ["usd", "eth", "btc"],
+      `${context}.denominations`
+    );
+    assertAddress(pricing.denominations.usd, `${context}.denominations.usd`);
+    assertAddress(pricing.denominations.eth, `${context}.denominations.eth`);
+    assertAddress(pricing.denominations.btc, `${context}.denominations.btc`);
+    assertExactKeys(
+      pricing.bridgeFeeds,
+      ["ethUsd", "btcUsd"],
+      `${context}.bridgeFeeds`
+    );
+    assertAddress(pricing.bridgeFeeds.ethUsd, `${context}.bridgeFeeds.ethUsd`);
+    assertAddress(pricing.bridgeFeeds.btcUsd, `${context}.bridgeFeeds.btcUsd`);
+    if (pricing.syntheticPrices.length !== 0) {
+      fail(`${context}.syntheticPrices`, "must be empty for CHAINLINK");
+    }
+    return;
+  }
+
+  if (
+    pricing.feedDecimals !== null ||
+    pricing.feedRegistry !== null ||
+    pricing.denominations !== null ||
+    pricing.bridgeFeeds !== null
+  ) {
+    fail(context, `${pricing.mode} must not declare Chainlink configuration`);
+  }
+  if (pricing.stablecoins.length !== 0 || pricing.directFeeds.length !== 0) {
+    fail(context, `${pricing.mode} must not declare address-based Chainlink assets`);
+  }
+  if (
+    pricing.mode === "SYNTHETIC_TESTNET" &&
+    pricing.syntheticPrices.length === 0
+  ) {
+    fail(`${context}.syntheticPrices`, "must not be empty for SYNTHETIC_TESTNET");
+  }
+  if (pricing.mode === "NONE" && pricing.syntheticPrices.length !== 0) {
+    fail(`${context}.syntheticPrices`, "must be empty for NONE");
+  }
+}
+
 function validateCommonFactory(factory, context, { deploymentTarget }) {
   const keys = [
     "label",
@@ -121,7 +254,7 @@ function validateCommonFactory(factory, context, { deploymentTarget }) {
   ) {
     fail(`${context}.manifestName`, "must be a valid Graph data-source name");
   }
-  assertNonEmptyString(factory.generation, `${context}.generation`);
+  assertContextSafeString(factory.generation, `${context}.generation`);
   assertAddress(factory.address, `${context}.address`);
   assertStartBlock(factory.startBlock, `${context}.startBlock`);
   assertBoolean(factory.indexed, `${context}.indexed`);
@@ -133,8 +266,8 @@ function validateCommonFactory(factory, context, { deploymentTarget }) {
     if (factory.deploymentTarget && !factory.indexed) {
       fail(context, "a deployment target must also be indexed");
     }
-    if (factory.deploymentTarget && factory.lifecycle === "retired") {
-      fail(context, "a retired factory cannot be a deployment target");
+    if (factory.deploymentTarget && factory.lifecycle !== "active") {
+      fail(context, "a deployment target must have an active lifecycle");
     }
   }
 }
@@ -170,7 +303,7 @@ function validateHooksFactory(factory, context, abiFamilies) {
   if (!MARKET_KINDS.includes(factory.marketKind)) {
     fail(`${context}.marketKind`, `must be one of ${MARKET_KINDS.join(", ")}`);
   }
-  assertNonEmptyString(factory.abiFamily, `${context}.abiFamily`);
+  assertContextSafeString(factory.abiFamily, `${context}.abiFamily`);
   const abiFamily = abiFamilies[factory.abiFamily];
   if (!abiFamily) {
     fail(`${context}.abiFamily`, `references unknown family ${factory.abiFamily}`);
@@ -214,9 +347,15 @@ function validateAbiFamilies(abiFamilies, options = {}) {
   }
   for (const [name, family] of Object.entries(abiFamilies)) {
     const context = `abiFamilies.${name}`;
-    assertExactKeys(family, ["kind", "abis"], context);
+    assertExactKeys(family, ["kind", "hookedMarketAbi", "abis"], context);
     if (family.kind !== "hooksFactory") {
       fail(`${context}.kind`, "must be hooksFactory");
+    }
+    if (!HOOKED_MARKET_ABIS.includes(family.hookedMarketAbi)) {
+      fail(
+        `${context}.hookedMarketAbi`,
+        `must be one of ${HOOKED_MARKET_ABIS.join(", ")}`
+      );
     }
     assertObject(family.abis, `${context}.abis`);
     const missing = REQUIRED_HOOKS_ABIS.filter((abiName) => !(abiName in family.abis));
@@ -319,10 +458,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     fail(`${context}.features.collateral`, "must match the presence of indexed collateral factories");
   }
 
-  assertExactKeys(config.pricing, ["mode"], `${context}.pricing`);
-  if (!PRICING_MODES.includes(config.pricing.mode)) {
-    fail(`${context}.pricing.mode`, `must be one of ${PRICING_MODES.join(", ")}`);
-  }
+  validatePricing(config.pricing, `${context}.pricing`);
 
   assertExactKeys(
     config.compatibility,

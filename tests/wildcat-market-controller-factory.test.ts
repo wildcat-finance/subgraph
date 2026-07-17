@@ -21,6 +21,9 @@ describe("wildcat market controller factory", () => {
 
     let event = createNewControllerEvent(borrower, controller, "Wildcat ", "WLD");
     createControllerFactory(generateControllerFactoryId(event.address), {
+      address: event.address,
+      generation: "v1",
+      abiFamily: "controller-factory-v1",
       sentinel: Address.zero(),
       originationFeeAsset: null,
       constraints: "constraints",

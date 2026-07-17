@@ -28,6 +28,7 @@ import {
   handlePeriodicTermUpdated,
 } from "../src/hooks-instance";
 import { handleAnnualInterestBipsUpdated } from "../src/wildcat-market";
+import { createInitialMarketSnapshot } from "../src/market-domain";
 import { newMockEvent } from "matchstick-as";
 
 let hooksAddress = Address.fromString(
@@ -46,10 +47,15 @@ function hooksConfigId(): string {
 }
 
 function saveMarket(): void {
-  createMarket(marketId(), {
+  let market = createMarket(marketId(), {
+    address: marketAddress,
     archController: "arch-controller",
     isRegistered: true,
     version: "V2",
+    marketKind: "STANDARD",
+    originKind: "HOOKS",
+    generation: "test",
+    abiFamily: "test",
     controller: null,
     hooksFactory: null,
     hooks: generateHooksInstanceId(hooksAddress),
@@ -72,8 +78,17 @@ function saveMarket(): void {
     lastInterestAccruedBlockNumber: 0,
     numCollateralContracts: 0,
     createdAt: 0,
+    createdAtBlock: BigInt.zero(),
+    createdAtTimestamp: BigInt.zero(),
+    createdAtTransaction: Address.zero(),
+    createdAtLogIndex: BigInt.zero(),
     deployedEvent: "deployed-event",
   });
+  createInitialMarketSnapshot(
+    changetype<ethereum.Event>(newMockEvent()),
+    market,
+    "EVENT_PROJECTION"
+  );
 }
 
 function saveHooksConfig(): void {
@@ -122,6 +137,7 @@ function createPeriodicTermUpdatedEvent(
   withdrawalWindowDuration: i32
 ): PeriodicTermUpdated {
   let event = changetype<PeriodicTermUpdated>(newMockEvent());
+  event.logIndex = BigInt.fromI32(1);
   event.parameters = new Array();
   event.parameters.push(
     new ethereum.EventParam("market", ethereum.Value.fromAddress(marketAddress))
@@ -151,6 +167,7 @@ function createPeriodicTermUpdatedEvent(
 
 function createPeriodicTermClosedEvent(): PeriodicTermClosed {
   let event = changetype<PeriodicTermClosed>(newMockEvent());
+  event.logIndex = BigInt.fromI32(1);
   event.parameters = new Array();
   event.parameters.push(
     new ethereum.EventParam("market", ethereum.Value.fromAddress(marketAddress))
@@ -165,6 +182,7 @@ function createAnnualInterestBipsReductionProposedEvent(
   responseWindowEnd: i32
 ): AnnualInterestBipsReductionProposed {
   let event = changetype<AnnualInterestBipsReductionProposed>(newMockEvent());
+  event.logIndex = BigInt.fromI32(1);
   event.parameters = new Array();
   event.parameters.push(
     new ethereum.EventParam("market", ethereum.Value.fromAddress(marketAddress))
@@ -200,6 +218,7 @@ function createAprReductionProposalCancelledEvent(): AnnualInterestBipsReduction
   let event = changetype<AnnualInterestBipsReductionProposalCancelled>(
     newMockEvent()
   );
+  event.logIndex = BigInt.fromI32(2);
   event.parameters = new Array();
   event.parameters.push(
     new ethereum.EventParam("market", ethereum.Value.fromAddress(marketAddress))
@@ -211,6 +230,7 @@ function createAprReductionExecutedEvent(
   annualInterestBips: i32
 ): AnnualInterestBipsReductionExecuted {
   let event = changetype<AnnualInterestBipsReductionExecuted>(newMockEvent());
+  event.logIndex = BigInt.fromI32(2);
   event.parameters = new Array();
   event.parameters.push(
     new ethereum.EventParam("market", ethereum.Value.fromAddress(marketAddress))
@@ -228,6 +248,7 @@ function createAnnualInterestBipsUpdatedEvent(
   annualInterestBips: i32
 ): AnnualInterestBipsUpdated {
   let event = changetype<AnnualInterestBipsUpdated>(newMockEvent());
+  event.logIndex = BigInt.fromI32(2);
   event.address = marketAddress;
   event.parameters = new Array();
   event.parameters.push(

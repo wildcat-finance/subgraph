@@ -16,6 +16,9 @@ dataSources:
       entities:
         - Market
         - SimpleCollateralContract
+        - SimpleCollateralContractCreated
+        - SimpleCollateralContractSnapshot
+        - SimpleCollateralMarketIndex
         - SimpleCollateralFactory
         - ApprovedLiquidator
         - LiquidatorApproved
@@ -24,6 +27,8 @@ dataSources:
         - ApprovedCollateralExchange
         - CollateralExchangeApproved
         - CollateralExchangeRemoved
+        - IndexerDiagnostic
+        - IndexerDeployment
       abis:
         - name: WildcatMarketCollateralFactory
           file: ./abis/WildcatMarketCollateralFactory.json
@@ -65,6 +70,9 @@ dataSources:
         - Wildcat4626WrapperFactory
         - Wildcat4626Wrapper
         - Wildcat4626WrapperDeployed
+        - WrapperMarketIndex
+        - IndexerDiagnostic
+        - IndexerDeployment
       abis:
         - name: Wildcat4626WrapperFactory
           file: ./abis/Wildcat4626WrapperFactory.json
@@ -86,6 +94,9 @@ dataSources:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
+        - ArchController
+        - Borrower
+        - BorrowerStats
         - LenderHooksAccess
         - HooksInstance
         - RoleProvider
@@ -100,11 +111,20 @@ dataSources:
         - AccountAccessRevoked
         - HooksFactory
         - HooksTemplate
+        - HooksTemplateRegistration
+        - HooksTemplateRegistrationEvent
         - HooksInstanceDeployed
-        - HooksTemplateAdded
-        - HooksTemplateDisabled
-        - HooksTemplateFeesUpdated
+        - IndexerDiagnostic
         - LenderAccount
+        - Market
+        - MarketDeployed
+        - MarketEvent
+        - MarketEventCursor
+        - MarketSnapshot
+        - ProtocolStats
+        - SimpleCollateralContract
+        - Token
+        - Wildcat4626Wrapper
       abis:
         - name: HooksFactory
           file: ./abis/HooksFactory.json
@@ -112,12 +132,16 @@ dataSources:
           file: ./abis/WildcatMarket.json
         - name: IWildcatMarketRevolving
           file: ./abis/IWildcatMarketRevolving.json
-        - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
-        - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
+        - name: OpenTermHooksBase
+          file: ./abis/hooked-market/base/OpenTermHooks.json
+        - name: FixedTermHooksBase
+          file: ./abis/hooked-market/base/FixedTermHooks.json
+        - name: OpenTermHooksForceBuyBack
+          file: ./abis/hooked-market/force-buyback/OpenTermHooks.json
+        - name: FixedTermHooksForceBuyBack
+          file: ./abis/hooked-market/force-buyback/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: ./abis/PeriodicTermHooks.json
+          file: ./abis/hooked-market/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -155,6 +179,7 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - ArchController
+        - Borrower
         - RegisteredBorrower
         - BorrowerRegistrationChange
         - Controller
@@ -163,9 +188,15 @@ dataSources:
         - ControllerFactory
         - ControllerFactoryAdded
         - ControllerFactoryRemoved
+        - FactoryRegistration
+        - FactoryRegistrationEvent
+        - IndexerDiagnostic
+        - IndexerDeployment
         - HooksFactory
         - Market
         - MarketAdded
+        - MarketEvent
+        - MarketEventCursor
         - MarketRemoved
         - ParameterConstraints
         - OwnershipHandoverCanceled
@@ -215,8 +246,13 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - NewSanctionsEscrow
+        - SanctionsEscrow
         - SanctionOverride
         - SanctionOverrideRemoved
+        - SanctionOverrideStatus
+        - Borrower
+        - IndexerDiagnostic
+        - IndexerDeployment
       abis:
         - name: WildcatSanctionsSentinel
           file: ./abis/WildcatSanctionsSentinel.json
@@ -242,10 +278,13 @@ templates:
         - SimpleCollateralFactory
         - SimpleCollateralContract
         - SimpleCollateralContractDepositor
+        - SimpleCollateralContractSnapshot
         - SimpleCollateralContractLiquidation
-        - SimpleCollateralFullReset
+        - SimpleCollateralContractFullReset
+        - SimpleCollateralContractLiquidatedSharesReset
         - SimpleCollateralContractDeposit
         - SimpleCollateralContractReclaim
+        - IndexerDiagnostic
       abis:
         - name: SimpleMarketCollateralMultiParty
           file: ./abis/SimpleMarketCollateralMultiParty.json
@@ -303,10 +342,20 @@ templates:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
+        - Borrower
+        - BorrowerStats
         - Controller
         - LenderAuthorization
         - LenderAuthorizationChange
         - MarketDeployed
+        - Market
+        - MarketEvent
+        - MarketEventCursor
+        - MarketSnapshot
+        - ProtocolStats
+        - SimpleCollateralContract
+        - Token
+        - Wildcat4626Wrapper
       abis:
         - name: WildcatMarketController
           file: ./abis/WildcatMarketController.json
@@ -344,13 +393,25 @@ templates:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
+        - BorrowerDailyStats
+        - BorrowerStats
         - LenderAccount
+        - LenderAccountSnapshot
+        - LenderDailyStats
         - LenderInterestAccrued
+        - LenderStats
         - MarketInterestAccrued
+        - MarketEvent
+        - MarketEventCursor
         - WithdrawalBatch
+        - WithdrawalBatchInterestAccrued
         - LenderWithdrawalStatus
         - Token
+        - TokenDailyPrice
         - Market
+        - MarketSnapshot
+        - ProtocolDailyStats
+        - ProtocolStats
         - DelinquencyStatusChanged
         - AnnualInterestBipsUpdated
         - Approval
@@ -362,6 +423,7 @@ templates:
         - MarketClosed
         - MaxTotalSupplyUpdated
         - ReserveRatioBipsUpdated
+        - SanctionedAccountAssetsQueuedForWithdrawal
         - SanctionedAccountAssetsSentToEscrow
         - SanctionedAccountWithdrawalSentToEscrow
         - StateUpdated
@@ -385,11 +447,12 @@ templates:
         - AccountAccessGranted
         - AccountAccessRevoked
         - HooksTemplate
+        - HooksTemplateRegistration
+        - HooksTemplateRegistrationEvent
         - HooksInstanceDeployed
-        - HooksTemplateAdded
-        - HooksTemplateDisabled
-        - HooksTemplateFeesUpdated
         - MarketDailyStats
+        - ProtocolFeeBipsUpdated
+        - ForceBuyBack
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
@@ -466,6 +529,7 @@ templates:
       language: wasm/assemblyscript
       entities:
         - HooksInstance
+        - HooksNameUpdated
         - AccountAccessGranted
         - AccountAccessRevoked
         - AccountBlockedFromDeposits
@@ -478,6 +542,9 @@ templates:
         - RoleProviderRemoved
         - LenderHooksAccess
         - Market
+        - MarketEvent
+        - MarketEventCursor
+        - MarketSnapshot
         - MinimumDepositUpdated
         - HooksConfig
         - DisabledForceBuyBacks
@@ -490,12 +557,6 @@ templates:
       abis:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
-        - name: OpenTermHooks
-          file: ./abis/OpenTermHooks.json
-        - name: FixedTermHooks
-          file: ./abis/FixedTermHooks.json
-        - name: PeriodicTermHooks
-          file: ./abis/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted

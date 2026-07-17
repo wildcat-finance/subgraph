@@ -26,7 +26,6 @@ import {
   ProtocolFeeBipsUpdated as ProtocolFeeBipsUpdatedEvent,
   ForceBuyBack as ForceBuyBackEvent,
 } from "../generated/templates/WildcatMarket/WildcatMarket";
-import { IWildcatMarketRevolving } from "../generated/templates/WildcatMarket/IWildcatMarketRevolving";
 import { IERC20 } from "../generated/templates/WildcatMarket/IERC20";
 import {
   createAnnualInterestBipsUpdated,
@@ -76,6 +75,7 @@ import {
 } from "../generated/UncrashableEntityHelpers";
 import {
   Approval,
+  SanctionedAccountAssetsQueuedForWithdrawal,
   SanctionedAccountAssetsSentToEscrow,
   SanctionedAccountWithdrawalSentToEscrow,
   LenderAccount,
@@ -111,29 +111,20 @@ import {
   setMarketTotalDebtUSD,
   updateMarketTotalDebtUSD,
 } from "./daily-stats";
-
-function syncRevolvingMarketState(market: Market, marketAddress: Address): void {
-  if (market.marketType == null || market.marketType != "Revolving") {
-    return;
-  }
-
-  let revolvingMarket = IWildcatMarketRevolving.bind(marketAddress);
-  let commitmentFeeBips = revolvingMarket.try_commitmentFeeBips();
-  if (!commitmentFeeBips.reverted) {
-    market.commitmentFeeBips = commitmentFeeBips.value;
-  }
-
-  let drawnAmount = revolvingMarket.try_drawnAmount();
-  if (!drawnAmount.reverted) {
-    market.drawnAmount = drawnAmount.value;
-  }
-}
+import { saveMarketAndSnapshot } from "./market-domain";
+import { saveLenderAccountAndSnapshot } from "./lender-account-domain";
+import {
+  saveLenderWithdrawalStatus,
+  saveWithdrawalBatch,
+} from "./withdrawal-domain";
+import { recordMarketEvent } from "./market-event-domain";
 
 export function handleAnnualInterestBipsUpdated(
   event: AnnualInterestBipsUpdatedEvent
 ): void {
   let newAnnualInterestBips = event.params.annualInterestBipsUpdated.toI32();
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "ANNUAL_INTEREST_BIPS_UPDATED");
   // PeriodicTermHooks deletes a pending APR reduction proposal when the APR is
   // increased and when a proposed reduction executes — both change the APR.
   // Setting the APR to its current value emits this event but does NOT delete
@@ -166,11 +157,14 @@ export function handleAnnualInterestBipsUpdated(
       hooksConfig.save();
     }
   }
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleApproval(event: ApprovalEvent): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "APPROVAL");
   let entity = new Approval(generateEventId(event));
+  entity.market = market.id;
   entity.owner = event.params.owner;
   entity.spender = event.params.spender;
   entity.value = event.params.value;
@@ -187,16 +181,17 @@ export function handleAuthorizationStatusUpdated(
   event: AuthorizationStatusUpdatedEvent
 ): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "AUTHORIZATION_STATUS_UPDATED");
   let lenderRoles = ["Null", "Blocked", "WithdrawOnly", "DepositAndWithdraw"];
   let lenderResult = getOrCreateLenderAccount(
     market,
     event.address,
     event.params.account,
-    event.block.timestamp
+    event
   );
   let lender = lenderResult.entity;
   lender.role = lenderRoles[event.params.role];
-  lender.save();
+  saveLenderAccountAndSnapshot(event, lender);
 
   if (lenderResult.wasCreated) {
     let ls = getOrCreateLenderStats(event.params.account, event.block.timestamp);
@@ -207,6 +202,7 @@ export function handleAuthorizationStatusUpdated(
 
 export function handleBorrow(event: BorrowEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "BORROW");
 
   createBorrow(generateMarketEventId(market), {
     assetAmount: event.params.assetAmount,
@@ -222,7 +218,7 @@ export function handleBorrow(event: BorrowEvent): void {
   market.eventIndex = market.eventIndex + 1;
   market.totalBorrowed = market.totalBorrowed.plus(event.params.assetAmount);
 
-  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
   let hasPrice = !priceMul.equals(BigDecimal.zero());
 
   if (hasPrice) {
@@ -243,15 +239,15 @@ export function handleBorrow(event: BorrowEvent): void {
     bds.save();
     pds.save();
   }
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  let mds = getOrCreateMarketDailyStats(market, event);
   mds.dayBorrowed = mds.dayBorrowed.plus(event.params.assetAmount);
-  syncRevolvingMarketState(market, event.address);
-  market.save();
+  saveMarketAndSnapshot(event, market);
   mds.save();
 }
 
 export function handleDebtRepaid(event: DebtRepaidEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "DEBT_REPAID");
   createDebtRepaid(generateMarketEventId(market), {
     assetAmount: event.params.assetAmount,
     from: event.params.from,
@@ -266,7 +262,7 @@ export function handleDebtRepaid(event: DebtRepaidEvent): void {
   market.debtRepaidIndex = market.debtRepaidIndex + 1;
   market.eventIndex = market.eventIndex + 1;
 
-  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
   let hasPrice = !priceMul.equals(BigDecimal.zero());
 
   market.totalRepaid = market.totalRepaid.plus(event.params.assetAmount);
@@ -291,10 +287,9 @@ export function handleDebtRepaid(event: DebtRepaidEvent): void {
     bs.save();
     bds.save();
   }
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  let mds = getOrCreateMarketDailyStats(market, event);
   mds.dayRepaid = mds.dayRepaid.plus(event.params.assetAmount);
-  syncRevolvingMarketState(market, event.address);
-  market.save();
+  saveMarketAndSnapshot(event, market);
   mds.save();
 }
 
@@ -310,14 +305,17 @@ function processLenderInterestAccrued(
     lender.totalInterestEarned = lender.totalInterestEarned.plus(
       interestEarned
     );
-    createLenderInterestAccrued(generateEventId(event), {
+    createLenderInterestAccrued(
+      generateEventId(event).concat("-").concat(lender.id),
+      {
       account: lender.id,
       interestEarned,
       market: market.id,
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
-    });
+      }
+    );
   }
   if (lender.lastUpdatedTimestamp != event.block.timestamp.toI32()) {
     lender.lastUpdatedTimestamp = event.block.timestamp.toI32();
@@ -351,11 +349,12 @@ function processWithdrawalBatchInterestAccrued(
 
 export function handleDeposit(event: DepositEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "DEPOSIT");
   let lenderResult = getOrCreateLenderAccount(
     market,
     event.address,
     event.params.account,
-    event.block.timestamp
+    event
   );
   let lender = lenderResult.entity;
   let lenderAccountCreated = lenderResult.wasCreated;
@@ -380,7 +379,7 @@ export function handleDeposit(event: DepositEvent): void {
   lender.totalDeposited = lender.totalDeposited.plus(event.params.assetAmount);
   lender.scaledBalance = lender.scaledBalance.plus(event.params.scaledAmount);
   lender.lastScaleFactor = market.scaleFactor;
-  lender.save();
+  saveLenderAccountAndSnapshot(event, lender);
 
   let prevSupply = market.scaledTotalSupply;
   market.scaledTotalSupply = market.scaledTotalSupply.plus(
@@ -388,7 +387,7 @@ export function handleDeposit(event: DepositEvent): void {
   );
   market.totalDeposited = market.totalDeposited.plus(event.params.assetAmount);
 
-  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
   setMarketTotalDebtUSD(market, priceMul);
 
   let hasPrice = !priceMul.equals(BigDecimal.zero());
@@ -427,10 +426,10 @@ export function handleDeposit(event: DepositEvent): void {
     lds.save();
   }
 
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  let mds = getOrCreateMarketDailyStats(market, event);
   mds.dayDeposited = mds.dayDeposited.plus(event.params.assetAmount);
 
-  market.save();
+  saveMarketAndSnapshot(event, market);
   mds.save();
   ps.save();
   bs.save();
@@ -439,6 +438,7 @@ export function handleDeposit(event: DepositEvent): void {
 
 export function handleFeesCollected(event: FeesCollectedEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "FEES_COLLECTED");
   market.pendingProtocolFees = market.pendingProtocolFees.minus(
     event.params.assets
   );
@@ -455,12 +455,13 @@ export function handleFeesCollected(event: FeesCollectedEvent): void {
   market.feesCollectedIndex = market.feesCollectedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
 
-  updateMarketTotalDebtUSD(market, event.block.timestamp);
-  market.save();
+  updateMarketTotalDebtUSD(market, event);
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleMarketClosed(event: MarketClosedEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "MARKET_CLOSED");
   let prevSupply = market.scaledTotalSupply;
   let wasClosed = market.isClosed;
   market.isClosed = true;
@@ -474,8 +475,7 @@ export function handleMarketClosed(event: MarketClosedEvent): void {
     blockLogIndex: event.logIndex.toI32(),
   });
   market.eventIndex = market.eventIndex + 1;
-  syncRevolvingMarketState(market, event.address);
-  market.save();
+  saveMarketAndSnapshot(event, market);
 
   if (!wasClosed) {
     let ps = getOrCreateProtocolStats();
@@ -500,6 +500,7 @@ export function handleMaxTotalSupplyUpdated(
   event: MaxTotalSupplyUpdatedEvent
 ): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "MAX_TOTAL_SUPPLY_UPDATED");
   createMaxTotalSupplyUpdated(generateMarketEventId(market), {
     market: market.id,
     oldMaxTotalSupply: market.maxTotalSupply,
@@ -514,13 +515,14 @@ export function handleMaxTotalSupplyUpdated(
   market.maxTotalSupplyUpdatedIndex = market.maxTotalSupplyUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
   market.maxTotalSupply = event.params.assets;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleReserveRatioBipsUpdated(
   event: ReserveRatioBipsUpdatedEvent
 ): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "RESERVE_RATIO_BIPS_UPDATED");
   createReserveRatioBipsUpdated(generateEventId(event), {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -531,13 +533,16 @@ export function handleReserveRatioBipsUpdated(
     blockLogIndex: event.logIndex.toI32(),
   });
   market.reserveRatioBips = event.params.reserveRatioBipsUpdated.toI32();
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleSanctionedAccountAssetsSentToEscrow(
   event: SanctionedAccountAssetsSentToEscrowEvent
 ): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "SANCTIONED_ASSETS_SENT_TO_ESCROW");
   let entity = new SanctionedAccountAssetsSentToEscrow(generateEventId(event));
+  entity.market = market.id;
   entity.account = event.params.account;
   entity.escrow = event.params.escrow;
   entity.amount = event.params.amount;
@@ -549,12 +554,39 @@ export function handleSanctionedAccountAssetsSentToEscrow(
   entity.save();
 }
 
+export function handleSanctionedAccountAssetsQueuedForWithdrawal(
+  event: SanctionedAccountAssetsQueuedForWithdrawalEvent
+): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "SANCTIONED_ASSETS_QUEUED");
+  let entity = new SanctionedAccountAssetsQueuedForWithdrawal(
+    generateEventId(event)
+  );
+  entity.market = market.id;
+  entity.account = event.params.account;
+  entity.expiry = event.params.expiry;
+  entity.scaledAmount = event.params.scaledAmount;
+  entity.normalizedAmount = event.params.normalizedAmount;
+  entity.blockNumber = event.block.number.toI32();
+  entity.blockTimestamp = event.block.timestamp.toI32();
+  entity.transactionHash = event.transaction.hash;
+  entity.blockLogIndex = event.logIndex.toI32();
+  entity.save();
+}
+
 export function handleSanctionedAccountWithdrawalSentToEscrow(
   event: SanctionedAccountWithdrawalSentToEscrowEvent
 ): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(
+    event,
+    market,
+    "SANCTIONED_WITHDRAWAL_SENT_TO_ESCROW"
+  );
   let entity = new SanctionedAccountWithdrawalSentToEscrow(
     generateEventId(event)
   );
+  entity.market = market.id;
   entity.account = event.params.account;
   entity.escrow = event.params.escrow;
   entity.expiry = event.params.expiry;
@@ -614,6 +646,7 @@ export function handleInterestAndFeesAccrued(
   event: InterestAndFeesAccruedEvent
 ): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "INTEREST_AND_FEES_ACCRUED");
   let baseInterestRay = event.params.baseInterestRay;
   let delinquencyFeeRay = event.params.delinquencyFeeRay;
   let protocolFee = event.params.protocolFees;
@@ -662,7 +695,7 @@ export function handleInterestAndFeesAccrued(
   market.lastInterestAccruedBlockNumber = event.block.number.toI32();
 
   // Single price lookup for all three USD conversions
-  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
   setMarketTotalDebtUSD(market, priceMul);
   let hasPrice = !priceMul.equals(BigDecimal.zero());
 
@@ -696,12 +729,12 @@ export function handleInterestAndFeesAccrued(
     pds.save();
   }
 
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  let mds = getOrCreateMarketDailyStats(market, event);
   mds.dayBaseInterestAccrued = mds.dayBaseInterestAccrued.plus(baseInterestAccrued);
   mds.dayDelinquencyFeesAccrued = mds.dayDelinquencyFeesAccrued.plus(delinquencyFeesAccrued);
   mds.dayProtocolFeesAccrued = mds.dayProtocolFeesAccrued.plus(protocolFee);
 
-  market.save();
+  saveMarketAndSnapshot(event, market);
   mds.save();
 }
 
@@ -709,6 +742,8 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
   let isDelinquent = event.params.isDelinquent;
   let marketId = generateMarketId(event.address);
   let market = getMarket(marketId);
+  recordMarketEvent(event, market, "STATE_UPDATED");
+  market.scaleFactor = event.params.scaleFactor;
   if (market.isDelinquent != isDelinquent) {
     let wasDelinquent = market.isDelinquent;
     market.isDelinquent = isDelinquent;
@@ -750,8 +785,8 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
     pds.save();
     bds.save();
   }
-  syncRevolvingMarketState(market, event.address);
-  market.save();
+  updateMarketTotalDebtUSD(market, event);
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTransfer(event: TransferEvent): void {
@@ -766,18 +801,19 @@ export function handleTransfer(event: TransferEvent): void {
     )
   ) {
     let market = getMarket(generateMarketId(event.address));
+    recordMarketEvent(event, market, "TRANSFER");
     let fromResult = getOrCreateLenderAccount(
       market,
       event.address,
       fromAddress,
-      event.block.timestamp
+      event
     );
     let from = fromResult.entity;
     let toResult = getOrCreateLenderAccount(
       market,
       event.address,
       toAddress,
-      event.block.timestamp
+      event
     );
     let to = toResult.entity;
 
@@ -788,8 +824,8 @@ export function handleTransfer(event: TransferEvent): void {
     let scaledAmount = rayDiv(value, market.scaleFactor);
     from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
     to.scaledBalance = to.scaledBalance.plus(scaledAmount);
-    from.save();
-    to.save();
+    saveLenderAccountAndSnapshot(event, from);
+    saveLenderAccountAndSnapshot(event, to);
 
     let ps = getOrCreateProtocolStats();
     let fromLs = getOrCreateLenderStats(fromAddress, event.block.timestamp);
@@ -803,7 +839,7 @@ export function handleTransfer(event: TransferEvent): void {
     updateLenderActiveMarketCount(fromLs, ps, prevFromBalance, from.scaledBalance);
     updateLenderActiveMarketCount(toLs, ps, prevToBalance, to.scaledBalance);
 
-    let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+    let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
     let hasPrice = !priceMul.equals(BigDecimal.zero());
 
     if (hasPrice) {
@@ -852,9 +888,10 @@ export function handleWithdrawalBatchClosed(
   let batchId = generateWithdrawalBatchId(event.address, event.params.expiry);
   let batch = getWithdrawalBatch(batchId);
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "WITHDRAWAL_BATCH_CLOSED");
   processWithdrawalBatchInterestAccrued(event, batch, market);
   batch.isClosed = true;
-  batch.save();
+  saveWithdrawalBatch(event, batch);
 
   let bs = getOrCreateBorrowerStats(market.borrower);
   if (batch.expiration != null) {
@@ -875,6 +912,8 @@ export function handleWithdrawalBatchCreated(
 ): void {
   let expiry = event.params.expiry;
   let id = generateWithdrawalBatchId(event.address, expiry);
+  let market = getMarket(event.address.toHex());
+  recordMarketEvent(event, market, "WITHDRAWAL_BATCH_CREATED");
   createWithdrawalBatchCreated(generateEventId(event), {
     batch: id,
     blockNumber: event.block.number.toI32(),
@@ -882,15 +921,19 @@ export function handleWithdrawalBatchCreated(
     transactionHash: event.transaction.hash,
     blockLogIndex: event.logIndex.toI32(),
   });
-  let market = getMarket(event.address.toHex());
-  createWithdrawalBatch(id, {
+  let batch = createWithdrawalBatch(id, {
     expiry: expiry,
     market: market.id,
     lastScaleFactor: market.scaleFactor,
     lastUpdatedTimestamp: event.block.timestamp.toI32(),
+    updatedAtBlock: event.block.number,
+    updatedAtTimestamp: event.block.timestamp,
+    updatedAtTransaction: event.transaction.hash,
+    updatedAtLogIndex: event.logIndex,
   });
+  saveWithdrawalBatch(event, batch);
   market.pendingWithdrawalExpiry = expiry;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleWithdrawalBatchExpired(
@@ -903,6 +946,7 @@ export function handleWithdrawalBatchExpired(
   let id = generateWithdrawalBatchId(event.address, expiry);
   let batch = getWithdrawalBatch(id);
   let market = getMarket(event.address.toHex());
+  recordMarketEvent(event, market, "WITHDRAWAL_BATCH_EXPIRED");
   processWithdrawalBatchInterestAccrued(event, batch, market);
 
   let scaledAmountOwed = batch.scaledTotalAmount.minus(
@@ -927,8 +971,8 @@ export function handleWithdrawalBatchExpired(
   batch.isExpired = true;
   market.pendingWithdrawalExpiry = BigInt.zero();
   batch.expiration = result.id;
-  batch.save();
-  market.save();
+  saveWithdrawalBatch(event, batch);
+  saveMarketAndSnapshot(event, market);
   let bs = getOrCreateBorrowerStats(market.borrower);
   bs.numBatchesExpired = bs.numBatchesExpired + 1;
   if (batch.scaledAmountBurned.lt(batch.scaledTotalAmount)) {
@@ -948,6 +992,7 @@ export function handleWithdrawalBatchPayment(
     generateWithdrawalBatchId(event.address, expiry)
   );
   let market = getMarket(batch.market);
+  recordMarketEvent(event, market, "WITHDRAWAL_BATCH_PAYMENT");
   processWithdrawalBatchInterestAccrued(event, batch, market);
   let paymentId = generateWithdrawalBatchPaymentId(
     event.address,
@@ -968,7 +1013,7 @@ export function handleWithdrawalBatchPayment(
   batch.normalizedAmountPaid = batch.normalizedAmountPaid.plus(
     normalizedAmountPaid
   );
-  batch.save();
+  saveWithdrawalBatch(event, batch);
 
   market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.minus(
     scaledAmountBurned
@@ -979,8 +1024,8 @@ export function handleWithdrawalBatchPayment(
   // Withdrawal batch payment burns market tokens
   let prevSupply = market.scaledTotalSupply;
   market.scaledTotalSupply = market.scaledTotalSupply.minus(scaledAmountBurned);
-  updateMarketTotalDebtUSD(market, event.block.timestamp);
-  market.save();
+  updateMarketTotalDebtUSD(market, event);
+  saveMarketAndSnapshot(event, market);
 
   // Borrower active count: supply may go to 0
   let ps = getOrCreateProtocolStats();
@@ -989,7 +1034,7 @@ export function handleWithdrawalBatchPayment(
   ps.save();
   bs.save();
 
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  let mds = getOrCreateMarketDailyStats(market, event);
   let pds = getOrCreateProtocolDailyStats(event.block.timestamp, ps);
   let bds = getOrCreateBorrowerDailyStats(market.borrower, event.block.timestamp, bs);
   mds.dayRepaid = mds.dayRepaid.plus(normalizedAmountPaid);
@@ -1003,6 +1048,7 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
   let account = event.params.account;
   let normalizedAmount = event.params.normalizedAmount;
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "WITHDRAWAL_EXECUTED");
   let status = getLenderWithdrawalStatus(
     generateLenderWithdrawalStatusId(event.address, expiry, account)
   );
@@ -1039,7 +1085,7 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
     normalizedAmount
   );
 
-  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
   setMarketTotalDebtUSD(market, priceMul);
   let hasPrice = !priceMul.equals(BigDecimal.zero());
 
@@ -1075,7 +1121,7 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       generateLenderAccountId(event.address, account)
     );
     lender.numPendingWithdrawalBatches = lender.numPendingWithdrawalBatches - 1;
-    lender.save();
+    saveLenderAccountAndSnapshot(event, lender);
     batch.completedWithdrawalsCount = batch.completedWithdrawalsCount + 1;
     // Track whether batch is complete by counting the number of lenders who have
     // completed their withdrawals. Tracking it by the claimed vs unclaimed
@@ -1084,10 +1130,10 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       batch.isCompleted = true;
     }
   }
-  batch.save();
-  status.save();
-  market.save();
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  saveWithdrawalBatch(event, batch);
+  saveLenderWithdrawalStatus(event, status);
+  saveMarketAndSnapshot(event, market);
+  let mds = getOrCreateMarketDailyStats(market, event);
   mds.dayWithdrawalsExecuted = mds.dayWithdrawalsExecuted.plus(normalizedAmount);
   mds.save();
 }
@@ -1102,6 +1148,7 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     generateLenderAccountId(event.address, account)
   );
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "WITHDRAWAL_QUEUED");
   let batch = getWithdrawalBatch(
     generateWithdrawalBatchId(event.address, expiry)
   );
@@ -1110,6 +1157,10 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     {
       account: lender.id,
       batch: batch.id,
+      updatedAtBlock: event.block.number,
+      updatedAtTimestamp: event.block.timestamp,
+      updatedAtTransaction: event.transaction.hash,
+      updatedAtLogIndex: event.logIndex,
     }
   );
   let status = statusCreation.entity;
@@ -1136,7 +1187,7 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   status.totalNormalizedRequests = status.totalNormalizedRequests.plus(
     normalizedAmount
   );
-  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event.block.timestamp);
+  let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
 
   let prevLenderBalance = lender.scaledBalance;
   let interestEarned = processLenderInterestAccrued(event, lender, market);
@@ -1193,28 +1244,35 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
   }
   ps.save();
   ls.save();
-  let mds = getOrCreateMarketDailyStats(market, event.block.timestamp);
+  let mds = getOrCreateMarketDailyStats(market, event);
   mds.dayWithdrawalsRequested = mds.dayWithdrawalsRequested.plus(normalizedAmount);
-  lender.save();
-  status.save();
-  market.save();
-  batch.save();
+  saveLenderAccountAndSnapshot(event, lender);
+  saveLenderWithdrawalStatus(event, status);
+  saveMarketAndSnapshot(event, market);
+  saveWithdrawalBatch(event, batch);
   mds.save();
 }
 
 export function handleChangedSpherexEngineAddress(
   event: ChangedSpherexEngineAddressEvent
-): void {}
+): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "SPHEREX_ENGINE_UPDATED");
+}
 
 export function handleChangedSpherexOperator(
   event: ChangedSpherexOperatorEvent
-): void {}
+): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "SPHEREX_OPERATOR_UPDATED");
+}
 
 export function handleProtocolFeeBipsUpdated(
   event: ProtocolFeeBipsUpdatedEvent
 ): void {
   let newProtocolFeeBips = event.params.protocolFeeBips.toI32();
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "PROTOCOL_FEE_BIPS_UPDATED");
   createProtocolFeeBipsUpdated(generateMarketEventId(market), {
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
@@ -1229,11 +1287,12 @@ export function handleProtocolFeeBipsUpdated(
   market.protocolFeeBips = newProtocolFeeBips;
   market.protocolFeeBipsUpdatedIndex = market.protocolFeeBipsUpdatedIndex + 1;
   market.eventIndex = market.eventIndex + 1;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleForceBuyBack(event: ForceBuyBackEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "FORCE_BUYBACK");
   createForceBuyBack(generateMarketEventId(market), {
     account: generateLenderAccountId(event.address, event.params.lender),
     blockNumber: event.block.number.toI32(),
@@ -1249,5 +1308,5 @@ export function handleForceBuyBack(event: ForceBuyBackEvent): void {
   });
   market.forceBuyBackIndex = market.forceBuyBackIndex + 1;
   market.eventIndex = market.eventIndex + 1;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }

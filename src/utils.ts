@@ -1,6 +1,7 @@
 import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
 import { LenderAccount, LenderHooksAccess, Market, WithdrawalBatch } from "../generated/schema";
 import { generateLenderAccountId, generateLenderAuthorizationId, generateLenderHooksAccessId, GetOrCreateReturn, getOrInitializeLenderAccount, getOrInitializeLenderAuthorization } from "../generated/UncrashableEntityHelpers";
+import { createInitialLenderAccountSnapshot } from "./lender-account-domain";
 
 export function generateEventId(event: ethereum.Event): string {
   return event.transaction.hash
@@ -115,7 +116,7 @@ export function getOrCreateLenderAccount(
   market: Market,
   marketAddress: Address,
   lenderAddress: Address,
-  addedTimestamp: BigInt
+  event: ethereum.Event
 ): GetOrCreateReturn<LenderAccount> {
   let lenderAccountId = generateLenderAccountId(marketAddress, lenderAddress);
   let _lenderAccount = LenderAccount.load(lenderAccountId);
@@ -137,7 +138,7 @@ export function getOrCreateLenderAccount(
         authorized: false,
         controller: controller,
         lender: lenderAddress,
-        addedTimestamp: addedTimestamp.toI32(),
+        addedTimestamp: event.block.timestamp.toI32(),
       }
     ).entity;
     authorization_id = authorization.id;
@@ -152,7 +153,7 @@ export function getOrCreateLenderAccount(
       hooks_access_id = access_id;
     }
   }
-  return getOrInitializeLenderAccount(lenderAccountId, {
+  let result = getOrInitializeLenderAccount(lenderAccountId, {
     address: lenderAddress,
     lastScaleFactor: market.scaleFactor,
     lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
@@ -160,6 +161,8 @@ export function getOrCreateLenderAccount(
     market: market.id,
     controllerAuthorization: authorization_id,
     hooksAccess: hooks_access_id,
-    addedTimestamp: addedTimestamp.toI32(),
+    addedTimestamp: event.block.timestamp.toI32(),
   });
+  createInitialLenderAccountSnapshot(event, result.entity);
+  return result;
 }

@@ -29,6 +29,23 @@ function abiPath(mapping, name) {
   return mapping.abis.find((abi) => abi.name === name)?.file;
 }
 
+function hooksFactoryContextKey(address) {
+  return `hooksFactory_${address.toLowerCase().slice(2)}`;
+}
+
+function contextData(source, address) {
+  return source.context?.[hooksFactoryContextKey(address)]?.data;
+}
+
+function assertDeclaresEntities(mapping, expectedEntities) {
+  for (const entity of expectedEntities) {
+    assert.ok(
+      mapping.entities.includes(entity),
+      `${mapping.file} must declare writes to ${entity}`
+    );
+  }
+}
+
 test("renders every configured network deterministically without placeholders", () => {
   const { configs } = loadAllChainConfigs();
   for (const config of configs) {
@@ -79,19 +96,108 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
       sourceByName(manifest, "HooksFactory").mapping,
       "PeriodicTermHooks"
     ),
-    "./network-specific-abis/sepolia/PeriodicTermHooks.json"
+    "./abis/hooked-market/PeriodicTermHooks.json"
   );
   assert.equal(
     abiPath(
-      manifest.templates.find((template) => template.name === "CombinedHooks")
-        .mapping,
-      "FixedTermHooks"
+      sourceByName(manifest, "HooksFactory").mapping,
+      "FixedTermHooksBase"
     ),
-    "./network-specific-abis/sepolia/FixedTermHooks.json"
+    "./abis/hooked-market/base/FixedTermHooks.json"
+  );
+  assert.equal(
+    abiPath(
+      sourceByName(manifest, "HooksFactory").mapping,
+      "FixedTermHooksForceBuyBack"
+    ),
+    "./abis/hooked-market/force-buyback/FixedTermHooks.json"
+  );
+  const standardFactory = sourceByName(manifest, "HooksFactory");
+  assert.equal(
+    contextData(standardFactory, standardFactory.source.address),
+    "STANDARD|v2.1|hooks-shared-current|FORCE_BUYBACK|7124440|true|false|ACTIVE|standard-v2.1|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+  );
+  assert.deepEqual(
+    Object.keys(standardFactory.context).filter((key) =>
+      key.startsWith("hooksFactory_")
+    ),
+    [hooksFactoryContextKey(standardFactory.source.address)]
+  );
+  assert.equal(standardFactory.context.pricingMode.data, "SYNTHETIC_TESTNET");
+  assert.match(
+    standardFactory.context.pricingSyntheticPrices.data,
+    /ZRX=0\.10=false/
+  );
+  assert.equal(
+    standardFactory.context.deploymentArchController.data,
+    "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+  );
+  assert.equal(
+    Object.keys(sourceByName(manifest, "WildcatArchController").context).filter(
+      (key) => key.startsWith("hooksFactory_")
+    ).length,
+    7
   );
   assert.equal(
     sourceByName(manifest, "HooksFactoryRevolving_20260419_233246"),
     undefined
+  );
+  const wrapperFactory = sourceByName(
+    manifest,
+    "Wildcat4626WrapperFactory"
+  );
+  assert.equal(
+    wrapperFactory.source.address,
+    "0x0566Fe57682164af689f1440cb3BCEedEe3bf843"
+  );
+  assert.equal(wrapperFactory.source.startBlock, 10534112);
+  assert.equal(wrapperFactory.context.moduleFactoryLabel.data, "wrapper-v1");
+  assert.equal(wrapperFactory.context.moduleFactoryGeneration.data, "v1");
+  assert.equal(wrapperFactory.context.moduleFactoryIndexed.data, "true");
+  assert.equal(
+    wrapperFactory.context.moduleFactoryDeploymentTarget.data,
+    "false"
+  );
+  assert.equal(wrapperFactory.context.moduleFactoryLifecycle.data, "ACTIVE");
+
+  const collateralFactory = sourceByName(
+    manifest,
+    "WildcatMarketCollateralFactory"
+  );
+  assert.equal(
+    collateralFactory.context.moduleFactoryLabel.data,
+    "collateral-v1"
+  );
+  assert.equal(
+    collateralFactory.context.moduleFactoryGeneration.data,
+    "v1"
+  );
+
+  assertDeclaresEntities(standardFactory.mapping, [
+    "Borrower",
+    "MarketEvent",
+    "MarketEventCursor",
+    "MarketSnapshot",
+  ]);
+  assertDeclaresEntities(
+    sourceByName(manifest, "WildcatArchController").mapping,
+    ["Borrower", "IndexerDeployment", "MarketEvent", "MarketEventCursor"]
+  );
+  assertDeclaresEntities(
+    manifest.templates.find((template) => template.name === "WildcatMarket")
+      .mapping,
+    [
+      "LenderAccountSnapshot",
+      "MarketEvent",
+      "MarketEventCursor",
+      "MarketSnapshot",
+      "TokenDailyPrice",
+    ]
+  );
+  assertDeclaresEntities(
+    manifest.templates.find((template) => template.name === "CombinedHooks")
+      .mapping,
+    ["HooksNameUpdated", "MarketEvent", "MarketEventCursor", "MarketSnapshot"]
   );
 });
 
@@ -160,18 +266,33 @@ test("deployment-target state does not alter current compatibility aliases", () 
     sourceByName(manifest, "HooksFactory").source.address,
     config.factories.find((factory) => factory.label === "standard-v2.1").address
   );
+  const standardTarget = modified.factories.find(
+    (factory) => factory.label === "standard-v2"
+  );
+  assert.match(
+    contextData(
+      sourceByName(manifest, standardTarget.manifestName),
+      standardTarget.address
+    ),
+    /\|true\|true\|ACTIVE\|standard-v2\|/
+  );
 });
 
-test("rejects mixed indexed ABI families until dynamic templates are generation-aware", () => {
+test("supports mixed hooked-market ABI adapters when core dynamic ABIs match", () => {
   const abiFamilies = loadAbiFamilies();
   const base = readYaml(MANIFEST_BASE_PATH);
   const config = loadChainConfig("sepolia", { abiFamilies });
   const modified = JSON.parse(JSON.stringify(config));
-  modified.factories[0].abiFamily = "hooks-shared-current";
+  modified.factories[0].abiFamily = "hooks-sepolia-current";
 
-  assert.throws(
-    () => buildManifest(modified, abiFamilies, base),
-    /must currently share one ABI family/
+  const manifest = buildManifest(modified, abiFamilies, base);
+  const source = sourceByName(
+    manifest,
+    modified.factories[0].manifestName
+  );
+  assert.match(
+    contextData(source, modified.factories[0].address),
+    /\|hooks-sepolia-current\|BASE\|/
   );
 });
 

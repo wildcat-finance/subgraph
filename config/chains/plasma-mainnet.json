@@ -37,7 +37,14 @@
     "wrappers": false
   },
   "pricing": {
-    "mode": "NONE"
+    "mode": "NONE",
+    "feedDecimals": null,
+    "feedRegistry": null,
+    "denominations": null,
+    "bridgeFeeds": null,
+    "stablecoins": [],
+    "directFeeds": [],
+    "syntheticPrices": []
   },
   "compatibility": {
     "canonicalFactoryByMarketKind": {

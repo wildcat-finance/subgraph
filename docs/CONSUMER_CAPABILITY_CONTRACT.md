@@ -2,6 +2,9 @@
 
 Status: accepted refactor input.
 
+The implemented old-to-new query mappings and consumer cutover obligations are
+recorded in `docs/V2_5_SCHEMA_MIGRATION.md`.
+
 This document defines the observable data capabilities that the V2.5 subgraph
 replacement must preserve. It deliberately does not preserve the current
 GraphQL schema or mapping structure.

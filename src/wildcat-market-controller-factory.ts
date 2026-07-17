@@ -16,6 +16,7 @@ import { Token } from "../generated/schema";
 import { readTokenMetadata } from "./token-metadata";
 import { isNullAddress } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
+import { createDeploymentChildContext } from "./deployment-context";
 
 function createTokenIfNotExists(asset: Address): string | null {
   if (isNullAddress(asset)) {
@@ -44,7 +45,10 @@ export function handleNewController(event: NewControllerEvent): void {
   );
   let controller = event.params.controller;
   let borrower = event.params.borrower;
-  WildcatMarketControllerTemplate.create(controller);
+  WildcatMarketControllerTemplate.createWithContext(
+    controller,
+    createDeploymentChildContext()
+  );
   createController(generateControllerId(controller), {
     borrower: borrower,
     controllerFactory: generateControllerFactoryId(event.address),

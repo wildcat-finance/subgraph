@@ -8,18 +8,20 @@ import {
 } from "matchstick-as/assembly/index";
 import { Address, BigDecimal, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
+  handleHooksTemplateDisabledForMarketType,
   handleHooksTemplateAddedForMarketType,
   handleMarketDeployedForMarketType,
 } from "../src/hooks-factory";
 import { handleBorrow, handleDebtRepaid, handleMarketClosed, handleStateUpdated } from "../src/wildcat-market";
+import { createInitialMarketSnapshot } from "../src/market-domain";
 import { MarketDeployed } from "../generated/HooksFactory/HooksFactory";
 import { Borrow, DebtRepaid, MarketClosed, StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
   ArchController,
-  FactoryHooksTemplate,
   HooksFactory,
   HooksInstance,
   HooksTemplate,
+  HooksTemplateRegistration,
   Market,
   Token,
 } from "../generated/schema";
@@ -29,7 +31,10 @@ import {
   createMarketClosedEvent,
   createStateUpdatedEvent,
 } from "./wildcat-market-utils";
-import { generateTokenId } from "../generated/UncrashableEntityHelpers";
+import {
+  generateHooksConfigId,
+  generateTokenId,
+} from "../generated/UncrashableEntityHelpers";
 
 const ZERO_ADDRESS = addressFrom("0x0000000000000000000000000000000000000000");
 const LEGACY_FACTORY_ADDRESS = addressFrom("0x1000000000000000000000000000000000000001");
@@ -45,7 +50,7 @@ function addressFrom(hex: string): Address {
   return Address.fromBytes(Bytes.fromHexString(hex));
 }
 
-function getFactoryHooksTemplateId(factoryAddress: Address): string {
+function getTemplateRegistrationId(factoryAddress: Address): string {
   return factoryAddress.toHexString() + "-" + HOOKS_TEMPLATE_ADDRESS.toHexString();
 }
 
@@ -71,8 +76,18 @@ function seedToken(address: Address): void {
 
 function seedHooksFactory(address: Address, marketType: string): void {
   let hooksFactory = new HooksFactory(address.toHexString());
+  hooksFactory.address = address;
+  hooksFactory.label = "test";
   hooksFactory.archController = ARCH_CONTROLLER_ADDRESS.toHexString();
-  hooksFactory.marketType = marketType;
+  hooksFactory.marketKind = marketType == "Revolving" ? "REVOLVING" : "STANDARD";
+  hooksFactory.generation = "test";
+  hooksFactory.abiFamily = "test";
+  hooksFactory.hookedMarketAbi = "BASE";
+  hooksFactory.configuredStartBlock = BigInt.zero();
+  hooksFactory.indexed = true;
+  hooksFactory.deploymentTarget = false;
+  hooksFactory.lifecycle = "ACTIVE";
+  hooksFactory.configured = true;
   hooksFactory.isRegistered = true;
   hooksFactory.eventIndex = 0;
   hooksFactory.sentinel = address;
@@ -81,50 +96,68 @@ function seedHooksFactory(address: Address, marketType: string): void {
 
 function seedHooksTemplate(): void {
   let hooksTemplate = new HooksTemplate(HOOKS_TEMPLATE_ADDRESS.toHexString());
-  hooksTemplate.name = "OpenTermHooks";
-  hooksTemplate.feeRecipient = LEGACY_FACTORY_ADDRESS;
-  hooksTemplate.protocolFeeBips = 25;
-  hooksTemplate.originationFeeAmount = BigInt.zero();
-  hooksTemplate.hooksFactory = LEGACY_FACTORY_ADDRESS.toHexString();
-  hooksTemplate.disabled = false;
+  hooksTemplate.address = HOOKS_TEMPLATE_ADDRESS;
+  hooksTemplate.kind = "OpenTerm";
+  hooksTemplate.version = "OpenTermHooks";
+  hooksTemplate.abiFamily = "test";
   hooksTemplate.save();
 }
 
-function seedFactoryHooksTemplate(factoryAddress: Address, protocolFeeBips: i32): void {
-  let factoryHooksTemplate = new FactoryHooksTemplate(
-    getFactoryHooksTemplateId(factoryAddress)
+function seedTemplateRegistration(factoryAddress: Address, protocolFeeBips: i32): void {
+  let registration = new HooksTemplateRegistration(
+    getTemplateRegistrationId(factoryAddress)
   );
-  factoryHooksTemplate.hooksFactory = factoryAddress.toHexString();
-  factoryHooksTemplate.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
-  factoryHooksTemplate.templateAddress = HOOKS_TEMPLATE_ADDRESS;
-  factoryHooksTemplate.name = "OpenTermHooks";
-  factoryHooksTemplate.feeRecipient = factoryAddress;
-  factoryHooksTemplate.protocolFeeBips = protocolFeeBips;
-  factoryHooksTemplate.originationFeeAmount = BigInt.zero();
-  factoryHooksTemplate.originationFeeAsset = null;
-  factoryHooksTemplate.disabled = false;
-  factoryHooksTemplate.save();
+  registration.hooksFactory = factoryAddress.toHexString();
+  registration.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
+  registration.templateAddress = HOOKS_TEMPLATE_ADDRESS;
+  registration.name = "OpenTermHooks";
+  registration.feeRecipient = factoryAddress;
+  registration.protocolFeeBips = protocolFeeBips;
+  registration.originationFeeAmount = BigInt.zero();
+  registration.originationFeeAsset = null;
+  registration.isEnabled = true;
+  registration.createdAtBlock = BigInt.zero();
+  registration.createdAtTimestamp = BigInt.zero();
+  registration.createdAtTransaction = Bytes.fromHexString("0x00");
+  registration.createdAtLogIndex = BigInt.zero();
+  registration.updatedAtBlock = BigInt.zero();
+  registration.updatedAtTimestamp = BigInt.zero();
+  registration.updatedAtTransaction = Bytes.fromHexString("0x00");
+  registration.updatedAtLogIndex = BigInt.zero();
+  registration.save();
 }
 
 function seedHooksInstance(factoryAddress: Address): void {
   let hooksInstance = new HooksInstance(ZERO_ADDRESS.toHexString());
+  hooksInstance.address = ZERO_ADDRESS;
   hooksInstance.name = "OpenTermHooks";
   hooksInstance.kind = "OpenTerm";
+  hooksInstance.marketKind = "STANDARD";
+  hooksInstance.generation = "test";
+  hooksInstance.abiFamily = "test";
   hooksInstance.borrower = factoryAddress;
   hooksInstance.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
-  hooksInstance.factoryHooksTemplate = getFactoryHooksTemplateId(factoryAddress);
+  hooksInstance.templateRegistration = getTemplateRegistrationId(factoryAddress);
   hooksInstance.hooksFactory = factoryAddress.toHexString();
   hooksInstance.eventIndex = 0;
   hooksInstance.numMarkets = 0;
+  hooksInstance.deployedAtBlock = BigInt.zero();
+  hooksInstance.deployedAtTimestamp = BigInt.zero();
+  hooksInstance.deployedAtTransaction = Bytes.fromHexString("0x00");
+  hooksInstance.deployedAtLogIndex = BigInt.zero();
   hooksInstance.save();
 }
 
-function seedMarket(address: Address, marketType: string | null): void {
+function seedMarket(address: Address, marketKind: string): void {
   let market = new Market(address.toHexString());
+  market.address = address;
   market.archController = ARCH_CONTROLLER_ADDRESS.toHexString();
   market.isRegistered = true;
   market.version = "V2";
-  market.marketType = marketType;
+  market.marketKind = marketKind;
+  market.originKind = "HOOKS";
+  market.generation = "test";
+  market.abiFamily = "test";
   market.borrower = LEGACY_FACTORY_ADDRESS;
   market.sentinel = LEGACY_FACTORY_ADDRESS;
   market.feeRecipient = LEGACY_FACTORY_ADDRESS;
@@ -187,10 +220,21 @@ function seedMarket(address: Address, marketType: string | null): void {
   market.minimumDepositUpdatedIndex = 0;
   market.numCollateralContracts = 0;
   market.createdAt = 1;
+  market.createdAtBlock = BigInt.fromI32(1);
+  market.createdAtTimestamp = BigInt.fromI32(1);
+  market.createdAtTransaction = Bytes.fromHexString("0x00");
+  market.createdAtLogIndex = BigInt.zero();
   market.deployedEvent = "DEPLOYED";
   market.commitmentFeeBips = null;
   market.drawnAmount = null;
   market.save();
+  createInitialMarketSnapshot(
+    changetype<ethereum.Event>(newMockEvent()),
+    market,
+    marketKind == "REVOLVING"
+      ? "EVENT_AND_CONTRACT_CALL"
+      : "EVENT_PROJECTION"
+  );
 }
 
 function createHooksMarketDeployedEvent(
@@ -284,6 +328,36 @@ function mockOpenTermHooks(marketAddress: Address): void {
     .returns([ethereum.Value.fromTuple(hookedMarket)]);
 }
 
+function mockOpenTermHooksWithForceBuyBack(marketAddress: Address): void {
+  createMockedFunction(ZERO_ADDRESS, "version", "version():(string)").returns([
+    ethereum.Value.fromString("OpenTermHooks"),
+  ]);
+
+  let hookedMarket = new ethereum.Tuple();
+  hookedMarket.push(ethereum.Value.fromBoolean(true));
+  hookedMarket.push(ethereum.Value.fromBoolean(false));
+  hookedMarket.push(ethereum.Value.fromBoolean(false));
+  hookedMarket.push(ethereum.Value.fromUnsignedBigInt(BigInt.zero()));
+  hookedMarket.push(ethereum.Value.fromBoolean(false));
+  hookedMarket.push(ethereum.Value.fromBoolean(true));
+
+  createMockedFunction(
+    ZERO_ADDRESS,
+    "getHookedMarket",
+    "getHookedMarket(address):((bool,bool,bool,uint128,bool,bool))"
+  )
+    .withArgs([ethereum.Value.fromAddress(marketAddress)])
+    .returns([ethereum.Value.fromTuple(hookedMarket)]);
+}
+
+function mockOpenTermTemplate(): void {
+  createMockedFunction(
+    HOOKS_TEMPLATE_ADDRESS,
+    "version",
+    "version():(string)"
+  ).returns([ethereum.Value.fromString("OpenTermHooks")]);
+}
+
 function mockUnknownHooks(): void {
   createMockedFunction(ZERO_ADDRESS, "version", "version():(string)").returns([
     ethereum.Value.fromString("AuctionHooks"),
@@ -313,7 +387,7 @@ function seedDeployContext(factoryAddress: Address, marketType: string): void {
   seedToken(ASSET_ADDRESS);
   seedHooksFactory(factoryAddress, marketType);
   seedHooksTemplate();
-  seedFactoryHooksTemplate(factoryAddress, 25);
+  seedTemplateRegistration(factoryAddress, 25);
   seedHooksInstance(factoryAddress);
 }
 
@@ -323,6 +397,7 @@ describe("RCF v2 subgraph regression coverage", () => {
     seedArchController();
     seedHooksFactory(LEGACY_FACTORY_ADDRESS, "Legacy");
     seedHooksFactory(REVOLVING_FACTORY_ADDRESS, "Revolving");
+    mockOpenTermTemplate();
 
     let legacyEvent = newMockEvent();
     legacyEvent.address = LEGACY_FACTORY_ADDRESS;
@@ -339,6 +414,7 @@ describe("RCF v2 subgraph regression coverage", () => {
 
     let revolvingEvent = newMockEvent();
     revolvingEvent.address = REVOLVING_FACTORY_ADDRESS;
+    revolvingEvent.logIndex = BigInt.fromI32(2);
     handleHooksTemplateAddedForMarketType(
       revolvingEvent,
       HOOKS_TEMPLATE_ADDRESS,
@@ -350,92 +426,80 @@ describe("RCF v2 subgraph regression coverage", () => {
       "Revolving"
     );
 
-    let legacyScopedTemplateId = getFactoryHooksTemplateId(
+    let legacyScopedTemplateId = getTemplateRegistrationId(
       LEGACY_FACTORY_ADDRESS
     );
-    let revolvingScopedTemplateId = getFactoryHooksTemplateId(
+    let revolvingScopedTemplateId = getTemplateRegistrationId(
       REVOLVING_FACTORY_ADDRESS
     );
 
     assert.fieldEquals(
-      "FactoryHooksTemplate",
+      "HooksTemplateRegistration",
       legacyScopedTemplateId,
       "hooksFactory",
       LEGACY_FACTORY_ADDRESS.toHexString()
     );
     assert.fieldEquals(
-      "FactoryHooksTemplate",
+      "HooksTemplateRegistration",
       legacyScopedTemplateId,
       "protocolFeeBips",
       "25"
     );
     assert.fieldEquals(
-      "FactoryHooksTemplate",
+      "HooksTemplateRegistration",
       revolvingScopedTemplateId,
       "hooksFactory",
       REVOLVING_FACTORY_ADDRESS.toHexString()
     );
     assert.fieldEquals(
-      "FactoryHooksTemplate",
+      "HooksTemplateRegistration",
       revolvingScopedTemplateId,
       "protocolFeeBips",
       "125"
+    );
+    assert.entityCount("HooksTemplate", 1);
+    assert.entityCount("HooksTemplateRegistration", 2);
+    assert.entityCount("HooksTemplateRegistrationEvent", 2);
+    assert.fieldEquals(
+      "HooksTemplate",
+      HOOKS_TEMPLATE_ADDRESS.toHexString(),
+      "abiFamily",
+      "test"
     );
 
     resetStore();
   });
 
-  test("template add repairs placeholder factory-scoped template metadata", () => {
+  test("disabling a shared template is isolated to one factory", () => {
     resetStore();
     seedArchController();
     seedHooksFactory(LEGACY_FACTORY_ADDRESS, "Legacy");
+    seedHooksFactory(REVOLVING_FACTORY_ADDRESS, "Revolving");
+    seedHooksTemplate();
+    seedTemplateRegistration(LEGACY_FACTORY_ADDRESS, 25);
+    seedTemplateRegistration(REVOLVING_FACTORY_ADDRESS, 125);
 
-    let placeholder = new FactoryHooksTemplate(
-      getFactoryHooksTemplateId(LEGACY_FACTORY_ADDRESS)
-    );
-    placeholder.hooksFactory = LEGACY_FACTORY_ADDRESS.toHexString();
-    placeholder.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
-    placeholder.templateAddress = HOOKS_TEMPLATE_ADDRESS;
-    placeholder.name = "";
-    placeholder.feeRecipient = ZERO_ADDRESS;
-    placeholder.protocolFeeBips = 0;
-    placeholder.originationFeeAmount = BigInt.zero();
-    placeholder.originationFeeAsset = null;
-    placeholder.disabled = false;
-    placeholder.save();
-
-    let event = newMockEvent();
-    event.address = LEGACY_FACTORY_ADDRESS;
-    handleHooksTemplateAddedForMarketType(
-      event,
+    let disabledEvent = newMockEvent();
+    disabledEvent.address = LEGACY_FACTORY_ADDRESS;
+    handleHooksTemplateDisabledForMarketType(
+      disabledEvent,
       HOOKS_TEMPLATE_ADDRESS,
-      "OpenTermHooks",
-      LEGACY_FACTORY_ADDRESS,
-      ZERO_ADDRESS,
-      BigInt.zero(),
-      25,
       "Legacy"
     );
 
-    let repairedId = getFactoryHooksTemplateId(LEGACY_FACTORY_ADDRESS);
     assert.fieldEquals(
-      "FactoryHooksTemplate",
-      repairedId,
-      "name",
-      "OpenTermHooks"
+      "HooksTemplateRegistration",
+      getTemplateRegistrationId(LEGACY_FACTORY_ADDRESS),
+      "isEnabled",
+      "false"
     );
     assert.fieldEquals(
-      "FactoryHooksTemplate",
-      repairedId,
-      "hooksFactory",
-      LEGACY_FACTORY_ADDRESS.toHexString()
+      "HooksTemplateRegistration",
+      getTemplateRegistrationId(REVOLVING_FACTORY_ADDRESS),
+      "isEnabled",
+      "true"
     );
-    assert.fieldEquals(
-      "FactoryHooksTemplate",
-      repairedId,
-      "protocolFeeBips",
-      "25"
-    );
+    assert.entityCount("HooksTemplateRegistrationEvent", 1);
 
     resetStore();
   });
@@ -446,7 +510,7 @@ describe("RCF v2 subgraph regression coverage", () => {
     seedToken(ASSET_ADDRESS);
     seedHooksFactory(REVOLVING_FACTORY_ADDRESS, "Revolving");
     seedHooksTemplate();
-    seedFactoryHooksTemplate(REVOLVING_FACTORY_ADDRESS, 125);
+    seedTemplateRegistration(REVOLVING_FACTORY_ADDRESS, 125);
     seedHooksInstance(REVOLVING_FACTORY_ADDRESS);
     mockOpenTermHooks(REVOLVING_MARKET_ADDRESS);
     mockRevolvingState(REVOLVING_MARKET_ADDRESS, 125, 4000);
@@ -519,8 +583,56 @@ describe("RCF v2 subgraph regression coverage", () => {
     assert.fieldEquals(
       "Market",
       LEGACY_MARKET_ADDRESS.toHexString(),
-      "marketType",
-      "Legacy"
+      "marketKind",
+      "STANDARD"
+    );
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "originKind",
+      "HOOKS"
+    );
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "generation",
+      "test"
+    );
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "borrowerProfile",
+      LEGACY_FACTORY_ADDRESS.toHexString()
+    );
+    assert.fieldEquals(
+      "Borrower",
+      LEGACY_FACTORY_ADDRESS.toHexString(),
+      "address",
+      LEGACY_FACTORY_ADDRESS.toHexString()
+    );
+    assert.fieldEquals(
+      "BorrowerStats",
+      "BORROWER-STATS-" + LEGACY_FACTORY_ADDRESS.toHexString(),
+      "profile",
+      LEGACY_FACTORY_ADDRESS.toHexString()
+    );
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "asset",
+      generateTokenId(ASSET_ADDRESS)
+    );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "source",
+      "EVENT_PROJECTION"
+    );
+    assert.fieldEquals(
+      "HooksConfig",
+      generateHooksConfigId(LEGACY_MARKET_ADDRESS),
+      "allowForceBuyBacks",
+      "false"
     );
     assert.fieldEquals(
       "Market",
@@ -533,6 +645,46 @@ describe("RCF v2 subgraph regression coverage", () => {
       LEGACY_MARKET_ADDRESS.toHexString(),
       "drawnAmount",
       "null"
+    );
+    resetStore();
+  });
+
+  test("force-buyback hooked-market ABI retains historical config", () => {
+    resetStore();
+    seedDeployContext(LEGACY_FACTORY_ADDRESS, "Legacy");
+    let factory = HooksFactory.load(LEGACY_FACTORY_ADDRESS.toHexString());
+    if (factory != null) {
+      factory.hookedMarketAbi = "FORCE_BUYBACK";
+      factory.save();
+    }
+    mockOpenTermHooksWithForceBuyBack(LEGACY_MARKET_ADDRESS);
+
+    let event = createHooksMarketDeployedEvent(
+      LEGACY_FACTORY_ADDRESS,
+      LEGACY_MARKET_ADDRESS,
+      ASSET_ADDRESS
+    );
+    handleMarketDeployedForMarketType(
+      event,
+      event.params.market,
+      event.params.hooks,
+      event.params.name,
+      event.params.symbol,
+      event.params.asset,
+      event.params.maxTotalSupply,
+      event.params.annualInterestBips,
+      event.params.delinquencyFeeBips,
+      event.params.withdrawalBatchDuration,
+      event.params.reserveRatioBips,
+      event.params.delinquencyGracePeriod,
+      "Legacy"
+    );
+
+    assert.fieldEquals(
+      "HooksConfig",
+      generateHooksConfigId(LEGACY_MARKET_ADDRESS),
+      "allowForceBuyBacks",
+      "true"
     );
 
     resetStore();
@@ -569,8 +721,14 @@ describe("RCF v2 subgraph regression coverage", () => {
     assert.fieldEquals(
       "Market",
       REVOLVING_MARKET_ADDRESS.toHexString(),
-      "marketType",
-      "Revolving"
+      "marketKind",
+      "REVOLVING"
+    );
+    assert.fieldEquals(
+      "Market",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "createdAt",
+      event.block.timestamp.toString()
     );
     assert.fieldEquals(
       "Market",
@@ -584,6 +742,18 @@ describe("RCF v2 subgraph regression coverage", () => {
       "drawnAmount",
       "4000"
     );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "source",
+      "EVENT_AND_CONTRACT_CALL"
+    );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "drawnAmount",
+      "4000"
+    );
 
     resetStore();
   });
@@ -592,7 +762,7 @@ describe("RCF v2 subgraph regression coverage", () => {
     resetStore();
     seedArchController();
     seedToken(ASSET_ADDRESS);
-    seedMarket(REVOLVING_MARKET_ADDRESS, "Revolving");
+    seedMarket(REVOLVING_MARKET_ADDRESS, "REVOLVING");
     mockRevolvingState(REVOLVING_MARKET_ADDRESS, 175, 9000);
 
     let event = createBorrowEvent(BigInt.fromI32(250));
@@ -626,7 +796,7 @@ describe("RCF v2 subgraph regression coverage", () => {
     resetStore();
     seedArchController();
     seedToken(ASSET_ADDRESS);
-    seedMarket(REVOLVING_MARKET_ADDRESS, "Revolving");
+    seedMarket(REVOLVING_MARKET_ADDRESS, "REVOLVING");
     mockRevolvingState(REVOLVING_MARKET_ADDRESS, 210, 4500);
 
     let event = createDebtRepaidEvent(REPAYER_ADDRESS, BigInt.fromI32(125));
@@ -660,7 +830,7 @@ describe("RCF v2 subgraph regression coverage", () => {
     resetStore();
     seedArchController();
     seedToken(ASSET_ADDRESS);
-    seedMarket(LEGACY_MARKET_ADDRESS, "Legacy");
+    seedMarket(LEGACY_MARKET_ADDRESS, "STANDARD");
 
     let event = createStateUpdatedEvent(BigInt.fromI32(1), false);
     event.address = LEGACY_MARKET_ADDRESS;
@@ -679,6 +849,12 @@ describe("RCF v2 subgraph regression coverage", () => {
       "drawnAmount",
       "null"
     );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "scaleFactor",
+      "1"
+    );
 
     resetStore();
   });
@@ -687,7 +863,7 @@ describe("RCF v2 subgraph regression coverage", () => {
     resetStore();
     seedArchController();
     seedToken(ASSET_ADDRESS);
-    seedMarket(REVOLVING_MARKET_ADDRESS, "Revolving");
+    seedMarket(REVOLVING_MARKET_ADDRESS, "REVOLVING");
     mockRevolvingState(REVOLVING_MARKET_ADDRESS, 150, 0);
 
     let market = Market.load(REVOLVING_MARKET_ADDRESS.toHexString());

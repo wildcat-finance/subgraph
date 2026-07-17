@@ -61,14 +61,23 @@ function sharedAbiFamily(config, abiFamilies) {
         .map((factory) => factory.abiFamily)
     ),
   ];
-  if (familyNames.length !== 1) {
+  if (familyNames.length === 0) {
     throw new Error(
-      `chainConfig.${config.network}: indexed hook factories must currently share one ABI family because CombinedHooks is a single dynamic template; found ${
-        familyNames.length === 0 ? "none" : familyNames.join(", ")
-      }`
+      `chainConfig.${config.network}: must contain at least one indexed hooks factory`
     );
   }
-  return abiFamilies[familyNames[0]];
+  const first = abiFamilies[familyNames[0]];
+  const expected = JSON.stringify(first.abis);
+  for (const familyName of familyNames.slice(1)) {
+    if (JSON.stringify(abiFamilies[familyName].abis) !== expected) {
+      throw new Error(
+        `chainConfig.${config.network}: indexed hooks factories may use different hooked-market adapters, but must share the core mapping ABIs used by dynamic templates; found ${familyNames.join(
+          ", "
+        )}`
+      );
+    }
+  }
+  return first;
 }
 
 function configureDataSource(prototype, config, factory, name) {
@@ -77,7 +86,110 @@ function configureDataSource(prototype, config, factory, name) {
   dataSource.network = config.graphNetwork;
   dataSource.source.address = factory.address;
   dataSource.source.startBlock = factory.startBlock;
+  addDeploymentContext(dataSource, config);
   return dataSource;
+}
+
+function stringContext(data) {
+  return { type: "String", data };
+}
+
+function mergeContext(dataSource, entries) {
+  dataSource.context = {
+    ...(dataSource.context || {}),
+    ...entries,
+  };
+}
+
+function addDeploymentContext(dataSource, config) {
+  const pricing = config.pricing;
+  mergeContext(dataSource, {
+    deploymentNetwork: stringContext(config.network),
+    deploymentGraphNetwork: stringContext(config.graphNetwork),
+    deploymentChainId: stringContext(String(config.chainId)),
+    deploymentSchemaRelease: stringContext(config.schemaRelease),
+    deploymentConfigDigest: stringContext(configDigest(config)),
+    deploymentArchController: stringContext(config.anchors.archController.address),
+    deploymentSanctionsSentinel: stringContext(
+      config.anchors.sanctionsSentinel.address
+    ),
+    deploymentAnalyticsEnabled: stringContext(String(config.features.analytics)),
+    deploymentCollateralEnabled: stringContext(String(config.features.collateral)),
+    deploymentWrappersEnabled: stringContext(String(config.features.wrappers)),
+    pricingMode: stringContext(pricing.mode),
+    pricingFeedDecimals: stringContext(
+      pricing.feedDecimals === null ? "" : String(pricing.feedDecimals)
+    ),
+    pricingFeedRegistry: stringContext(pricing.feedRegistry || ""),
+    pricingUsdDenomination: stringContext(pricing.denominations?.usd || ""),
+    pricingEthDenomination: stringContext(pricing.denominations?.eth || ""),
+    pricingBtcDenomination: stringContext(pricing.denominations?.btc || ""),
+    pricingEthUsdFeed: stringContext(pricing.bridgeFeeds?.ethUsd || ""),
+    pricingBtcUsdFeed: stringContext(pricing.bridgeFeeds?.btcUsd || ""),
+    pricingStablecoins: stringContext(
+      pricing.stablecoins.map((address) => address.toLowerCase()).join(",")
+    ),
+    pricingDirectFeeds: stringContext(
+      pricing.directFeeds
+        .map(
+          ({ token, feed }) =>
+            `${token.toLowerCase()}=${feed.toLowerCase()}`
+        )
+        .join(",")
+    ),
+    pricingSyntheticPrices: stringContext(
+      pricing.syntheticPrices
+        .map(
+          ({ symbol, priceUSD, usdPeg }) =>
+            `${symbol}=${priceUSD}=${String(usdPeg)}`
+        )
+        .join(",")
+    ),
+  });
+}
+
+function hooksFactoryContextKey(address) {
+  return `hooksFactory_${address.toLowerCase().slice(2)}`;
+}
+
+function hooksFactoryContextValue(config, factory, abiFamilies) {
+  return [
+    factory.marketKind,
+    factory.generation,
+    factory.abiFamily,
+    abiFamilies[factory.abiFamily].hookedMarketAbi,
+    String(factory.startBlock),
+    String(factory.indexed),
+    String(factory.deploymentTarget),
+    factory.lifecycle.toUpperCase(),
+    factory.label,
+    config.anchors.archController.address,
+  ].join("|");
+}
+
+function addHooksFactoryContext(dataSource, config, factories, abiFamilies) {
+  mergeContext(
+    dataSource,
+    Object.fromEntries(
+      factories.map((factory) => [
+        hooksFactoryContextKey(factory.address),
+        stringContext(hooksFactoryContextValue(config, factory, abiFamilies)),
+      ])
+    )
+  );
+}
+
+function addOptionalModuleFactoryContext(dataSource, factory) {
+  mergeContext(dataSource, {
+    moduleFactoryLabel: stringContext(factory.label),
+    moduleFactoryGeneration: stringContext(factory.generation),
+    moduleFactoryStartBlock: stringContext(String(factory.startBlock)),
+    moduleFactoryIndexed: stringContext(String(factory.indexed)),
+    moduleFactoryDeploymentTarget: stringContext(
+      String(factory.deploymentTarget || false)
+    ),
+    moduleFactoryLifecycle: stringContext(factory.lifecycle.toUpperCase()),
+  });
 }
 
 function buildManifest(config, abiFamilies, baseManifest) {
@@ -121,6 +233,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
       finalCollateralFactoryName(config, factory)
     );
     setAbiFiles(dataSource.mapping, defaultAbiFamily);
+    addOptionalModuleFactoryContext(dataSource, factory);
     dataSources.push(dataSource);
   }
 
@@ -134,6 +247,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
       finalWrapperFactoryName(config, factory)
     );
     setAbiFiles(dataSource.mapping, defaultAbiFamily);
+    addOptionalModuleFactoryContext(dataSource, factory);
     dataSources.push(dataSource);
   }
 
@@ -163,6 +277,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
         ? "./src/hooks-factory-revolving.ts"
         : "./src/hooks-factory.ts";
     setAbiFiles(dataSource.mapping, abiFamilies[factory.abiFamily]);
+    addHooksFactoryContext(dataSource, config, [factory], abiFamilies);
     dataSources.push(dataSource);
   }
 
@@ -173,6 +288,12 @@ function buildManifest(config, abiFamilies, baseManifest) {
     "WildcatArchController"
   );
   setAbiFiles(archController.mapping, defaultAbiFamily);
+  addHooksFactoryContext(
+    archController,
+    config,
+    config.factories,
+    abiFamilies
+  );
   dataSources.push(archController);
 
   const sanctionsSentinel = configureDataSource(

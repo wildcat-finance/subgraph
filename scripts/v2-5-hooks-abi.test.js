@@ -17,6 +17,21 @@ const loadSepoliaAbi = (contractName) =>
     )
   );
 
+const loadHookedMarketAbi = (variant, contractName) =>
+  JSON.parse(
+    fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "abis",
+        "hooked-market",
+        ...variant,
+        `${contractName}.json`
+      ),
+      "utf8"
+    )
+  );
+
 const outputComponentNames = (abi, functionName) => {
   const fn = abi.find(
     (entry) => entry.type === "function" && entry.name === functionName
@@ -52,5 +67,18 @@ for (const [contractName, components] of Object.entries(expectedComponents)) {
     const abi = loadSepoliaAbi(contractName);
     assert.deepEqual(outputComponentNames(abi, "getHookedMarket"), components);
     assert.deepEqual(outputComponentNames(abi, "getHookedMarkets"), components);
+  });
+
+  test(`${contractName} base adapter matches the frozen V2.5 tuple`, () => {
+    const abi = loadHookedMarketAbi(["base"], contractName);
+    assert.deepEqual(outputComponentNames(abi, "getHookedMarket"), components);
+  });
+
+  test(`${contractName} force-buyback adapter retains its extra field`, () => {
+    const abi = loadHookedMarketAbi(["force-buyback"], contractName);
+    assert.deepEqual(outputComponentNames(abi, "getHookedMarket"), [
+      ...components,
+      "allowForceBuyBacks",
+    ]);
   });
 }

@@ -87,6 +87,17 @@ test("rejects a deployment target before the chain target set is ready", () => {
   );
 });
 
+test("rejects a non-active deployment target", () => {
+  const abiFamilies = loadAbiFamilies();
+  const config = clone(loadChainConfig("mainnet", { abiFamilies }));
+  config.factories[0].deploymentTarget = true;
+  config.factories[0].lifecycle = "historical";
+  assert.throws(
+    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    /deployment target must have an active lifecycle/
+  );
+});
+
 test("rejects a wrapper deployment target before the chain target set is ready", () => {
   const abiFamilies = loadAbiFamilies();
   const config = clone(loadChainConfig("mainnet", { abiFamilies }));
@@ -132,5 +143,40 @@ test("rejects compatibility aliases that select unindexed factories", () => {
   assert.throws(
     () => validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
     /must select an indexed factory/
+  );
+});
+
+test("rejects factory metadata that cannot be encoded in mapping context", () => {
+  const abiFamilies = loadAbiFamilies();
+  const config = clone(loadChainConfig("mainnet", { abiFamilies }));
+  config.factories[0].generation = "v2|unexpected";
+  assert.throws(
+    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    /must not contain the factory-context separator/
+  );
+});
+
+test("keeps every analytics price source explicit in chain configuration", () => {
+  const mainnet = loadChainConfig("mainnet");
+  assert.equal(mainnet.pricing.mode, "CHAINLINK");
+  assert.equal(mainnet.pricing.feedDecimals, 8);
+  assert.equal(mainnet.pricing.directFeeds.length, 2);
+
+  const sepolia = loadChainConfig("sepolia");
+  assert.equal(sepolia.pricing.mode, "SYNTHETIC_TESTNET");
+  assert.deepEqual(
+    sepolia.pricing.syntheticPrices.map(({ symbol }) => symbol),
+    ["USDC", "USDT", "DAI", "WETH", "WBTC", "ZRX"]
+  );
+});
+
+test("rejects mixed or incomplete pricing modes", () => {
+  const abiFamilies = loadAbiFamilies();
+  const config = clone(loadChainConfig("sepolia", { abiFamilies }));
+  config.pricing.feedRegistry =
+    "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf";
+  assert.throws(
+    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
+    /must not declare Chainlink configuration/
   );
 });

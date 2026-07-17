@@ -1,4 +1,9 @@
-import { BigDecimal, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import {
+  BigDecimal,
+  BigInt,
+  Bytes,
+  ethereum,
+} from "@graphprotocol/graph-ts";
 import {
   ProtocolStats,
   BorrowerStats,
@@ -37,19 +42,14 @@ import { calculateTotalDebt } from "./utils";
 export function getTokenPriceMultiplier(
   decimals: i32,
   tokenId: string,
-  timestamp: BigInt
+  event: ethereum.Event
 ): BigDecimal {
   let token = Token.load(tokenId);
   if (token == null) return BigDecimal.zero();
 
-  let priceValue: BigDecimal;
-  if (token.isUsdStablecoin) {
-    priceValue = new BigDecimal(BigInt.fromI32(1));
-  } else {
-    let daily = ensureTokenDailyPrice(tokenId, timestamp);
-    if (daily == null) return BigDecimal.zero();
-    priceValue = daily.priceUSD;
-  }
+  let daily = ensureTokenDailyPrice(tokenId, event);
+  if (daily == null) return BigDecimal.zero();
+  let priceValue = daily.priceUSD;
 
   let divisor = BigInt.fromI32(10).pow(u8(decimals)).toBigDecimal();
   // multiplier = priceUSD / 10^decimals
@@ -70,9 +70,9 @@ export function computeUsdDelta(
   amount: BigInt,
   decimals: i32,
   tokenId: string,
-  timestamp: BigInt
+  event: ethereum.Event
 ): BigDecimal {
-  let m = getTokenPriceMultiplier(decimals, tokenId, timestamp);
+  let m = getTokenPriceMultiplier(decimals, tokenId, event);
   if (m.equals(BigDecimal.zero())) return BigDecimal.zero();
   return amount.toBigDecimal().times(m);
 }
@@ -89,11 +89,11 @@ export function setMarketTotalDebtUSD(
 
 export function updateMarketTotalDebtUSD(
   market: Market,
-  timestamp: BigInt
+  event: ethereum.Event
 ): void {
   setMarketTotalDebtUSD(
     market,
-    getTokenPriceMultiplier(market.decimals, market.asset, timestamp)
+    getTokenPriceMultiplier(market.decimals, market.asset, event)
   );
 }
 
@@ -110,6 +110,7 @@ export function getOrCreateBorrowerStats(borrower: Bytes): BorrowerStats {
   let id = generateBorrowerStatsId(borrower);
   return getOrInitializeBorrowerStats(id, {
     borrower,
+    profile: borrower.toHexString(),
   }).entity;
 }
 
@@ -197,6 +198,7 @@ export function getOrCreateBorrowerDailyStats(borrower: Bytes, timestamp: BigInt
     startTimestamp: startOfDay,
     endTimestamp: startOfDay + 86400,
     borrower: borrower,
+    profile: borrower.toHexString(),
     numMarkets: bs.numMarkets,
     numActiveMarkets: bs.numActiveMarkets,
     numDelinquentMarkets: bs.numDelinquentMarkets,
@@ -255,10 +257,14 @@ export function getOrCreateLenderDailyStats(lender: Bytes, timestamp: BigInt, ls
   return result.entity;
 }
 
-export function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): MarketDailyStats {
+export function getOrCreateMarketDailyStats(
+  market: Market,
+  event: ethereum.Event
+): MarketDailyStats {
+  let timestamp = event.block.timestamp;
   let startOfDay = dayTimestamp(timestamp);
   let id = market.id.concat("-").concat(startOfDay.toString());
-  let dailyPrice = ensureTokenDailyPrice(market.asset, timestamp);
+  let dailyPrice = ensureTokenDailyPrice(market.asset, event);
   if (dailyPrice != null) {
     market.tokenDailyPrice = dailyPrice.id;
   }

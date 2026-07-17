@@ -21,7 +21,7 @@
       "manifestName": "HooksFactoryLegacyV2",
       "marketKind": "STANDARD",
       "generation": "v2",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88",
       "startBlock": 6973842,
       "indexed": true,
@@ -33,7 +33,7 @@
       "manifestName": "HooksFactoryStandardV2_1",
       "marketKind": "STANDARD",
       "generation": "v2.1",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
       "startBlock": 7124440,
       "indexed": true,
@@ -45,7 +45,7 @@
       "manifestName": "HooksFactoryRevolving_20260419_233246",
       "marketKind": "REVOLVING",
       "generation": "preview-2026-04-19",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0xF4564015E524cf5629828E61F45ed339D998D85f",
       "startBlock": 10695521,
       "indexed": false,
@@ -57,7 +57,7 @@
       "manifestName": "HooksFactoryRevolvingPreview20260424",
       "marketKind": "REVOLVING",
       "generation": "preview-2026-04-24",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5",
       "startBlock": 10725492,
       "indexed": true,
@@ -69,7 +69,7 @@
       "manifestName": "HooksFactoryStandardTest20240805",
       "marketKind": "STANDARD",
       "generation": "test-2024-08-05",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0x6Cb3512b541733d340Aa520b63105586588BD600",
       "startBlock": 6443857,
       "indexed": false,
@@ -81,7 +81,7 @@
       "manifestName": "HooksFactoryStandardTest20240923",
       "marketKind": "STANDARD",
       "generation": "test-2024-09-23",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0xE1d14E8176d27415c204A4F9Ef58E107964CA12C",
       "startBlock": 6746262,
       "indexed": false,
@@ -93,7 +93,7 @@
       "manifestName": "HooksFactoryStandardTest20241121",
       "marketKind": "STANDARD",
       "generation": "test-2024-11-21",
-      "abiFamily": "hooks-sepolia-current",
+      "abiFamily": "hooks-shared-current",
       "address": "0xCf872Ac862d2ba97F99804ed25f0dB5F2352933a",
       "startBlock": 7123486,
       "indexed": false,
@@ -130,7 +130,45 @@
     "wrappers": true
   },
   "pricing": {
-    "mode": "SYNTHETIC_TESTNET"
+    "mode": "SYNTHETIC_TESTNET",
+    "feedDecimals": null,
+    "feedRegistry": null,
+    "denominations": null,
+    "bridgeFeeds": null,
+    "stablecoins": [],
+    "directFeeds": [],
+    "syntheticPrices": [
+      {
+        "symbol": "USDC",
+        "priceUSD": "1",
+        "usdPeg": true
+      },
+      {
+        "symbol": "USDT",
+        "priceUSD": "1",
+        "usdPeg": true
+      },
+      {
+        "symbol": "DAI",
+        "priceUSD": "1",
+        "usdPeg": true
+      },
+      {
+        "symbol": "WETH",
+        "priceUSD": "2000",
+        "usdPeg": false
+      },
+      {
+        "symbol": "WBTC",
+        "priceUSD": "70000",
+        "usdPeg": false
+      },
+      {
+        "symbol": "ZRX",
+        "priceUSD": "0.10",
+        "usdPeg": false
+      }
+    ]
   },
   "compatibility": {
     "canonicalFactoryByMarketKind": {
