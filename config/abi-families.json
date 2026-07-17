@@ -1,0 +1,47 @@
+{
+  "hooks-mainnet-current": {
+    "kind": "hooksFactory",
+    "abis": {
+      "HooksFactory": "./abis/HooksFactory.json",
+      "WildcatMarket": "./abis/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/IWildcatMarketRevolving.json",
+      "OpenTermHooks": "./network-specific-abis/mainnet/OpenTermHooks.json",
+      "FixedTermHooks": "./network-specific-abis/mainnet/FixedTermHooks.json",
+      "PeriodicTermHooks": "./network-specific-abis/mainnet/PeriodicTermHooks.json",
+      "CombinedHooks": "./abis/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  },
+  "hooks-sepolia-current": {
+    "kind": "hooksFactory",
+    "abis": {
+      "HooksFactory": "./abis/HooksFactory.json",
+      "WildcatMarket": "./abis/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/IWildcatMarketRevolving.json",
+      "OpenTermHooks": "./network-specific-abis/sepolia/OpenTermHooks.json",
+      "FixedTermHooks": "./network-specific-abis/sepolia/FixedTermHooks.json",
+      "PeriodicTermHooks": "./network-specific-abis/sepolia/PeriodicTermHooks.json",
+      "CombinedHooks": "./abis/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  },
+  "hooks-shared-current": {
+    "kind": "hooksFactory",
+    "abis": {
+      "HooksFactory": "./abis/HooksFactory.json",
+      "WildcatMarket": "./abis/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/IWildcatMarketRevolving.json",
+      "OpenTermHooks": "./abis/OpenTermHooks.json",
+      "FixedTermHooks": "./abis/FixedTermHooks.json",
+      "PeriodicTermHooks": "./abis/PeriodicTermHooks.json",
+      "CombinedHooks": "./abis/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  }
+}

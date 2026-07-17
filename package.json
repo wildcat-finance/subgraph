@@ -9,6 +9,8 @@
     "auth": "graph auth --studio",
     "codegen": "graph codegen -u",
     "build": "graph build",
+    "build:all-networks": "node ./scripts/build-all-networks.js",
+    "verify:all-networks": "yarn config:validate && yarn test:config && yarn build:all-networks",
     "deploy": "node scripts/deploy.js",
     "create-local": "graph create --node $NODE_HOST:$NODE_PORT/ wildcat-test-deployment",
     "remove-local": "graph remove --node $NODE_HOST:$NODE_PORT/ wildcat-test-deployment",
@@ -17,7 +19,9 @@
     "test": "graph test",
     "test:config": "node --test scripts/*.test.js",
     "test:rcf-v2": "graph test rcf-v2",
-    "netconfig": "node ./scripts/set-addresses",
+    "config:validate": "node ./scripts/validate-config.js",
+    "netconfig": "node ./scripts/generate-manifest.js",
+    "netconfig:check": "node ./scripts/generate-manifest.js --check",
     "postnetconfig": "yarn codegen",
     "deploy:sepolia": "yarn deploy goldsky sepolia",
     "deploy:mainnet": "yarn deploy goldsky mainnet",
@@ -29,7 +33,8 @@
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",
     "@graphprotocol/graph-ts": "0.30.0",
-    "dotenv": "16.6.1"
+    "dotenv": "16.6.1",
+    "yaml": "1.10.2"
   },
   "devDependencies": {
     "@ethersproject/abi": "5.7.0",

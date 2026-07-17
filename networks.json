@@ -41,6 +41,60 @@
       }
     ]
   },
+  "plasma-mainnet": {
+    "name": "plasma-mainnet",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae",
+        "startBlock": 1989721
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0x37064895ba2C1e269EAF7FF32564818d08903f5B",
+        "startBlock": 1989725
+      },
+      "HooksFactory": {
+        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
+        "startBlock": 1989742
+      }
+    },
+    "hooksFactories": [
+      {
+        "name": "HooksFactory",
+        "marketType": "legacy",
+        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
+        "startBlock": 1989742,
+        "indexed": true
+      }
+    ],
+    "wrapperFactories": []
+  },
+  "plasma-testnet": {
+    "name": "plasma-testnet",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0x1EeBC079aE1e7dCDe31C74A7EF48fA8737673A6a",
+        "startBlock": 2994796
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0x7cc91e3c64A0b5844650d586B87B291AC3A3aaD4",
+        "startBlock": 2994800
+      },
+      "HooksFactory": {
+        "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
+        "startBlock": 2994816
+      }
+    },
+    "hooksFactories": [
+      {
+        "name": "HooksFactory",
+        "marketType": "legacy",
+        "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
+        "startBlock": 2994816,
+        "indexed": true
+      }
+    ],
+    "wrapperFactories": []
+  },
   "sepolia": {
     "name": "sepolia",
     "contracts": {
@@ -97,6 +151,27 @@
         "address": "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5",
         "startBlock": 10725492,
         "indexed": true
+      },
+      {
+        "name": "HooksFactoryStandardTest20240805",
+        "marketType": "legacy",
+        "address": "0x6Cb3512b541733d340Aa520b63105586588BD600",
+        "startBlock": 6443857,
+        "indexed": false
+      },
+      {
+        "name": "HooksFactoryStandardTest20240923",
+        "marketType": "legacy",
+        "address": "0xE1d14E8176d27415c204A4F9Ef58E107964CA12C",
+        "startBlock": 6746262,
+        "indexed": false
+      },
+      {
+        "name": "HooksFactoryStandardTest20241121",
+        "marketType": "legacy",
+        "address": "0xCf872Ac862d2ba97F99804ed25f0dB5F2352933a",
+        "startBlock": 7123486,
+        "indexed": false
       }
     ],
     "wrapperFactories": [
@@ -104,58 +179,6 @@
         "name": "Wildcat4626WrapperFactory",
         "address": "0x0566Fe57682164af689f1440cb3BCEedEe3bf843",
         "startBlock": 10534112,
-        "indexed": true
-      }
-    ]
-  },
-  "plasma-testnet": {
-    "name": "plasma-testnet",
-    "contracts": {
-      "WildcatArchController": {
-        "address": "0x1EeBC079aE1e7dCDe31C74A7EF48fA8737673A6a",
-        "startBlock": 2994796
-      },
-      "WildcatSanctionsSentinel": {
-        "address": "0x7cc91e3c64A0b5844650d586B87B291AC3A3aaD4",
-        "startBlock": 2994800
-      },
-      "HooksFactory": {
-        "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
-        "startBlock": 2994816
-      }
-    },
-    "hooksFactories": [
-      {
-        "name": "HooksFactory",
-        "marketType": "legacy",
-        "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
-        "startBlock": 2994816,
-        "indexed": true
-      }
-    ]
-  },
-  "plasma-mainnet": {
-    "name": "plasma-mainnet",
-    "contracts": {
-      "WildcatArchController": {
-        "address": "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae",
-        "startBlock": 1989721
-      },
-      "WildcatSanctionsSentinel": {
-        "address": "0x37064895ba2C1e269EAF7FF32564818d08903f5B",
-        "startBlock": 1989725
-      },
-      "HooksFactory": {
-        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
-        "startBlock": 1989742
-      }
-    },
-    "hooksFactories": [
-      {
-        "name": "HooksFactory",
-        "marketType": "legacy",
-        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
-        "startBlock": 1989742,
         "indexed": true
       }
     ]

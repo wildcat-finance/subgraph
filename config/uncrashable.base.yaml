@@ -1,7 +1,7 @@
 networkConfig:
   entityIdPrefixes:
     - networks:
-        - sepolia
+        - mainnet
       prefix: ""
 entitySettings:
   WithdrawalBatch:

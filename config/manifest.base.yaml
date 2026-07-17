@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: WildcatMarketCollateralFactory
-    network: {{NetworkName}}
+    network: mainnet
     source:
-      address: "{{CollateralFactoryAddress}}"
+      address: "0x0000000000000000000000000000000000000000"
       abi: WildcatMarketCollateralFactory
-      startBlock: {{CollateralFactoryStartBlock}}
+      startBlock: 0
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -47,14 +47,40 @@ dataSources:
         - event: ExchangeRemoved(address)
           handler: handleExchangeRemoved
       file: ./src/simple-collateral-factory.ts
-{{Wildcat4626WrapperFactoryDataSource}}
+  - kind: ethereum
+    name: Wildcat4626WrapperFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: Wildcat4626WrapperFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Market
+        - Token
+        - Wildcat4626WrapperFactory
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperDeployed
+      abis:
+        - name: Wildcat4626WrapperFactory
+          file: ./abis/Wildcat4626WrapperFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: WrapperDeployed(indexed address,indexed address)
+          handler: handleWrapperDeployed
+      file: ./src/wildcat-4626-wrapper-factory.ts
   - kind: ethereum
     name: HooksFactory
-    network: {{NetworkName}}
+    network: mainnet
     source:
-      address: "{{HooksFactoryAddress}}"
+      address: "0x0000000000000000000000000000000000000000"
       abi: HooksFactory
-      startBlock: {{HooksFactoryStartBlock}}
+      startBlock: 0
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -87,11 +113,11 @@ dataSources:
         - name: IWildcatMarketRevolving
           file: ./abis/IWildcatMarketRevolving.json
         - name: OpenTermHooks
-          file: {{HooksAbiDir}}/OpenTermHooks.json
+          file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
-          file: {{HooksAbiDir}}/FixedTermHooks.json
+          file: ./abis/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: {{HooksAbiDir}}/PeriodicTermHooks.json
+          file: ./abis/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -116,14 +142,13 @@ dataSources:
         - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
       file: ./src/hooks-factory.ts
-{{HooksFactoryRevolvingDataSource}}
   - kind: ethereum
     name: WildcatArchController
-    network: {{NetworkName}}
+    network: mainnet
     source:
-      address: "{{WildcatArchControllerAddress}}"
+      address: "0x0000000000000000000000000000000000000000"
       abi: WildcatArchController
-      startBlock: {{WildcatArchControllerStartBlock}}
+      startBlock: 0
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -179,11 +204,11 @@ dataSources:
       file: ./src/wildcat-arch-controller.ts
   - kind: ethereum
     name: WildcatSanctionsSentinel
-    network: {{NetworkName}}
+    network: mainnet
     source:
-      address: "{{WildcatSanctionsSentinelAddress}}"
+      address: "0x0000000000000000000000000000000000000000"
       abi: WildcatSanctionsSentinel
-      startBlock: {{WildcatSanctionsSentinelStartBlock}}
+      startBlock: 0
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -206,7 +231,7 @@ dataSources:
 templates:
   - kind: ethereum
     name: SimpleMarketCollateralMultiParty
-    network: {{NetworkName}}
+    network: mainnet
     source:
       abi: SimpleMarketCollateralMultiParty
     mapping:
@@ -240,7 +265,7 @@ templates:
       file: ./src/simple-collateral.ts
   - kind: ethereum
     name: WildcatMarketControllerFactory
-    network: {{NetworkName}}
+    network: mainnet
     source:
       abi: WildcatMarketControllerFactory
     mapping:
@@ -270,7 +295,7 @@ templates:
       file: ./src/wildcat-market-controller-factory.ts
   - kind: ethereum
     name: WildcatMarketController
-    network: {{NetworkName}}
+    network: mainnet
     source:
       abi: WildcatMarketController
     mapping:
@@ -311,7 +336,7 @@ templates:
       file: ./src/wildcat-market-controller.ts
   - kind: ethereum
     name: WildcatMarket
-    network: {{NetworkName}}
+    network: mainnet
     source:
       abi: WildcatMarket
     mapping:
@@ -432,7 +457,7 @@ templates:
       file: ./src/wildcat-market.ts
   - kind: ethereum
     name: CombinedHooks
-    network: {{NetworkName}}
+    network: mainnet
     source:
       abi: CombinedHooks
     mapping:
@@ -466,11 +491,11 @@ templates:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: OpenTermHooks
-          file: {{HooksAbiDir}}/OpenTermHooks.json
+          file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
-          file: {{HooksAbiDir}}/FixedTermHooks.json
+          file: ./abis/FixedTermHooks.json
         - name: PeriodicTermHooks
-          file: {{HooksAbiDir}}/PeriodicTermHooks.json
+          file: ./abis/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted

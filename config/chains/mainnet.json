@@ -1,0 +1,76 @@
+{
+  "configVersion": 1,
+  "schemaRelease": "2.5",
+  "network": "mainnet",
+  "chainId": 1,
+  "graphNetwork": "mainnet",
+  "deploymentTargetsReady": false,
+  "anchors": {
+    "archController": {
+      "address": "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4",
+      "startBlock": 18686645
+    },
+    "sanctionsSentinel": {
+      "address": "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A",
+      "startBlock": 18686645
+    }
+  },
+  "factories": [
+    {
+      "label": "standard-v2",
+      "manifestName": "HooksFactoryStandardV2",
+      "marketKind": "STANDARD",
+      "generation": "v2",
+      "abiFamily": "hooks-mainnet-current",
+      "address": "0xdd7dd3b5076cf89440d05585ff56d246386207be",
+      "startBlock": 21788182,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    }
+  ],
+  "wrapperFactories": [
+    {
+      "label": "wrapper-v1",
+      "manifestName": "Wildcat4626WrapperFactoryV1",
+      "generation": "v1",
+      "address": "0xEA6DE11f8F3F83c79bD9d8Db5517fCFDf2Bb148a",
+      "startBlock": 24750455,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    }
+  ],
+  "collateralFactories": [
+    {
+      "label": "collateral-v1",
+      "manifestName": "WildcatMarketCollateralFactory",
+      "generation": "v1",
+      "address": "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c",
+      "startBlock": 23167811,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
+  "features": {
+    "analytics": true,
+    "collateral": true,
+    "wrappers": true
+  },
+  "pricing": {
+    "mode": "CHAINLINK"
+  },
+  "compatibility": {
+    "canonicalFactoryByMarketKind": {
+      "STANDARD": "standard-v2"
+    },
+    "primaryWrapperFactory": "wrapper-v1",
+    "primaryCollateralFactory": "collateral-v1"
+  },
+  "provenance": {
+    "kind": "protocol-factory-inventory",
+    "source": "v2-protocol/deployments/mainnet/factory-inventory.json",
+    "schemaVersion": "1.1.0",
+    "sha256": "87d15ea62f69714cedd0b603aa2ff1d6f506b83c14477179b9aff82e01dbb312"
+  }
+}
