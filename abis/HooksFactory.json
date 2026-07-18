@@ -854,6 +854,11 @@
             "internalType": "address"
           },
           {
+            "name": "wrapperFactory",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
             "name": "maxTotalSupply",
             "type": "uint128",
             "internalType": "uint128"

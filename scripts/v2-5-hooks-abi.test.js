@@ -17,6 +17,14 @@ const loadSepoliaAbi = (contractName) =>
     )
   );
 
+const loadAbi = (contractName) =>
+  JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "..", "abis", `${contractName}.json`),
+      "utf8"
+    )
+  );
+
 const loadHookedMarketAbi = (variant, contractName) =>
   JSON.parse(
     fs.readFileSync(
@@ -39,6 +47,14 @@ const outputComponentNames = (abi, functionName) => {
   assert.ok(fn, `${functionName} is missing`);
   assert.equal(fn.outputs.length, 1);
   return fn.outputs[0].components.map(({ name }) => name);
+};
+
+const getFunction = (abi, functionName) => {
+  const fn = abi.find(
+    (entry) => entry.type === "function" && entry.name === functionName
+  );
+  assert.ok(fn, `${functionName} is missing`);
+  return fn;
 };
 
 const expectedComponents = {
@@ -82,3 +98,39 @@ for (const [contractName, components] of Object.entries(expectedComponents)) {
     ]);
   });
 }
+
+test("HooksFactory market parameters match the frozen V2.5 tuple", () => {
+  assert.deepEqual(outputComponentNames(loadAbi("HooksFactory"), "getMarketParameters"), [
+    "asset",
+    "decimals",
+    "packedNameWord0",
+    "packedNameWord1",
+    "packedSymbolWord0",
+    "packedSymbolWord1",
+    "borrower",
+    "feeRecipient",
+    "sentinel",
+    "wrapperFactory",
+    "maxTotalSupply",
+    "protocolFeeBips",
+    "annualInterestBips",
+    "delinquencyFeeBips",
+    "withdrawalBatchDuration",
+    "reserveRatioBips",
+    "delinquencyGracePeriod",
+    "archController",
+    "sphereXEngine",
+    "hooks",
+  ]);
+});
+
+test("WildcatMarket withdrawal and version declarations match V2.5", () => {
+  const abi = loadAbi("WildcatMarket");
+  const queueWithdrawal = getFunction(abi, "queueWithdrawal");
+  const version = getFunction(abi, "version");
+
+  assert.deepEqual(queueWithdrawal.outputs, [
+    { internalType: "uint32", name: "expiry", type: "uint32" },
+  ]);
+  assert.equal(version.stateMutability, "pure");
+});
