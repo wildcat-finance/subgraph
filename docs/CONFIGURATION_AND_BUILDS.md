@@ -17,8 +17,8 @@ sources.
 
 Do not edit `subgraph.yaml`, `uncrashable-config.yaml`, or `networks.json`
 directly. `scripts/generate-manifest.js` renders all three deterministically.
-`networks.json` remains a compatibility projection because the frozen protocol
-inventory validator reads it.
+`networks.json` remains a compatibility projection for legacy tooling; it is
+not the source for the refactored schema or deployment-target authority.
 
 ## Factory concepts
 
@@ -113,16 +113,15 @@ blocks:
 5. Change compatibility aliases only when the generated binding alias and the
    frozen protocol compatibility projection should move to the new factory.
 6. Run `yarn verify:all-networks`.
-7. From `v2-protocol`, run the offline inventory validator against this
-   subgraph directory for the affected network.
+7. Compare every hooks/wrapper generation, start block, indexing policy, and
+   selected deployment target against the completed protocol
+   `handoff-v2-5.json`, then record that review with the deployment artifacts.
 
-For example:
-
-```sh
-node scripts/validate-factory-inventory.js \
-  --network sepolia \
-  --subgraph-dir ../subgraph
-```
+There is currently no checked-in cross-repo validator for step 7. The older
+`scripts/validate-factory-inventory.js` command referenced by this guide is no
+longer present. Until a replacement is added, the protocol handoff plus
+`yarn verify:all-networks` and an explicit reviewed diff are the gate; do not
+claim automated cross-repo coverage.
 
 ## Current transitional constraint
 

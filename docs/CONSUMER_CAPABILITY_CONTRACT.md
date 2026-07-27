@@ -1,6 +1,7 @@
 # V2.5 Subgraph Consumer Capability Contract
 
-Status: accepted refactor input.
+Status: accepted refactor input; source migration implemented on the coordinated
+subgraph, SDK, and app feature branches. Live endpoint parity remains pending.
 
 The implemented old-to-new query mappings and consumer cutover obligations are
 recorded in `docs/V2_5_SCHEMA_MIGRATION.md`.
@@ -9,9 +10,9 @@ This document defines the observable data capabilities that the V2.5 subgraph
 replacement must preserve. It deliberately does not preserve the current
 GraphQL schema or mapping structure.
 
-The current SDK and app are reference consumers. They remain unchanged while
-the subgraph is rebuilt. Their migration begins only after a replacement
-endpoint satisfies this contract.
+The SDK and app paths below are a snapshot of the reference consumers at the
+start of the refactor. Their source migrations are now complete; the parity
+gate still applies to the replacement deployed endpoint.
 
 ## Authority boundary
 

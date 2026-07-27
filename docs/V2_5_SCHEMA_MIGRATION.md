@@ -1,6 +1,7 @@
 # V2.5 Subgraph Schema Migration
 
-Status: subgraph implementation complete; SDK and app migration pending.
+Status: subgraph implementation complete; SDK and app source migrations
+complete; deployed endpoint cutover pending.
 
 The V2.5 endpoint is a clean schema deployment. It does not attempt to remain
 query-compatible with earlier V2 endpoints. Historical factories and markets
@@ -118,27 +119,29 @@ analytics fields remain available. `IndexerDeployment` exposes the chain,
 schema release, configuration digest, optional-module flags, and pricing mode
 for endpoint introspection.
 
-## Known consumer cutover work
+## Consumer cutover status
 
-The current SDK GraphQL documents intentionally do not validate against this
-schema yet. Its migration must, at minimum:
+`wildcat.ts@feat/sdk-refactor` completed the required source migration:
 
-1. replace `FactoryHooksTemplateData` with a
+1. replaced `FactoryHooksTemplateData` with a
    `HooksTemplateRegistration` fragment;
-2. update hooks-instance and market fragments to follow
+2. updated hooks-instance and market fragments to follow
    `templateRegistration`;
-3. replace subgraph `marketType` reads with `marketKind` while preserving any
-   desired public SDK compatibility mapping;
-4. query all indexed factories for discovery but use only configured current
+3. replaced subgraph `marketType` reads with `marketKind` and SDK-owned public
+   domain types;
+4. queried all indexed factories for discovery but uses only configured current
    deployment targets for market creation;
-5. add collateral depositor `address`; and
-6. overlay freshness-sensitive snapshot values with lens/RPC data.
+5. added collateral depositor `address`; and
+6. overlaid freshness-sensitive snapshot values with named lens/RPC live reads.
 
-The app's direct borrower analytics query still sorts and reads
-`Market.createdAt`; that compatibility field is intentionally retained. Direct
-borrower stats, daily stats, and token-price fields are also retained. The app
-should move through the updated SDK where practical, and direct queries should
-be validated against the deployed V2.5 endpoint before endpoint cutover.
+`wildcat-app-v2@feat/app-refactor` now consumes the SDK-owned market, hooks,
+withdrawal, profile, and analytics models. It retains only documented
+app-owned notification/subscription/discovery GraphQL escape hatches.
+`Market.createdAt` remains intentionally available for compatibility.
+
+The remaining cutover work is to insert verified deployment targets and a
+hosted endpoint, refresh SDK endpoint metadata, and run fixed-block/live SDK
+and app smoke against the deployed V2.5 graph.
 
 ## Cutover gate
 
@@ -151,3 +154,7 @@ Do not point the released SDK or app at a V2.5 endpoint until:
 4. borrower analytics and collateral account fixtures pass;
 5. lens/RPC overlays replace freshness-sensitive values; and
 6. fixed-block parity checks confirm historical markets remain discoverable.
+
+Items 1-5 have local schema/fixture evidence on the refactor branches. Item 6
+and hosted endpoint validation remain deployment gates and must be repeated
+against the actual release endpoint.

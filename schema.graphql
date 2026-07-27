@@ -547,7 +547,7 @@ type RoleProvider @entity {
   providerAddress: Bytes! # address
   hooks: HooksInstance! # address
   # version: String!
-  timeToLive: Int!
+  timeToLive: BigInt!
   isPullProvider: Boolean!
   pullProviderIndex: Int!
   isPushProvider: Boolean!
@@ -689,7 +689,7 @@ type RoleProviderAdded @entity(immutable: true) {
   pullProviderIndex: Int!
   isPushProvider: Boolean!
   pushProviderIndex: Int!
-  timeToLive: Int!
+  timeToLive: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -727,7 +727,7 @@ type RoleProviderUpdated @entity(immutable: true) {
   pullProviderIndex: Int!
   isPushProvider: Boolean!
   pushProviderIndex: Int!
-  timeToLive: Int!
+  timeToLive: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
