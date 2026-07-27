@@ -75,9 +75,12 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     manifest.dataSources.map((source) => source.name),
     [
       "WildcatMarketCollateralFactory",
+      "Wildcat4626WrapperFactoryV1",
       "Wildcat4626WrapperFactory",
       "HooksFactory",
       "HooksFactoryLegacyV2",
+      "HooksFactoryStandardV2_1",
+      "HooksFactoryRevolvingPreview20260424",
       "HooksFactoryRevolving",
       "WildcatArchController",
       "WildcatSanctionsSentinel",
@@ -115,7 +118,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
   const standardFactory = sourceByName(manifest, "HooksFactory");
   assert.equal(
     contextData(standardFactory, standardFactory.source.address),
-    "STANDARD|v2.1|hooks-shared-current|FORCE_BUYBACK|7124440|true|false|ACTIVE|standard-v2.1|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+    "STANDARD|v2.5|hooks-sepolia-current|BASE|11363908|true|true|ACTIVE|standard-v2.5|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
   );
   assert.deepEqual(
     Object.keys(standardFactory.context).filter((key) =>
@@ -136,7 +139,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     Object.keys(sourceByName(manifest, "WildcatArchController").context).filter(
       (key) => key.startsWith("hooksFactory_")
     ).length,
-    7
+    9
   );
   assert.equal(
     sourceByName(manifest, "HooksFactoryRevolving_20260419_233246"),
@@ -148,17 +151,29 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
   );
   assert.equal(
     wrapperFactory.source.address,
-    "0x0566Fe57682164af689f1440cb3BCEedEe3bf843"
+    "0x8a77449eaBB1522983cd700f002b5b191463378e"
   );
-  assert.equal(wrapperFactory.source.startBlock, 10534112);
-  assert.equal(wrapperFactory.context.moduleFactoryLabel.data, "wrapper-v1");
-  assert.equal(wrapperFactory.context.moduleFactoryGeneration.data, "v1");
+  assert.equal(wrapperFactory.source.startBlock, 11363904);
+  assert.equal(wrapperFactory.context.moduleFactoryLabel.data, "wrapper-v2.5");
+  assert.equal(wrapperFactory.context.moduleFactoryGeneration.data, "v2.5");
   assert.equal(wrapperFactory.context.moduleFactoryIndexed.data, "true");
   assert.equal(
     wrapperFactory.context.moduleFactoryDeploymentTarget.data,
-    "false"
+    "true"
   );
   assert.equal(wrapperFactory.context.moduleFactoryLifecycle.data, "ACTIVE");
+  const legacyWrapperFactory = sourceByName(
+    manifest,
+    "Wildcat4626WrapperFactoryV1"
+  );
+  assert.equal(
+    legacyWrapperFactory.source.address,
+    "0x0566Fe57682164af689f1440cb3BCEedEe3bf843"
+  );
+  assert.equal(
+    legacyWrapperFactory.context.moduleFactoryDeploymentTarget.data,
+    "false"
+  );
 
   const collateralFactory = sourceByName(
     manifest,
@@ -223,18 +238,22 @@ test("legacy networks projection retains all inventory entries but aliases only 
   const networks = buildLegacyNetworks(configs);
   const sepolia = networks.sepolia;
 
-  assert.equal(sepolia.hooksFactories.length, 7);
+  assert.equal(sepolia.hooksFactories.length, 9);
   assert.equal(
     sepolia.hooksFactories.filter((factory) => factory.indexed).length,
-    3
+    5
   );
   assert.equal(
     sepolia.contracts.HooksFactory.address,
-    "0x10A64ABa0159720F8a23E1A552800CA4eb21576C"
+    "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C"
   );
   assert.equal(
     sepolia.contracts.HooksFactoryRevolving.address,
-    "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5"
+    "0x76Fe050d91940a72133e1819BF34c1042d8DBe73"
+  );
+  assert.equal(
+    sepolia.contracts.Wildcat4626WrapperFactory.address,
+    "0x8a77449eaBB1522983cd700f002b5b191463378e"
   );
   assert.equal(
     sepolia.hooksFactories.find(
@@ -250,21 +269,20 @@ test("legacy networks projection retains all inventory entries but aliases only 
   );
 });
 
-test("deployment-target state does not alter current compatibility aliases", () => {
+test("deployment-target changes do not alter current compatibility aliases", () => {
   const abiFamilies = loadAbiFamilies();
   const base = readYaml(MANIFEST_BASE_PATH);
   const config = loadChainConfig("sepolia", { abiFamilies });
   const modified = JSON.parse(JSON.stringify(config));
-  modified.deploymentTargetsReady = true;
-  modified.factories.find((factory) => factory.label === "standard-v2").deploymentTarget = true;
   modified.factories.find(
-    (factory) => factory.label === "revolving-preview-2026-04-24"
-  ).deploymentTarget = true;
+    (factory) => factory.label === "standard-v2.5"
+  ).deploymentTarget = false;
+  modified.factories.find((factory) => factory.label === "standard-v2").deploymentTarget = true;
 
   const manifest = buildManifest(modified, abiFamilies, base);
   assert.equal(
     sourceByName(manifest, "HooksFactory").source.address,
-    config.factories.find((factory) => factory.label === "standard-v2.1").address
+    config.factories.find((factory) => factory.label === "standard-v2.5").address
   );
   const standardTarget = modified.factories.find(
     (factory) => factory.label === "standard-v2"
