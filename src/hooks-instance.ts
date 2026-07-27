@@ -507,8 +507,10 @@ export function handleRoleProviderRemoved(
 
   roleProvider.isApproved = false;
   roleProvider.isPullProvider = false;
+  roleProvider.isPushProvider = false;
   roleProvider.timeToLive = BigInt.zero();
   roleProvider.pullProviderIndex = 0;
+  roleProvider.pushProviderIndex = 0;
   roleProvider.save();
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
