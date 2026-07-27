@@ -15,6 +15,11 @@ const POSITIVE_DECIMAL_PATTERN = /^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 const MARKET_KINDS = ["STANDARD", "REVOLVING"];
 const LIFECYCLES = ["active", "historical", "retired"];
 const HOOKED_MARKET_ABIS = ["BASE", "FORCE_BUYBACK"];
+const HOOKS_TEMPLATE_IDENTITIES = {
+  OpenTerm: "OpenTermHooks",
+  FixedTerm: "FixedTermHooks",
+  PeriodicTerm: "PeriodicTermHooks",
+};
 const PRICING_MODES = ["CHAINLINK", "SYNTHETIC_TESTNET", "NONE"];
 const REQUIRED_HOOKS_ABIS = [
   "HooksFactory",
@@ -34,6 +39,7 @@ const TOP_LEVEL_KEYS = [
   "graphNetwork",
   "deploymentTargetsReady",
   "anchors",
+  "hooksTemplates",
   "factories",
   "wrapperFactories",
   "collateralFactories",
@@ -104,6 +110,36 @@ function validateAnchor(anchor, context) {
   assertExactKeys(anchor, ["address", "startBlock"], context);
   assertAddress(anchor.address, `${context}.address`);
   assertStartBlock(anchor.startBlock, `${context}.startBlock`);
+}
+
+function validateHooksTemplates(templates, context) {
+  if (!Array.isArray(templates)) {
+    fail(context, "must be an array");
+  }
+  const addresses = new Set();
+  templates.forEach((template, index) => {
+    const itemContext = `${context}[${index}]`;
+    assertExactKeys(template, ["address", "kind", "version"], itemContext);
+    assertAddress(template.address, `${itemContext}.address`);
+    const expectedVersion = HOOKS_TEMPLATE_IDENTITIES[template.kind];
+    if (!expectedVersion) {
+      fail(
+        `${itemContext}.kind`,
+        `must be one of ${Object.keys(HOOKS_TEMPLATE_IDENTITIES).join(", ")}`
+      );
+    }
+    if (template.version !== expectedVersion) {
+      fail(
+        `${itemContext}.version`,
+        `must be ${expectedVersion} for ${template.kind}`
+      );
+    }
+    const address = template.address.toLowerCase();
+    if (addresses.has(address)) {
+      fail(itemContext, `duplicates address ${template.address}`);
+    }
+    addresses.add(address);
+  });
 }
 
 function validatePricing(pricing, context) {
@@ -415,7 +451,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   assertExactKeys(config, TOP_LEVEL_KEYS, expectedNetwork || "chainConfig");
   const context = `chainConfig.${config.network || expectedNetwork || "unknown"}`;
 
-  if (config.configVersion !== 1) fail(`${context}.configVersion`, "must be 1");
+  if (config.configVersion !== 2) fail(`${context}.configVersion`, "must be 2");
   if (config.schemaRelease !== "2.5") fail(`${context}.schemaRelease`, "must be 2.5");
   if (typeof config.network !== "string" || !LABEL_PATTERN.test(config.network)) {
     fail(`${context}.network`, "must be a lowercase network identifier");
@@ -432,6 +468,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   assertExactKeys(config.anchors, ["archController", "sanctionsSentinel"], `${context}.anchors`);
   validateAnchor(config.anchors.archController, `${context}.anchors.archController`);
   validateAnchor(config.anchors.sanctionsSentinel, `${context}.anchors.sanctionsSentinel`);
+  validateHooksTemplates(config.hooksTemplates, `${context}.hooksTemplates`);
 
   validateFactoryCollection(config.factories, `${context}.factories`, (factory, itemContext) =>
     validateHooksFactory(factory, itemContext, abiFamilies)
@@ -577,6 +614,19 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   ) {
     fail(context, "cannot declare deployment targets before deploymentTargetsReady is true");
   }
+  if (config.deploymentTargetsReady) {
+    const configuredKinds = new Set(
+      config.hooksTemplates.map((template) => template.kind)
+    );
+    for (const kind of Object.keys(HOOKS_TEMPLATE_IDENTITIES)) {
+      if (!configuredKinds.has(kind)) {
+        fail(
+          `${context}.hooksTemplates`,
+          `must include at least one ${kind} template when deployment targets are ready`
+        );
+      }
+    }
+  }
 
   const allAddresses = new Map();
   const addressEntries = [
@@ -590,6 +640,10 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     ...config.collateralFactories.map((factory) => [
       `collateralFactories.${factory.label}`,
       factory.address,
+    ]),
+    ...config.hooksTemplates.map((template, index) => [
+      `hooksTemplates[${index}]`,
+      template.address,
     ]),
   ];
   for (const [name, address] of addressEntries) {

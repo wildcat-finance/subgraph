@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "schemaRelease": "2.5",
   "network": "mainnet",
   "chainId": 1,
@@ -15,6 +15,7 @@
       "startBlock": 18686645
     }
   },
+  "hooksTemplates": [],
   "factories": [
     {
       "label": "standard-v2",

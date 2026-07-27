@@ -8,6 +8,7 @@ import { HooksFactory } from "../generated/schema";
 import { copyDeploymentContext } from "./deployment-context";
 
 const FACTORY_CONTEXT_PREFIX = "hooksFactory_";
+const HOOKS_TEMPLATE_CONTEXT_PREFIX = "hooksTemplate_";
 
 export const CONTEXT_FACTORY_ADDRESS = "factoryAddress";
 export const CONTEXT_FACTORY_MARKET_KIND = "factoryMarketKind";
@@ -55,8 +56,22 @@ export class ConfiguredHooksFactory {
   }
 }
 
+export class ConfiguredHooksTemplate {
+  version: string;
+  kind: string;
+
+  constructor(version: string, kind: string) {
+    this.version = version;
+    this.kind = kind;
+  }
+}
+
 export function configuredHooksFactoryContextKey(address: Address): string {
   return FACTORY_CONTEXT_PREFIX + address.toHexString().slice(2);
+}
+
+export function configuredHooksTemplateContextKey(address: Address): string {
+  return HOOKS_TEMPLATE_CONTEXT_PREFIX + address.toHexString().slice(2);
 }
 
 export function getConfiguredHooksFactory(
@@ -85,6 +100,22 @@ export function getConfiguredHooksFactory(
     parts[8],
     Address.fromString(parts[9])
   );
+}
+
+export function getConfiguredHooksTemplate(
+  address: Address
+): ConfiguredHooksTemplate | null {
+  let context = dataSource.context();
+  let key = configuredHooksTemplateContextKey(address);
+  if (!context.isSet(key)) {
+    return null;
+  }
+
+  let parts = context.getString(key).split("|");
+  if (parts.length != 2) {
+    return null;
+  }
+  return new ConfiguredHooksTemplate(parts[0], parts[1]);
 }
 
 export function createFactoryChildContext(

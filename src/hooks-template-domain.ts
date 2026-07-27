@@ -8,6 +8,7 @@ import {
 } from "../generated/schema";
 import { recordIndexerDiagnostic } from "./indexer-diagnostics";
 import { generateEventId } from "./utils";
+import { getConfiguredHooksTemplate } from "./factory-context";
 
 export function generateHooksTemplateId(template: Address): string {
   return template.toHexString();
@@ -35,7 +36,6 @@ export function getOrCreateHooksTemplate(
   let id = generateHooksTemplateId(address);
   let template = HooksTemplate.load(id);
   let isNew = template == null;
-  let versionResult = CombinedHooks.bind(address).try_version();
   if (template != null && template.abiFamily != abiFamily) {
     recordIndexerDiagnostic(
       event,
@@ -47,11 +47,20 @@ export function getOrCreateHooksTemplate(
       address
     );
   }
-  if (template != null && versionResult.reverted) {
-    return template;
+  let configuredTemplate = getConfiguredHooksTemplate(address);
+  let version = "Unknown";
+  let kind = "Unknown";
+  if (configuredTemplate != null) {
+    version = configuredTemplate.version;
+    kind = configuredTemplate.kind;
+  } else {
+    let versionResult = CombinedHooks.bind(address).try_version();
+    if (template != null && versionResult.reverted) {
+      return template;
+    }
+    version = versionResult.reverted ? "Unknown" : versionResult.value;
+    kind = hooksKindForVersion(version);
   }
-  let version = versionResult.reverted ? "Unknown" : versionResult.value;
-  let kind = hooksKindForVersion(version);
 
   if (template == null) {
     template = new HooksTemplate(id);

@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "schemaRelease": "2.5",
   "network": "sepolia",
   "chainId": 11155111,
@@ -15,6 +15,58 @@
       "startBlock": 4796511
     }
   },
+  "hooksTemplates": [
+    {
+      "address": "0xD26f107796582fDf64658d81E2170c7c05082E5f",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0xE6AEbE0Fd1f41053967907d6edD1801d77cbf969",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0xdb2d6EeB5ac72252955783fEe44f6667b63b7a11",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0x3D5f0AAcFC976A88fC8CA2Adbe0453Fe876a84bb",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x8B076B2502cDd5F86fc1710Cb0408Be0adEbF38d",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0xaacAcf6729391742CbE130D6C5aE76469C0600D6",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0x271EC1C852Bf7BF7E7eDdBf47B35E2ecdF3b328B",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0x2E8Bc3cc859f517535aD7A5352322F3926D9BEaa",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0x0ae2033719bE2D5aad4144De8406aCF5aC59cb17",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x52D1B53fc667ef5cbf1A792494266946cDa86fa7",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    }
+  ],
   "factories": [
     {
       "label": "standard-v2",

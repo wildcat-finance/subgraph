@@ -1,5 +1,5 @@
 {
-  "configVersion": 1,
+  "configVersion": 2,
   "schemaRelease": "2.5",
   "network": "plasma-testnet",
   "chainId": 9746,
@@ -15,6 +15,7 @@
       "startBlock": 2994800
     }
   },
+  "hooksTemplates": [],
   "factories": [
     {
       "label": "standard-v2",

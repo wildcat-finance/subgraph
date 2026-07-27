@@ -26,6 +26,7 @@ test("loads and validates every supported chain descriptor", () => {
   ]);
   const { configs } = loadAllChainConfigs();
   assert.equal(configs.length, 4);
+  assert.ok(configs.every(({ configVersion }) => configVersion === 2));
   assert.deepEqual(
     configs.map(({ chainId }) => chainId).sort((a, b) => a - b),
     [1, 9745, 9746, 11155111]
@@ -44,6 +45,11 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
 
   const sepolia = configs.find(({ network }) => network === "sepolia");
   assert.equal(sepolia.deploymentTargetsReady, true);
+  assert.equal(sepolia.hooksTemplates.length, 10);
+  assert.deepEqual(
+    [...new Set(sepolia.hooksTemplates.map(({ kind }) => kind))].sort(),
+    ["FixedTerm", "OpenTerm", "PeriodicTerm"]
+  );
   assert.deepEqual(
     sepolia.factories
       .filter((factory) => factory.deploymentTarget)
@@ -131,6 +137,29 @@ test("rejects duplicate addresses across configured source types", () => {
   assert.throws(
     () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /duplicates address/
+  );
+});
+
+test("rejects duplicate and inconsistent hooks-template identities", () => {
+  const abiFamilies = loadAbiFamilies();
+  const duplicate = clone(loadChainConfig("sepolia", { abiFamilies }));
+  duplicate.hooksTemplates[1].address = duplicate.hooksTemplates[0].address;
+  assert.throws(
+    () =>
+      validateChainConfig(duplicate, abiFamilies, {
+        expectedNetwork: "sepolia",
+      }),
+    /duplicates address/
+  );
+
+  const inconsistent = clone(loadChainConfig("sepolia", { abiFamilies }));
+  inconsistent.hooksTemplates[0].version = "FixedTermHooks";
+  assert.throws(
+    () =>
+      validateChainConfig(inconsistent, abiFamilies, {
+        expectedNetwork: "sepolia",
+      }),
+    /must be OpenTermHooks for OpenTerm/
   );
 });
 

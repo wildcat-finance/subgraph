@@ -9,6 +9,7 @@ const {
   buildLegacyNetworks,
   buildManifest,
   buildUncrashableConfig,
+  hooksTemplateContextKey,
   renderOutputs,
 } = require("./generate-manifest");
 const {
@@ -125,6 +126,18 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
       key.startsWith("hooksFactory_")
     ),
     [hooksFactoryContextKey(standardFactory.source.address)]
+  );
+  assert.equal(
+    standardFactory.context[
+      hooksTemplateContextKey("0x2E8Bc3cc859f517535aD7A5352322F3926D9BEaa")
+    ].data,
+    "OpenTermHooks|OpenTerm"
+  );
+  assert.equal(
+    Object.keys(standardFactory.context).filter((key) =>
+      key.startsWith("hooksTemplate_")
+    ).length,
+    10
   );
   assert.equal(standardFactory.context.pricingMode.data, "SYNTHETIC_TESTNET");
   assert.match(

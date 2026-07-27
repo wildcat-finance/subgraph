@@ -179,6 +179,22 @@ function addHooksFactoryContext(dataSource, config, factories, abiFamilies) {
   );
 }
 
+function hooksTemplateContextKey(address) {
+  return `hooksTemplate_${address.toLowerCase().slice(2)}`;
+}
+
+function addHooksTemplateContext(dataSource, templates) {
+  mergeContext(
+    dataSource,
+    Object.fromEntries(
+      templates.map((template) => [
+        hooksTemplateContextKey(template.address),
+        stringContext(`${template.version}|${template.kind}`),
+      ])
+    )
+  );
+}
+
 function addOptionalModuleFactoryContext(dataSource, factory) {
   mergeContext(dataSource, {
     moduleFactoryLabel: stringContext(factory.label),
@@ -278,6 +294,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
         : "./src/hooks-factory.ts";
     setAbiFiles(dataSource.mapping, abiFamilies[factory.abiFamily]);
     addHooksFactoryContext(dataSource, config, [factory], abiFamilies);
+    addHooksTemplateContext(dataSource, config.hooksTemplates);
     dataSources.push(dataSource);
   }
 
@@ -503,5 +520,6 @@ module.exports = {
   buildManifest,
   buildUncrashableConfig,
   generate,
+  hooksTemplateContextKey,
   renderOutputs,
 };
