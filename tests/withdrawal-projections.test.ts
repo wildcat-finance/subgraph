@@ -233,6 +233,12 @@ describe("withdrawal projections", () => {
     assert.fieldEquals(
       "LenderWithdrawalStatus",
       statusId,
+      "batchExpiry",
+      expiry.toString()
+    );
+    assert.fieldEquals(
+      "LenderWithdrawalStatus",
+      statusId,
       "updatedAtLogIndex",
       "8"
     );

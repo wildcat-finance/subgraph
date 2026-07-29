@@ -1157,6 +1157,7 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     {
       account: lender.id,
       batch: batch.id,
+      batchExpiry: expiry,
       updatedAtBlock: event.block.number,
       updatedAtTimestamp: event.block.timestamp,
       updatedAtTransaction: event.transaction.hash,

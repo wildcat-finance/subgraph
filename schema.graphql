@@ -1112,6 +1112,7 @@ type LenderWithdrawalStatus @entity {
   executionsCount: Int!
   account: LenderAccount!
   batch: WithdrawalBatch!
+  batchExpiry: BigInt!
   scaledAmount: BigInt!
   normalizedAmountWithdrawn: BigInt!
   totalNormalizedRequests: BigInt! # sum of amounts originally requested
