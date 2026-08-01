@@ -8,14 +8,20 @@ const subgraphName = process.argv[4] || network;
 const devDeployKey = process.env.DEV_DEPLOY_KEY;
 const devIpfsUrl = process.env.DEV_IPFS_URL;
 const devNodeUrl = process.env.DEV_NODE_URL;
+const sentioApiKey = process.env.SENTIO_API_KEY;
 
 if (!network) {
-  console.error("Usage: yarn deploy <provider> <network> <subgraph-name>");
+  console.error("Usage: yarn deploy <provider> <network> [subgraph-name] [version-label]");
   process.exit(1);
 }
 
 if (!provider) {
-  console.error("Usage: yarn deploy <provider> <network> <subgraph-name>");
+  console.error("Usage: yarn deploy <provider> <network> [subgraph-name] [version-label]");
+  process.exit(1);
+}
+
+if (provider === "sentio" && !sentioApiKey) {
+  console.error("SENTIO_API_KEY must be set");
   process.exit(1);
 }
 
@@ -24,9 +30,11 @@ function run(cmd) {
   execSync(cmd, { stdio: "inherit" });
 }
 
-const version = execSync("node scripts/next-version")
-  .toString()
-  .trim();
+const version =
+  process.argv[5] ||
+  execSync("node scripts/next-version")
+    .toString()
+    .trim();
 
 console.log(
   `Deploying ${subgraphName}@${version} to ${network} with ${provider}`
@@ -57,6 +65,12 @@ switch (provider) {
     );
     break;
 
+  case "sentio":
+    run(
+      `graph deploy --node https://app.sentio.xyz/api/v1/graph-node --ipfs https://app.sentio.xyz/api/v1/ipfs ${subgraphName} --version-label ${version} --deploy-key "$SENTIO_API_KEY"`
+    );
+    break;
+
   case "alchemy":
     throw Error(`Alchemy subgraph support is deprecated. Use Goldsky instead.`)
     // run(
@@ -68,6 +82,6 @@ switch (provider) {
     break;
 
   default:
-    console.error("Unknown provider. Use: thegraph | alchemy | goldsky | dev");
+    console.error("Unknown provider. Use: thegraph | alchemy | goldsky | sentio | dev");
     process.exit(1);
 }
