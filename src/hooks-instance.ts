@@ -48,7 +48,7 @@ import {
   FixedTermUpdated as FixedTermUpdatedEvent,
   NameUpdated as NameUpdatedEvent,
 } from "../generated/templates/CombinedHooks/CombinedHooks";
-import { log } from '@graphprotocol/graph-ts'
+import { BigInt, log } from "@graphprotocol/graph-ts";
 function generateHooksInstanceEventId(hooks: HooksInstance): string {
   return "RECORD" + "-" + hooks.id + "-" + hooks.eventIndex.toString();
 }
@@ -275,7 +275,7 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
     generateRoleProviderId(event.address, event.params.providerAddress),
     {
       hooks: hooks.id,
-      timeToLive: event.params.timeToLive.toI32(),
+      timeToLive: event.params.timeToLive,
       isPullProvider: event.params.pullProviderIndex != nullProviderIndex,
       pullProviderIndex: event.params.pullProviderIndex,
       providerAddress: event.params.providerAddress,
@@ -285,7 +285,7 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
     }
   );
   if (!roleProvider.wasCreated) {
-    roleProvider.entity.timeToLive = event.params.timeToLive.toI32();
+    roleProvider.entity.timeToLive = event.params.timeToLive;
     roleProvider.entity.isPullProvider =
       event.params.pullProviderIndex != nullProviderIndex;
     roleProvider.entity.pullProviderIndex = event.params.pullProviderIndex;
@@ -333,8 +333,10 @@ export function handleRoleProviderRemoved(
 
   roleProvider.isApproved = false;
   roleProvider.isPullProvider = false;
-  roleProvider.timeToLive = 0;
+  roleProvider.isPushProvider = false;
+  roleProvider.timeToLive = BigInt.zero();
   roleProvider.pullProviderIndex = 0;
+  roleProvider.pushProviderIndex = 0;
   roleProvider.save();
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
@@ -351,7 +353,7 @@ export function handleRoleProviderUpdated(
   let nullProviderIndex = 2 ** 24 - 1;
   roleProvider.pullProviderIndex = event.params.pullProviderIndex;
   roleProvider.pushProviderIndex = event.params.pushProviderIndex;
-  roleProvider.timeToLive = event.params.timeToLive.toI32();
+  roleProvider.timeToLive = event.params.timeToLive;
   roleProvider.isPullProvider =
     roleProvider.pullProviderIndex != nullProviderIndex;
   roleProvider.isPushProvider =

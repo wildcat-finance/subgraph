@@ -7,12 +7,16 @@ const network = process.argv[3];
 const subgraphName = process.argv[4] || network;
 
 if (!network) {
-  console.error("Usage: yarn deploy <provider> <network> <subgraph-name>");
+  console.error(
+    "Usage: SUBGRAPH_VERSION_LABEL=<label> yarn deploy <provider> <network> [subgraph-name]"
+  );
   process.exit(1);
 }
 
 if (!provider) {
-  console.error("Usage: yarn deploy <provider> <network> <subgraph-name>");
+  console.error(
+    "Usage: SUBGRAPH_VERSION_LABEL=<label> yarn deploy <provider> <network> [subgraph-name]"
+  );
   process.exit(1);
 }
 
@@ -21,9 +25,13 @@ function run(cmd) {
   execSync(cmd, { stdio: "inherit" });
 }
 
-const version = execSync("node scripts/next-version")
-  .toString()
-  .trim();
+const version =
+  process.env.SUBGRAPH_VERSION_LABEL ||
+  execSync("node scripts/next-version").toString().trim();
+
+if (!/^[A-Za-z0-9._-]+$/.test(version)) {
+  throw Error(`Invalid subgraph version label: ${version}`);
+}
 
 console.log(
   `Deploying ${subgraphName}@${version} to ${network} with ${provider}`

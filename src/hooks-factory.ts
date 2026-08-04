@@ -53,7 +53,7 @@ import {
   WildcatMarket as MarketTemplate,
 } from "../generated/templates";
 
-function generateRecordId(id: string, eventIndex: number): string {
+function generateRecordId(id: string, eventIndex: i32): string {
   return "RECORD" + "-" + id + "-" + eventIndex.toString();
 }
 
@@ -287,23 +287,26 @@ function decodeAndCreateRoleProvider(
   event: ethereum.Event,
   hooksAddress: Bytes,
   hooksInstanceId: string,
-  eventIndex: number,
+  eventIndex: i32,
   encodedRoleProvider: BigInt
 ): RoleProvider {
   let nullProviderIndex = 2 ** 24 - 1;
+  let providerIndexMask = BigInt.fromI32(nullProviderIndex);
   let hooksConfigBytes = encodedRoleProvider
     .toHex()
     .replace("0x", "")
     .padStart(64, "0");
 
-  let timeToLive = Bytes.fromHexString(hooksConfigBytes.slice(0, 8)).toI32();
+  let timeToLive = encodedRoleProvider.rightShift(224);
   let providerAddress = Bytes.fromHexString(hooksConfigBytes.slice(8, 48));
-  let pullProviderIndex = Bytes.fromHexString(
-    hooksConfigBytes.slice(48, 54)
-  ).toI32();
-  let pushProviderIndex = Bytes.fromHexString(
-    hooksConfigBytes.slice(54, 60)
-  ).toI32();
+  let pullProviderIndex = encodedRoleProvider
+    .rightShift(40)
+    .bitAnd(providerIndexMask)
+    .toI32();
+  let pushProviderIndex = encodedRoleProvider
+    .rightShift(16)
+    .bitAnd(providerIndexMask)
+    .toI32();
   let isPullProvider = pullProviderIndex !== nullProviderIndex;
   let isPushProvider = pushProviderIndex !== nullProviderIndex;
   let providerId = generateRoleProviderId(hooksAddress, providerAddress);
@@ -475,6 +478,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       protocolFeeBips: hooksTemplate.protocolFeeBips,
       sentinel: hooksFactory.sentinel,
       scaleFactor: BigInt.fromI32(10).pow(27),
+      totalAssets: IERC20.bind(params.asset).balanceOf(params.market),
       maxTotalSupply: params.maxTotalSupply,
       lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
       lastInterestAccruedBlockNumber: event.block.number.toI32(),
