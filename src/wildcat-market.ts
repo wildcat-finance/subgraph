@@ -121,6 +121,13 @@ function getOrCreateMarketDailyStats(market: Market, timestamp: BigInt): GetOrCr
   });
 }
 
+function getTotalAssets(market: Market, marketAddress: Address): BigInt {
+  let assetAddress = market.asset.slice(market.asset.indexOf("0x"));
+  return IERC20.bind(
+    Address.fromBytes(Bytes.fromHexString(assetAddress))
+  ).balanceOf(marketAddress);
+}
+
 // function getOrCreateLenderAccount(
 //   market: Market,
 //   marketAddress: Address,
@@ -573,12 +580,10 @@ export function handleStateUpdated(event: StateUpdatedEvent): void {
   let isDelinquent = event.params.isDelinquent;
   let marketId = generateMarketId(event.address);
   let market = getMarket(marketId);
+  let totalAssets = getTotalAssets(market, event.address);
+  market.totalAssets = totalAssets;
   if (market.isDelinquent != isDelinquent) {
     market.isDelinquent = isDelinquent;
-    let assetAddress = market.asset.slice(market.asset.indexOf(`0x`));
-    let totalAssets = IERC20.bind(
-      Address.fromBytes(Bytes.fromHexString(assetAddress))
-    ).balanceOf(event.address);
     let liquidityRequired = calculateLiquidityRequired(market);
     createDelinquencyStatusChanged(generateMarketEventId(market), {
       blockNumber: event.block.number.toI32(),

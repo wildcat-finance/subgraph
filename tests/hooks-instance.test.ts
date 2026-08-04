@@ -9,19 +9,27 @@ import {
   AnnualInterestBipsReductionProposed,
   PeriodicTermClosed,
   PeriodicTermUpdated,
+  RoleProviderAdded,
+  RoleProviderRemoved,
+  RoleProviderUpdated,
 } from "../generated/templates/CombinedHooks/CombinedHooks";
 import { AnnualInterestBipsUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import { HooksConfig } from "../generated/schema";
 import {
+  createHooksInstance,
   createMarket,
   generateHooksConfigId,
   generateHooksInstanceId,
   generateMarketId,
+  generateRoleProviderId,
 } from "../generated/UncrashableEntityHelpers";
 import {
   handleAnnualInterestBipsReductionProposed,
   handlePeriodicTermClosed,
   handlePeriodicTermUpdated,
+  handleRoleProviderAdded,
+  handleRoleProviderRemoved,
+  handleRoleProviderUpdated,
 } from "../src/hooks-instance";
 import { handleAnnualInterestBipsUpdated } from "../src/wildcat-market";
 import { newMockEvent } from "matchstick-as";
@@ -31,6 +39,9 @@ let hooksAddress = Address.fromString(
 );
 let marketAddress = Address.fromString(
   "0x0000000000000000000000000000000000002002"
+);
+let providerAddress = Address.fromString(
+  "0x0000000000000000000000000000000000003003"
 );
 
 function marketId(): string {
@@ -60,6 +71,7 @@ function saveMarket(): void {
     delinquencyFeeBips: 0,
     asset: "asset",
     withdrawalBatchDuration: 0,
+    totalAssets: BigInt.zero(),
     maxTotalSupply: BigInt.zero(),
     annualInterestBips: 1200,
     reserveRatioBips: 0,
@@ -69,6 +81,16 @@ function saveMarket(): void {
     numCollateralContracts: 0,
     createdAt: 0,
     deployedEvent: "deployed-event",
+  });
+}
+
+function saveHooksInstance(): void {
+  createHooksInstance(generateHooksInstanceId(hooksAddress), {
+    name: "role provider test hooks",
+    kind: "PeriodicTerm",
+    borrower: providerAddress,
+    hooksTemplate: "hooks-template",
+    hooksFactory: "hooks-factory",
   });
 }
 
@@ -207,6 +229,104 @@ function createAnnualInterestBipsUpdatedEvent(
   return event;
 }
 
+function createRoleProviderAddedEvent(
+  timeToLive: BigInt,
+  pullProviderIndex: i32,
+  pushProviderIndex: i32
+): RoleProviderAdded {
+  let event = changetype<RoleProviderAdded>(newMockEvent());
+  event.address = hooksAddress;
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "providerAddress",
+      ethereum.Value.fromAddress(providerAddress)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "timeToLive",
+      ethereum.Value.fromUnsignedBigInt(timeToLive)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pullProviderIndex",
+      ethereum.Value.fromI32(pullProviderIndex)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pushProviderIndex",
+      ethereum.Value.fromI32(pushProviderIndex)
+    )
+  );
+  return event;
+}
+
+function createRoleProviderUpdatedEvent(
+  timeToLive: BigInt,
+  pullProviderIndex: i32,
+  pushProviderIndex: i32
+): RoleProviderUpdated {
+  let event = changetype<RoleProviderUpdated>(newMockEvent());
+  event.address = hooksAddress;
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "providerAddress",
+      ethereum.Value.fromAddress(providerAddress)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "timeToLive",
+      ethereum.Value.fromUnsignedBigInt(timeToLive)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pullProviderIndex",
+      ethereum.Value.fromI32(pullProviderIndex)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pushProviderIndex",
+      ethereum.Value.fromI32(pushProviderIndex)
+    )
+  );
+  return event;
+}
+
+function createRoleProviderRemovedEvent(
+  pullProviderIndex: i32,
+  pushProviderIndex: i32
+): RoleProviderRemoved {
+  let event = changetype<RoleProviderRemoved>(newMockEvent());
+  event.address = hooksAddress;
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "providerAddress",
+      ethereum.Value.fromAddress(providerAddress)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pullProviderIndex",
+      ethereum.Value.fromI32(pullProviderIndex)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pushProviderIndex",
+      ethereum.Value.fromI32(pushProviderIndex)
+    )
+  );
+  return event;
+}
+
 describe("periodic term hooks events", () => {
   test("updates periodic term config and records the event", () => {
     setupMarketAndConfig();
@@ -288,5 +408,68 @@ describe("periodic term hooks events", () => {
       "0"
     );
     assert.fieldEquals("Market", marketId(), "annualInterestBips", "900");
+  });
+});
+
+describe("role provider events", () => {
+  test("preserves max TTL and updates provider classifications", () => {
+    clearStore();
+    saveHooksInstance();
+
+    let nullProviderIndex = 2 ** 24 - 1;
+    let providerId = generateRoleProviderId(hooksAddress, providerAddress);
+    let hooksId = generateHooksInstanceId(hooksAddress);
+
+    handleRoleProviderAdded(
+      createRoleProviderAddedEvent(
+        BigInt.fromString("4294967295"),
+        nullProviderIndex,
+        0
+      )
+    );
+    assert.fieldEquals("RoleProvider", providerId, "timeToLive", "4294967295");
+    assert.fieldEquals("RoleProvider", providerId, "isPullProvider", "false");
+    assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "true");
+
+    handleRoleProviderUpdated(
+      createRoleProviderUpdatedEvent(BigInt.zero(), 0, nullProviderIndex)
+    );
+    assert.fieldEquals("RoleProvider", providerId, "timeToLive", "0");
+    assert.fieldEquals("RoleProvider", providerId, "isPullProvider", "true");
+    assert.fieldEquals("RoleProvider", providerId, "pullProviderIndex", "0");
+    assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "false");
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "pushProviderIndex",
+      "16777215"
+    );
+    assert.fieldEquals("HooksInstance", hooksId, "eventIndex", "2");
+  });
+
+  test("clears pull and push state when a provider is removed", () => {
+    clearStore();
+    saveHooksInstance();
+
+    let nullProviderIndex = 2 ** 24 - 1;
+    let providerId = generateRoleProviderId(hooksAddress, providerAddress);
+
+    handleRoleProviderAdded(
+      createRoleProviderAddedEvent(
+        BigInt.fromString("4294967295"),
+        nullProviderIndex,
+        0
+      )
+    );
+    handleRoleProviderRemoved(
+      createRoleProviderRemovedEvent(nullProviderIndex, 0)
+    );
+
+    assert.fieldEquals("RoleProvider", providerId, "isApproved", "false");
+    assert.fieldEquals("RoleProvider", providerId, "timeToLive", "0");
+    assert.fieldEquals("RoleProvider", providerId, "isPullProvider", "false");
+    assert.fieldEquals("RoleProvider", providerId, "pullProviderIndex", "0");
+    assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "false");
+    assert.fieldEquals("RoleProvider", providerId, "pushProviderIndex", "0");
   });
 });

@@ -292,7 +292,7 @@ type RoleProvider @entity {
   providerAddress: Bytes! # address
   hooks: HooksInstance! # address
   # version: String!
-  timeToLive: Int!
+  timeToLive: BigInt!
   isPullProvider: Boolean!
   pullProviderIndex: Int!
   isPushProvider: Boolean!
@@ -411,7 +411,7 @@ type RoleProviderAdded @entity(immutable: true) {
   pullProviderIndex: Int!
   isPushProvider: Boolean!
   pushProviderIndex: Int!
-  timeToLive: Int!
+  timeToLive: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -449,7 +449,7 @@ type RoleProviderUpdated @entity(immutable: true) {
   pullProviderIndex: Int!
   isPushProvider: Boolean!
   pushProviderIndex: Int!
-  timeToLive: Int!
+  timeToLive: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -841,6 +841,8 @@ type Market @entity {
 
   # ---------------------------------- State --------------------------------- #
   isClosed: Boolean!
+  # Balance of the underlying asset held by the market at the indexed block
+  totalAssets: BigInt!
   maxTotalSupply: BigInt!
   pendingProtocolFees: BigInt!
   # Underlying assets reserved for withdrawals which have been paid
