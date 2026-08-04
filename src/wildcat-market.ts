@@ -611,23 +611,31 @@ export function handleTransfer(event: TransferEvent): void {
       fromAddress,
       event.block.timestamp
     ).entity;
-    let to = getOrCreateLenderAccount(
-      market,
-      event.address,
-      toAddress,
-      event.block.timestamp
-    ).entity;
-    processLenderInterestAccrued(event, from, market);
-    processLenderInterestAccrued(event, to, market);
     let scaledAmount = rayDiv(value, market.scaleFactor);
-    from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
-    to.scaledBalance = to.scaledBalance.plus(scaledAmount);
-    from.save();
-    to.save();
+    let toId = from.id;
+    if (fromAddress.equals(toAddress)) {
+      // Do not update the same lender twice or write its immutable interest record twice.
+      processLenderInterestAccrued(event, from, market);
+      from.save();
+    } else {
+      let to = getOrCreateLenderAccount(
+        market,
+        event.address,
+        toAddress,
+        event.block.timestamp
+      ).entity;
+      processLenderInterestAccrued(event, from, market);
+      processLenderInterestAccrued(event, to, market);
+      from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
+      to.scaledBalance = to.scaledBalance.plus(scaledAmount);
+      from.save();
+      to.save();
+      toId = to.id;
+    }
     createTransfer(generateEventId(event), {
       market: market.id,
       from: from.id,
-      to: to.id,
+      to: toId,
       scaledAmount: scaledAmount,
       amount: value,
       blockNumber: event.block.number.toI32(),

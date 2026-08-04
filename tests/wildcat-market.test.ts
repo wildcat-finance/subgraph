@@ -8,17 +8,25 @@ import { createMockedFunction, newMockEvent } from "matchstick-as";
 import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
+  createLenderAccount,
   createMarket,
+  generateLenderAccountId,
   generateMarketId,
   generateTokenId,
+  getMarket,
 } from "../generated/UncrashableEntityHelpers";
-import { handleStateUpdated } from "../src/wildcat-market";
+import { handleStateUpdated, handleTransfer } from "../src/wildcat-market";
+import { generateEventId } from "../src/utils";
+import { createTransferEvent } from "./wildcat-market-utils";
 
 let marketAddress = Address.fromString(
   "0x0000000000000000000000000000000000001001"
 );
 let assetAddress = Address.fromString(
   "0x0000000000000000000000000000000000001002"
+);
+let lenderAddress = Address.fromString(
+  "0x0000000000000000000000000000000000001003"
 );
 
 function marketId(): string {
@@ -113,5 +121,60 @@ describe("market total assets", () => {
       "totalAssets",
       "456"
     );
+  });
+});
+
+describe("market transfers", () => {
+  test("self-transfers accrue interest once without changing the balance", () => {
+    clearStore();
+
+    let ray = BigInt.fromI32(10).pow(27);
+    let marketScaleFactor = BigInt.fromI32(11).times(
+      BigInt.fromI32(10).pow(26)
+    );
+    saveMarket();
+    let market = getMarket(marketId());
+    market.scaleFactor = marketScaleFactor;
+    market.save();
+
+    let lenderId = generateLenderAccountId(marketAddress, lenderAddress);
+    let lender = createLenderAccount(lenderId, {
+      address: lenderAddress,
+      market: marketId(),
+      lastScaleFactor: ray,
+      lastUpdatedTimestamp: 0,
+      lastUpdatedBlockNumber: 0,
+      controllerAuthorization: null,
+      hooksAccess: null,
+      addedTimestamp: 0,
+    });
+    lender.scaledBalance = BigInt.fromI32(100);
+    lender.save();
+
+    let event = createTransferEvent(
+      lenderAddress,
+      lenderAddress,
+      BigInt.fromI32(55)
+    );
+    event.address = marketAddress;
+    handleTransfer(event);
+
+    let eventId = generateEventId(event);
+    assert.fieldEquals("LenderAccount", lenderId, "scaledBalance", "100");
+    assert.fieldEquals(
+      "LenderAccount",
+      lenderId,
+      "lastScaleFactor",
+      marketScaleFactor.toString()
+    );
+    assert.fieldEquals("LenderAccount", lenderId, "totalInterestEarned", "10");
+    assert.entityCount("LenderInterestAccrued", 1);
+    assert.fieldEquals("LenderInterestAccrued", eventId, "account", lenderId);
+    assert.fieldEquals("LenderInterestAccrued", eventId, "interestEarned", "10");
+    assert.entityCount("Transfer", 1);
+    assert.fieldEquals("Transfer", eventId, "from", lenderId);
+    assert.fieldEquals("Transfer", eventId, "to", lenderId);
+    assert.fieldEquals("Transfer", eventId, "amount", "55");
+    assert.fieldEquals("Transfer", eventId, "scaledAmount", "50");
   });
 });

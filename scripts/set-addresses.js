@@ -5,6 +5,11 @@ const networkId = process.argv[2];
 if (!networks[networkId]) {
   throw Error(`No deployments for network: ${networkId}`);
 }
+// Plasma deployments use the same pre-force-buyback hooks ABI as mainnet.
+const abiNetworkId = {
+  "plasma-testnet": "mainnet",
+  "plasma-mainnet": "mainnet",
+}[networkId] ?? networkId;
 let subgraphTemplateYamlName = 'subgraph.template.yaml';
 if (networkId.toLowerCase().includes("plasma")) {
   subgraphTemplateYamlName = "plasma-subgraph.template.yaml";
@@ -41,7 +46,7 @@ function replaceNetworkAbis() {
   const networkAbisDir = path.join(
     __dirname,
     "../network-specific-abis",
-    networkId
+    abiNetworkId
   );
   const abisDir = path.join(__dirname, "../abis");
   if (!fs.existsSync(networkAbisDir)) {
