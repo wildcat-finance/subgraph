@@ -11,20 +11,28 @@ export function recordMarketEvent(
   market: Market,
   kind: string
 ): MarketEvent {
+  return recordMarketEventForMarketId(event, market.id, kind);
+}
+
+export function recordMarketEventForMarketId(
+  event: ethereum.Event,
+  marketId: string,
+  kind: string
+): MarketEvent {
   let id = generateEventId(event);
   if (MarketEvent.load(id) != null) {
     log.critical("Duplicate MarketEvent for trigger {}", [id]);
   }
 
-  let cursor = MarketEventCursor.load(market.id);
+  let cursor = MarketEventCursor.load(marketId);
   if (cursor == null) {
-    cursor = new MarketEventCursor(market.id);
-    cursor.market = market.id;
+    cursor = new MarketEventCursor(marketId);
+    cursor.market = marketId;
     cursor.nextSequence = 0;
   }
 
   let record = new MarketEvent(id);
-  record.market = market.id;
+  record.market = marketId;
   record.sequence = cursor.nextSequence;
   record.kind = kind;
   record.blockNumber = event.block.number;

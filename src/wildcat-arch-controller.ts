@@ -35,6 +35,7 @@ import { WildcatMarketControllerFactory } from "../generated/WildcatArchControll
 import { HooksFactory as HooksFactoryContract } from "../generated/WildcatArchController/HooksFactory";
 import {
   ControllerFactory,
+  Controller,
   FactoryRegistration,
   FactoryRegistrationEvent,
   HooksFactory,
@@ -51,7 +52,10 @@ import {
 } from "./factory-domain";
 import { getConfiguredHooksFactory } from "./factory-context";
 import { recordIndexerDiagnostic } from "./indexer-diagnostics";
-import { recordMarketEvent } from "./market-event-domain";
+import {
+  recordMarketEvent,
+  recordMarketEventForMarketId,
+} from "./market-event-domain";
 import { getOrCreateBorrower } from "./borrower-domain";
 import {
   createDeploymentChildContext,
@@ -390,15 +394,25 @@ export function handleControllerRemoved(event: ControllerRemovedEvent): void {
 
 export function handleMarketAdded(event: MarketAddedEvent): void {
   ensureIndexerDeployment(event);
-  let market = Market.load(generateMarketId(event.params.market));
+  let controllerAddress = event.params.controller;
+  let controller = Controller.load(generateControllerId(controllerAddress));
+  let hooksFactory = HooksFactory.load(controllerAddress.toHexString());
+  let marketId = generateMarketId(event.params.market);
+  let market = Market.load(marketId);
   if (market != null) {
     market.isRegistered = true;
     market.save();
     recordMarketEvent(event, market, "MARKET_REGISTERED");
+  } else if (controller != null || hooksFactory != null) {
+    // Initial registration precedes the deployment event that creates Market.
+    recordMarketEventForMarketId(event, marketId, "MARKET_REGISTERED");
   }
   createMarketAdded(generateEventId(event), {
-    controller: event.params.controller.toHex(),
-    market: event.params.market.toHex(),
+    controllerAddress,
+    controller: controller == null ? null : controller.id,
+    hooksFactory: hooksFactory == null ? null : hooksFactory.id,
+    marketAddress: event.params.market,
+    market: marketId,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,

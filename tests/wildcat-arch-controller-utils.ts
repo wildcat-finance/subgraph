@@ -5,6 +5,7 @@ import {
   BorrowerRemoved,
   ControllerFactoryAdded,
   ControllerFactoryRemoved,
+  MarketAdded,
 } from "../generated/WildcatArchController/WildcatArchController";
 
 export function createBorrowerAddedEvent(borrower: Address): BorrowerAdded {
@@ -49,6 +50,24 @@ export function createControllerFactoryRemovedEvent(
       "controllerFactory",
       ethereum.Value.fromAddress(factory)
     )
+  );
+  return event;
+}
+
+export function createMarketAddedEvent(
+  controller: Address,
+  market: Address
+): MarketAdded {
+  let event = changetype<MarketAdded>(newMockEvent());
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "controller",
+      ethereum.Value.fromAddress(controller)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam("market", ethereum.Value.fromAddress(market))
   );
   return event;
 }
