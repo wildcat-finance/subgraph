@@ -22,7 +22,7 @@
       "manifestName": "HooksFactoryStandardV2",
       "marketKind": "STANDARD",
       "generation": "v2",
-      "abiFamily": "hooks-shared-current",
+      "abiFamily": "hooks-mainnet-current",
       "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
       "startBlock": 2994816,
       "indexed": true,

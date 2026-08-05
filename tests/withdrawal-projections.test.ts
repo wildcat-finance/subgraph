@@ -115,7 +115,7 @@ function seedMarket(event: ethereum.Event): Market {
 }
 
 describe("withdrawal projections", () => {
-  test("stamps market, lender, batch, and lender-withdrawal state", () => {
+  test("stamps withdrawal state without counting batch payments as debt repayment", () => {
     clearStore();
 
     let creationEvent = changetype<ethereum.Event>(newMockEvent());
@@ -155,6 +155,13 @@ describe("withdrawal projections", () => {
     );
     positionEvent(payment, 5);
     handleWithdrawalBatchPayment(payment);
+
+    assert.fieldEquals(
+      "MarketDailyStats",
+      generateMarketId(MARKET) + "-0",
+      "dayRepaid",
+      "0"
+    );
 
     let expired = createWithdrawalBatchExpiredEvent(
       expiry,

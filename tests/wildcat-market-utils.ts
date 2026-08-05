@@ -9,6 +9,7 @@ import {
   MarketClosed,
   SanctionedAccountAssetsQueuedForWithdrawal,
   StateUpdated,
+  Transfer,
   WithdrawalBatchClosed,
   WithdrawalBatchCreated,
   WithdrawalBatchExpired,
@@ -314,6 +315,28 @@ export function createStateUpdatedEvent(
     new ethereum.EventParam(
       "isDelinquent",
       ethereum.Value.fromBoolean(isDelinquent)
+    )
+  );
+  return event;
+}
+
+export function createTransferEvent(
+  from: Address,
+  to: Address,
+  value: BigInt
+): Transfer {
+  let event = changetype<Transfer>(newMockEvent());
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam("from", ethereum.Value.fromAddress(from))
+  );
+  event.parameters.push(
+    new ethereum.EventParam("to", ethereum.Value.fromAddress(to))
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "value",
+      ethereum.Value.fromUnsignedBigInt(value)
     )
   );
   return event;

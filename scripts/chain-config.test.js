@@ -97,6 +97,21 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
   });
 });
 
+test("keeps legacy Plasma factories on the base hooked-market ABI", () => {
+  const abiFamilies = loadAbiFamilies();
+  for (const network of ["plasma-mainnet", "plasma-testnet"]) {
+    const config = loadChainConfig(network, { abiFamilies });
+    assert.deepEqual(
+      config.factories.map(({ abiFamily }) => abiFamily),
+      ["hooks-mainnet-current"]
+    );
+    assert.equal(
+      abiFamilies[config.factories[0].abiFamily].hookedMarketAbi,
+      "BASE"
+    );
+  }
+});
+
 test("derives current manifest aliases from the live Sepolia V2.5 targets", () => {
   const sepolia = loadChainConfig("sepolia");
   const standard = sepolia.factories.find((factory) => factory.label === "standard-v2.5");

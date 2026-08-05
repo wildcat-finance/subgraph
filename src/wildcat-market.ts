@@ -79,6 +79,7 @@ import {
   SanctionedAccountAssetsSentToEscrow,
   SanctionedAccountWithdrawalSentToEscrow,
   LenderAccount,
+  LenderStats,
   Market,
   WithdrawalBatch,
   HooksConfig,
@@ -322,6 +323,36 @@ function processLenderInterestAccrued(
     lender.lastUpdatedBlockNumber = event.block.number.toI32();
   }
   return interestEarned;
+}
+
+function updateLenderInterestStats(
+  event: ethereum.Event,
+  lenderAddress: Address,
+  lenderStats: LenderStats,
+  interest: BigInt,
+  priceMul: BigDecimal
+): void {
+  if (priceMul.equals(BigDecimal.zero())) {
+    return;
+  }
+  if (!interest.isZero()) {
+    lenderStats.totalInterestEarnedUSD =
+      lenderStats.totalInterestEarnedUSD.plus(
+        amountToUSD(interest, priceMul)
+      );
+  }
+  let lenderDailyStats = getOrCreateLenderDailyStats(
+    lenderAddress,
+    event.block.timestamp,
+    lenderStats
+  );
+  if (!interest.isZero()) {
+    lenderDailyStats.dayInterestEarnedUSD =
+      lenderDailyStats.dayInterestEarnedUSD.plus(
+        amountToUSD(interest, priceMul)
+      );
+  }
+  lenderDailyStats.save();
 }
 
 function processWithdrawalBatchInterestAccrued(
@@ -809,69 +840,93 @@ export function handleTransfer(event: TransferEvent): void {
       event
     );
     let from = fromResult.entity;
-    let toResult = getOrCreateLenderAccount(
-      market,
-      event.address,
-      toAddress,
-      event
-    );
-    let to = toResult.entity;
-
-    let prevFromBalance = from.scaledBalance;
-    let prevToBalance = to.scaledBalance;
-    let fromInterest = processLenderInterestAccrued(event, from, market);
-    let toInterest = processLenderInterestAccrued(event, to, market);
     let scaledAmount = rayDiv(value, market.scaleFactor);
-    from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
-    to.scaledBalance = to.scaledBalance.plus(scaledAmount);
-    saveLenderAccountAndSnapshot(event, from);
-    saveLenderAccountAndSnapshot(event, to);
+    let toId = from.id;
 
-    let ps = getOrCreateProtocolStats();
-    let fromLs = getOrCreateLenderStats(fromAddress, event.block.timestamp);
-    let toLs = getOrCreateLenderStats(toAddress, event.block.timestamp);
-    if (fromResult.wasCreated) {
-      fromLs.numMarkets = fromLs.numMarkets + 1;
+    if (fromAddress.equals(toAddress)) {
+      // A self-transfer has one participating lender. Process and persist it
+      // once so the balance remains unchanged and immutable interest history
+      // is not written twice.
+      let interest = processLenderInterestAccrued(event, from, market);
+      saveLenderAccountAndSnapshot(event, from);
+
+      let lenderStats = getOrCreateLenderStats(
+        fromAddress,
+        event.block.timestamp
+      );
+      if (fromResult.wasCreated) {
+        lenderStats.numMarkets = lenderStats.numMarkets + 1;
+      }
+
+      let priceMul = getTokenPriceMultiplier(
+        market.decimals,
+        market.asset,
+        event
+      );
+      updateLenderInterestStats(
+        event,
+        fromAddress,
+        lenderStats,
+        interest,
+        priceMul
+      );
+      lenderStats.save();
+    } else {
+      let toResult = getOrCreateLenderAccount(
+        market,
+        event.address,
+        toAddress,
+        event
+      );
+      let to = toResult.entity;
+      toId = to.id;
+
+      let prevFromBalance = from.scaledBalance;
+      let prevToBalance = to.scaledBalance;
+      let fromInterest = processLenderInterestAccrued(event, from, market);
+      let toInterest = processLenderInterestAccrued(event, to, market);
+      from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
+      to.scaledBalance = to.scaledBalance.plus(scaledAmount);
+      saveLenderAccountAndSnapshot(event, from);
+      saveLenderAccountAndSnapshot(event, to);
+
+      let ps = getOrCreateProtocolStats();
+      let fromLs = getOrCreateLenderStats(fromAddress, event.block.timestamp);
+      let toLs = getOrCreateLenderStats(toAddress, event.block.timestamp);
+      if (fromResult.wasCreated) {
+        fromLs.numMarkets = fromLs.numMarkets + 1;
+      }
+      if (toResult.wasCreated) {
+        toLs.numMarkets = toLs.numMarkets + 1;
+      }
+      updateLenderActiveMarketCount(fromLs, ps, prevFromBalance, from.scaledBalance);
+      updateLenderActiveMarketCount(toLs, ps, prevToBalance, to.scaledBalance);
+
+      let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
+      updateLenderInterestStats(
+        event,
+        fromAddress,
+        fromLs,
+        fromInterest,
+        priceMul
+      );
+      updateLenderInterestStats(
+        event,
+        toAddress,
+        toLs,
+        toInterest,
+        priceMul
+      );
+
+      ps.save();
+      fromLs.save();
+      toLs.save();
     }
-    if (toResult.wasCreated) {
-      toLs.numMarkets = toLs.numMarkets + 1;
-    }
-    updateLenderActiveMarketCount(fromLs, ps, prevFromBalance, from.scaledBalance);
-    updateLenderActiveMarketCount(toLs, ps, prevToBalance, to.scaledBalance);
-
-    let priceMul = getTokenPriceMultiplier(market.decimals, market.asset, event);
-    let hasPrice = !priceMul.equals(BigDecimal.zero());
-
-    if (hasPrice) {
-      if (!fromInterest.isZero()) {
-        let fromInterestUSD = amountToUSD(fromInterest, priceMul);
-        fromLs.totalInterestEarnedUSD = fromLs.totalInterestEarnedUSD.plus(fromInterestUSD);
-      }
-      if (!toInterest.isZero()) {
-        let toInterestUSD = amountToUSD(toInterest, priceMul);
-        toLs.totalInterestEarnedUSD = toLs.totalInterestEarnedUSD.plus(toInterestUSD);
-      }
-
-      let fromLds = getOrCreateLenderDailyStats(fromAddress, event.block.timestamp, fromLs);
-      let toLds = getOrCreateLenderDailyStats(toAddress, event.block.timestamp, toLs);
-      if (!fromInterest.isZero()) {
-        fromLds.dayInterestEarnedUSD = fromLds.dayInterestEarnedUSD.plus(amountToUSD(fromInterest, priceMul));
-      }
-      if (!toInterest.isZero()) {
-        toLds.dayInterestEarnedUSD = toLds.dayInterestEarnedUSD.plus(amountToUSD(toInterest, priceMul));
-      }
-      fromLds.save();
-      toLds.save();
-    }
-
-    ps.save();
-    fromLs.save();
-    toLs.save();
 
     createTransfer(generateEventId(event), {
       market: market.id,
       from: from.id,
-      to: to.id,
+      to: toId,
       scaledAmount: scaledAmount,
       amount: value,
       blockNumber: event.block.number.toI32(),
@@ -1037,7 +1092,6 @@ export function handleWithdrawalBatchPayment(
   let mds = getOrCreateMarketDailyStats(market, event);
   let pds = getOrCreateProtocolDailyStats(event.block.timestamp, ps);
   let bds = getOrCreateBorrowerDailyStats(market.borrower, event.block.timestamp, bs);
-  mds.dayRepaid = mds.dayRepaid.plus(normalizedAmountPaid);
   mds.save();
   pds.save();
   bds.save();
