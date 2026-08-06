@@ -38,7 +38,7 @@ yarn deploy:plasma-testnet-sentio v2.0.22.3
 On a machine without Yarn, prefix the same alias with the Docker wrapper:
 
 ```bash
-scripts/yarn-docker deploy:sepolia-sentio v2.5.6
+scripts/yarn-docker deploy:sepolia-sentio v2.5.7
 ```
 
 The wrapper mounts only this repository, runs as the invoking UID/GID to avoid
@@ -50,7 +50,7 @@ Sepolia may retain several releases in parallel. Deploy each one with its own
 label; for example:
 
 ```bash
-yarn deploy:sepolia-sentio v2.5.6
+yarn deploy:sepolia-sentio v2.5.7
 ```
 
 The explicit label is mandatory for Sentio. It is not inferred from

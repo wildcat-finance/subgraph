@@ -34,7 +34,7 @@ const explicitVersion = process.argv[5];
 if (provider === "sentio" && !explicitVersion) {
   console.error(
     `Sentio deployments require an explicit immutable version label.\n` +
-      `Example: yarn deploy:${network}-sentio v2.5.6`
+      `Example: yarn deploy:${network}-sentio v2.5.7`
   );
   process.exit(1);
 }
