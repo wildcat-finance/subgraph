@@ -44,6 +44,12 @@ const RAY = BigInt.fromString("1000000000000000000000000000");
 const UPDATED_SCALE_FACTOR = BigInt.fromString(
   "1100000000000000000000000000"
 );
+const ROUNDING_SCALE_FACTOR = BigInt.fromString(
+  "1000000342465782383371674669"
+);
+const ROUNDING_TRANSFER_AMOUNT = BigInt.fromString("1000000342465782384");
+const ROUNDING_FROM_BALANCE = BigInt.fromString("3000000000000000000");
+const ROUNDING_TO_BALANCE = BigInt.fromString("1000000000000000000");
 
 function positionEvent(event: ethereum.Event, logIndex: i32): void {
   event.address = MARKET;
@@ -52,7 +58,11 @@ function positionEvent(event: ethereum.Event, logIndex: i32): void {
   event.logIndex = BigInt.fromI32(logIndex);
 }
 
-function seedTransferMarket(event: ethereum.Event): void {
+function seedTransferMarket(
+  event: ethereum.Event,
+  generation: string,
+  scaleFactor: BigInt
+): void {
   let token = new Token(generateTokenId(ASSET));
   token.address = ASSET;
   token.name = "Test Dollar";
@@ -69,7 +79,7 @@ function seedTransferMarket(event: ethereum.Event): void {
     version: "V2",
     marketKind: "STANDARD",
     originKind: "HOOKS",
-    generation: "test",
+    generation,
     abiFamily: "test",
     controller: null,
     hooksFactory: null,
@@ -91,7 +101,7 @@ function seedTransferMarket(event: ethereum.Event): void {
     commitmentFeeBips: null,
     reserveRatioBips: 0,
     drawnAmount: null,
-    scaleFactor: UPDATED_SCALE_FACTOR,
+    scaleFactor,
     lastInterestAccruedTimestamp: 100,
     lastInterestAccruedBlockNumber: 1,
     tokenWrapper: null,
@@ -247,7 +257,7 @@ describe("wildcat market", () => {
 
     let event = createTransferEvent(LENDER_A, LENDER_A, BigInt.fromI32(55));
     positionEvent(event, 5);
-    seedTransferMarket(event);
+    seedTransferMarket(event, "v2.5", UPDATED_SCALE_FACTOR);
     seedLender(event, LENDER_A, BigInt.fromI32(100));
     seedProtocolActiveLenders(1);
 
@@ -338,7 +348,7 @@ describe("wildcat market", () => {
 
     let event = createTransferEvent(LENDER_A, LENDER_B, BigInt.fromI32(55));
     positionEvent(event, 6);
-    seedTransferMarket(event);
+    seedTransferMarket(event, "v2.5", UPDATED_SCALE_FACTOR);
     seedLender(event, LENDER_A, BigInt.fromI32(100));
     seedLender(event, LENDER_B, BigInt.fromI32(40));
     seedProtocolActiveLenders(2);
@@ -395,5 +405,85 @@ describe("wildcat market", () => {
     assert.fieldEquals("Transfer", eventId, "amount", "55");
     assert.fieldEquals("Transfer", eventId, "scaledAmount", "50");
     assert.entityCount("MarketEvent", 1);
+  });
+
+  test("rounds V2.5 transfer scaling down", () => {
+    clearStore();
+
+    let event = createTransferEvent(
+      LENDER_A,
+      LENDER_B,
+      ROUNDING_TRANSFER_AMOUNT
+    );
+    positionEvent(event, 7);
+    seedTransferMarket(event, "v2.5", ROUNDING_SCALE_FACTOR);
+    seedLender(event, LENDER_A, ROUNDING_FROM_BALANCE);
+    seedLender(event, LENDER_B, ROUNDING_TO_BALANCE);
+    seedProtocolActiveLenders(2);
+
+    handleTransfer(event);
+
+    let fromId = generateLenderAccountId(MARKET, LENDER_A);
+    let toId = generateLenderAccountId(MARKET, LENDER_B);
+    let eventId = generateEventId(event);
+
+    assert.fieldEquals(
+      "LenderAccount",
+      fromId,
+      "scaledBalance",
+      "2000000000000000000"
+    );
+    assert.fieldEquals(
+      "LenderAccount",
+      toId,
+      "scaledBalance",
+      "2000000000000000000"
+    );
+    assert.fieldEquals(
+      "Transfer",
+      eventId,
+      "scaledAmount",
+      "1000000000000000000"
+    );
+  });
+
+  test("preserves half-up transfer scaling for legacy generations", () => {
+    clearStore();
+
+    let event = createTransferEvent(
+      LENDER_A,
+      LENDER_B,
+      ROUNDING_TRANSFER_AMOUNT
+    );
+    positionEvent(event, 8);
+    seedTransferMarket(event, "v2.1", ROUNDING_SCALE_FACTOR);
+    seedLender(event, LENDER_A, ROUNDING_FROM_BALANCE);
+    seedLender(event, LENDER_B, ROUNDING_TO_BALANCE);
+    seedProtocolActiveLenders(2);
+
+    handleTransfer(event);
+
+    let fromId = generateLenderAccountId(MARKET, LENDER_A);
+    let toId = generateLenderAccountId(MARKET, LENDER_B);
+    let eventId = generateEventId(event);
+
+    assert.fieldEquals(
+      "LenderAccount",
+      fromId,
+      "scaledBalance",
+      "1999999999999999999"
+    );
+    assert.fieldEquals(
+      "LenderAccount",
+      toId,
+      "scaledBalance",
+      "2000000000000000001"
+    );
+    assert.fieldEquals(
+      "Transfer",
+      eventId,
+      "scaledAmount",
+      "1000000000000000001"
+    );
   });
 });

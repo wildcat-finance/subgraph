@@ -20,6 +20,10 @@ export function rayDiv(a: BigInt, b: BigInt): BigInt {
   return numerator.div(b);
 }
 
+export function rayDivDown(a: BigInt, b: BigInt): BigInt {
+  return a.times(BigInt.fromI32(10).pow(27)).div(b);
+}
+
 export function rayMul(a: BigInt, b: BigInt): BigInt {
   let halfRay = BigInt.fromI32(10)
     .pow(27)

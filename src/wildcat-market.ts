@@ -92,6 +92,7 @@ import {
   generateMarketEventId,
   isNullAddress,
   rayDiv,
+  rayDivDown,
   rayMul,
   satSub,
   getOrCreateLenderAccount,
@@ -840,7 +841,11 @@ export function handleTransfer(event: TransferEvent): void {
       event
     );
     let from = fromResult.entity;
-    let scaledAmount = rayDiv(value, market.scaleFactor);
+    // V2.5 standardized normalized-to-scaled conversions on floor rounding.
+    // Earlier market generations retain the legacy half-up behavior.
+    let scaledAmount = market.generation == "v2.5"
+      ? rayDivDown(value, market.scaleFactor)
+      : rayDiv(value, market.scaleFactor);
     let toId = from.id;
 
     if (fromAddress.equals(toAddress)) {
