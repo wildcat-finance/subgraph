@@ -403,7 +403,10 @@ export function handleMarketAdded(event: MarketAddedEvent): void {
     market.isRegistered = true;
     market.save();
     recordMarketEvent(event, market, "MARKET_REGISTERED");
-  } else if (controller != null || hooksFactory != null) {
+  } else if (
+    controller != null ||
+    (hooksFactory != null && hooksFactory.indexed)
+  ) {
     // Initial registration precedes the deployment event that creates Market.
     recordMarketEventForMarketId(event, marketId, "MARKET_REGISTERED");
   }

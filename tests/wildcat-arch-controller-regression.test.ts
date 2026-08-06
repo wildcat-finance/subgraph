@@ -22,6 +22,28 @@ import {
   createMarketAddedEvent,
 } from "./wildcat-arch-controller-utils";
 
+function createTestHooksFactory(address: Address, indexed: boolean): void {
+  createHooksFactory(address.toHexString(), {
+    address,
+    label: "test-hooks-factory",
+    archController: "test-arch-controller",
+    marketKind: "STANDARD",
+    generation: "v2.5",
+    abiFamily: "test-hooks-abi",
+    hookedMarketAbi: "BASE",
+    configuredStartBlock: BigInt.zero(),
+    indexed,
+    deploymentTarget: indexed,
+    lifecycle: "ACTIVE",
+    configured: true,
+    isRegistered: true,
+    registrationUpdatedAtBlock: null,
+    registrationUpdatedAtTimestamp: null,
+    eventIndex: 0,
+    sentinel: Address.zero(),
+  });
+}
+
 describe("WildcatArchController regressions", () => {
   test("BorrowerRemoved records removal history as unregistered", () => {
     clearStore();
@@ -104,25 +126,7 @@ describe("WildcatArchController regressions", () => {
     let marketAddress = Address.fromString(
       "0x4000000000000000000000000000000000000004"
     );
-    createHooksFactory(hooksFactoryAddress.toHexString(), {
-      address: hooksFactoryAddress,
-      label: "test-hooks-factory",
-      archController: "test-arch-controller",
-      marketKind: "STANDARD",
-      generation: "v2.5",
-      abiFamily: "test-hooks-abi",
-      hookedMarketAbi: "BASE",
-      configuredStartBlock: BigInt.zero(),
-      indexed: true,
-      deploymentTarget: true,
-      lifecycle: "ACTIVE",
-      configured: true,
-      isRegistered: true,
-      registrationUpdatedAtBlock: null,
-      registrationUpdatedAtTimestamp: null,
-      eventIndex: 0,
-      sentinel: Address.zero(),
-    });
+    createTestHooksFactory(hooksFactoryAddress, true);
 
     let event = createMarketAddedEvent(hooksFactoryAddress, marketAddress);
     handleMarketAdded(event);
@@ -144,14 +148,42 @@ describe("WildcatArchController regressions", () => {
     clearStore();
   });
 
+  test("MarketAdded skips normalized events for unindexed hooks factories", () => {
+    clearStore();
+
+    let hooksFactoryAddress = Address.fromString(
+      "0x5000000000000000000000000000000000000005"
+    );
+    let marketAddress = Address.fromString(
+      "0x6000000000000000000000000000000000000006"
+    );
+    createTestHooksFactory(hooksFactoryAddress, false);
+
+    let event = createMarketAddedEvent(hooksFactoryAddress, marketAddress);
+    handleMarketAdded(event);
+
+    let record = MarketAdded.load(generateEventId(event));
+    assert.assertNotNull(record);
+    assert.assertNull(record!.controller);
+    assert.stringEquals(
+      record!.hooksFactory!,
+      hooksFactoryAddress.toHexString()
+    );
+    assert.stringEquals(record!.market!, marketAddress.toHexString());
+    assert.entityCount("MarketEvent", 0);
+    assert.entityCount("MarketEventCursor", 0);
+
+    clearStore();
+  });
+
   test("MarketAdded keeps unknown addresses with nullable relations", () => {
     clearStore();
 
     let unknownController = Address.fromString(
-      "0x5000000000000000000000000000000000000005"
+      "0x7000000000000000000000000000000000000007"
     );
     let unknownMarket = Address.fromString(
-      "0x6000000000000000000000000000000000000006"
+      "0x8000000000000000000000000000000000000008"
     );
 
     let event = createMarketAddedEvent(unknownController, unknownMarket);
