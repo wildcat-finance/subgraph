@@ -94,8 +94,11 @@ type ControllerFactoryAdded @entity(immutable: true) {
 
 type MarketAdded @entity(immutable: true) {
   id: ID!
-  controller: Controller! # address
-  market: Market! # address
+  controllerAddress: Bytes! # event parameter; may identify a Controller or HooksFactory
+  controller: Controller
+  hooksFactory: HooksFactory
+  marketAddress: Bytes!
+  market: Market
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!

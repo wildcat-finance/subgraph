@@ -3,7 +3,7 @@ import { ethereum, Address, BigInt } from "@graphprotocol/graph-ts"
 import {
   NewController,
   UpdateProtocolFeeConfiguration
-} from "../generated/WildcatMarketControllerFactory/WildcatMarketControllerFactory"
+} from "../generated/templates/WildcatMarketControllerFactory/WildcatMarketControllerFactory"
 
 export function createNewControllerEvent(
   borrower: Address,

@@ -3,12 +3,53 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
-    name: HooksFactory
-    network: plasma-mainnet
+    name: WildcatMarketCollateralFactory
+    network: mainnet
     source:
-      address: "0xB46bae25AC6D23148531ed1853a8881FD842E517"
+      address: "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c"
+      abi: WildcatMarketCollateralFactory
+      startBlock: 23167811
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - SimpleCollateralContract
+        - SimpleCollateralFactory
+        - ApprovedLiquidator
+        - LiquidatorApproved
+        - LiquidatorRemoved
+        - Token
+        - ApprovedCollateralExchange
+        - CollateralExchangeApproved
+        - CollateralExchangeRemoved
+      abis:
+        - name: WildcatMarketCollateralFactory
+          file: ./abis/WildcatMarketCollateralFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+        - name: SimpleMarketCollateralMultiParty
+          file: ./abis/SimpleMarketCollateralMultiParty.json
+      eventHandlers:
+        - event: CollateralContractCreated(address,address,address)
+          handler: handleCollateralContractCreated
+        - event: ExecutorApproved(address)
+          handler: handleExecutorApproved
+        - event: ExecutorRemoved(address)
+          handler: handleExecutorRemoved
+        - event: ExchangeApproved(address)
+          handler: handleExchangeApproved
+        - event: ExchangeRemoved(address)
+          handler: handleExchangeRemoved
+      file: ./src/simple-collateral-factory.ts
+  - kind: ethereum
+    name: HooksFactory
+    network: mainnet
+    source:
+      address: "0xdd7dd3b5076cf89440d05585ff56d246386207be"
       abi: HooksFactory
-      startBlock: 1989742
+      startBlock: 21788182
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -64,11 +105,11 @@ dataSources:
       file: ./src/hooks-factory.ts
   - kind: ethereum
     name: WildcatArchController
-    network: plasma-mainnet
+    network: mainnet
     source:
-      address: "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae"
+      address: "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4"
       abi: WildcatArchController
-      startBlock: 1989721
+      startBlock: 18686645
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -124,11 +165,11 @@ dataSources:
       file: ./src/wildcat-arch-controller.ts
   - kind: ethereum
     name: WildcatSanctionsSentinel
-    network: plasma-mainnet
+    network: mainnet
     source:
-      address: "0x37064895ba2C1e269EAF7FF32564818d08903f5B"
+      address: "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A"
       abi: WildcatSanctionsSentinel
-      startBlock: 1989725
+      startBlock: 18686645
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -150,8 +191,42 @@ dataSources:
       file: ./src/wildcat-sanctions-sentinel.ts
 templates:
   - kind: ethereum
+    name: SimpleMarketCollateralMultiParty
+    network: mainnet
+    source:
+      abi: SimpleMarketCollateralMultiParty
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - SimpleCollateralFactory
+        - SimpleCollateralContract
+        - SimpleCollateralContractDepositor
+        - SimpleCollateralContractLiquidation
+        - SimpleCollateralFullReset
+        - SimpleCollateralContractDeposit
+        - SimpleCollateralContractReclaim
+      abis:
+        - name: SimpleMarketCollateralMultiParty
+          file: ./abis/SimpleMarketCollateralMultiParty.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: CollateralDeposited(address,uint256,uint256,uint32)
+          handler: handleCollateralDeposited
+        - event: CollateralReclaimed(address,uint256,uint256)
+          handler: handleCollateralReclaimed
+        - event: Liquidation(address,uint256,uint256)
+          handler: handleLiquidation
+        - event: FullLiquidation(uint32)
+          handler: handleFullLiquidation
+        - event: LiquidatedSharesReset(address,uint256)
+          handler: handleLiquidatedSharesReset
+      file: ./src/simple-collateral.ts
+  - kind: ethereum
     name: WildcatMarketControllerFactory
-    network: plasma-mainnet
+    network: mainnet
     source:
       abi: WildcatMarketControllerFactory
     mapping:
@@ -177,7 +252,7 @@ templates:
       file: ./src/wildcat-market-controller-factory.ts
   - kind: ethereum
     name: WildcatMarketController
-    network: plasma-mainnet
+    network: mainnet
     source:
       abi: WildcatMarketController
     mapping:
@@ -214,7 +289,7 @@ templates:
       file: ./src/wildcat-market-controller.ts
   - kind: ethereum
     name: WildcatMarket
-    network: plasma-mainnet
+    network: mainnet
     source:
       abi: WildcatMarket
     mapping:
@@ -267,6 +342,7 @@ templates:
         - HooksTemplateAdded
         - HooksTemplateDisabled
         - HooksTemplateFeesUpdated
+        - MarketDailyStats
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
@@ -328,7 +404,7 @@ templates:
       file: ./src/wildcat-market.ts
   - kind: ethereum
     name: CombinedHooks
-    network: plasma-mainnet
+    network: mainnet
     source:
       abi: CombinedHooks
     mapping:

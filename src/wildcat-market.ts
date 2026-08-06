@@ -283,14 +283,17 @@ function processLenderInterestAccrued(
     lender.totalInterestEarned = lender.totalInterestEarned.plus(
       interestEarned
     );
-    createLenderInterestAccrued(generateEventId(event), {
-      account: lender.id,
-      interestEarned,
-      market: market.id,
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-    });
+    createLenderInterestAccrued(
+      generateEventId(event).concat("-").concat(lender.id),
+      {
+        account: lender.id,
+        interestEarned,
+        market: market.id,
+        blockNumber: event.block.number.toI32(),
+        blockTimestamp: event.block.timestamp.toI32(),
+        transactionHash: event.transaction.hash,
+      }
+    );
   }
   if (lender.lastUpdatedTimestamp != event.block.timestamp.toI32()) {
     lender.lastUpdatedTimestamp = event.block.timestamp.toI32();
@@ -385,7 +388,11 @@ export function handleFeesCollected(event: FeesCollectedEvent): void {
 
 export function handleMarketClosed(event: MarketClosedEvent): void {
   let market = getMarket(generateMarketId(event.address));
+  market.annualInterestBips = 0;
   market.isClosed = true;
+  market.reserveRatioBips = 10000;
+  market.timeDelinquent = 0;
+  market.isIncurringPenalties = false;
   createMarketClosed(generateMarketEventId(market), {
     market: market.id,
     timestamp: event.params.timestamp.toI32(),
