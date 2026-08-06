@@ -30,11 +30,27 @@ function run(cmd) {
   execSync(cmd, { stdio: "inherit" });
 }
 
+const explicitVersion = process.argv[5];
+if (provider === "sentio" && !explicitVersion) {
+  console.error(
+    `Sentio deployments require an explicit immutable version label.\n` +
+      `Example: yarn deploy:${network}-sentio v2.5.6`
+  );
+  process.exit(1);
+}
+
 const version =
-  process.argv[5] ||
+  explicitVersion ||
   execSync("node scripts/next-version")
     .toString()
     .trim();
+
+if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(version)) {
+  console.error(
+    "Version labels must start with an alphanumeric character and contain only letters, numbers, periods, underscores, or hyphens"
+  );
+  process.exit(1);
+}
 
 console.log(
   `Deploying ${subgraphName}@${version} to ${network} with ${provider}`

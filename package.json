@@ -27,7 +27,10 @@
     "deploy:mainnet": "yarn deploy goldsky mainnet",
     "deploy:plasma-testnet": "yarn deploy goldsky plasma-testnet",
     "deploy:plasma-mainnet": "yarn deploy goldsky plasma-mainnet",
-    "deploy:sepolia-sentio": "yarn deploy sentio sepolia wildcat/data_gateway v2.5.6",
+    "deploy:mainnet-sentio": "yarn deploy sentio mainnet wildcat/mainnet",
+    "deploy:sepolia-sentio": "yarn deploy sentio sepolia wildcat/sepolia",
+    "deploy:plasma-mainnet-sentio": "yarn deploy sentio plasma-mainnet wildcat/plasma-mainnet",
+    "deploy:plasma-testnet-sentio": "yarn deploy sentio plasma-testnet wildcat/plasma-testnet",
     "deploy:mainnet-analytics": "yarn deploy dev mainnet wildcat_ethereum_mainnet_analytics",
     "deploy:sepolia-analytics": "yarn deploy dev sepolia wildcat_ethereum_sepolia_analytics"
   },
