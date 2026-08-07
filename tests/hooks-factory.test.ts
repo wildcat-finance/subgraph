@@ -7,6 +7,7 @@ import {
 import { createMockedFunction, newMockEvent } from "matchstick-as";
 import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { HooksInstanceDeployed } from "../generated/HooksFactory/HooksFactory";
+import { RoleProviderAdded } from "../generated/templates/CombinedHooks/CombinedHooks";
 import {
   createHooksFactory,
   createHooksTemplate,
@@ -15,6 +16,7 @@ import {
   generateRoleProviderId,
 } from "../generated/UncrashableEntityHelpers";
 import { handleHooksInstanceDeployed } from "../src/hooks-factory";
+import { handleRoleProviderAdded } from "../src/hooks-instance";
 
 let factoryAddress = Address.fromString(
   "0x0000000000000000000000000000000000002001"
@@ -46,6 +48,37 @@ function createHooksInstanceDeployedEvent(): HooksInstanceDeployed {
     new ethereum.EventParam(
       "hooksTemplate",
       ethereum.Value.fromAddress(hooksTemplate)
+    )
+  );
+  return event;
+}
+
+function createRoleProviderAddedEvent(): RoleProviderAdded {
+  let event = changetype<RoleProviderAdded>(newMockEvent());
+  event.address = hooksInstance;
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "providerAddress",
+      ethereum.Value.fromAddress(borrower)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "timeToLive",
+      ethereum.Value.fromUnsignedBigInt(BigInt.fromString("4294967295"))
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pullProviderIndex",
+      ethereum.Value.fromI32(2 ** 24 - 1)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "pushProviderIndex",
+      ethereum.Value.fromI32(0)
     )
   );
   return event;
@@ -144,12 +177,25 @@ describe("hooks factory role provider decoding", () => {
       "true"
     );
     assert.fieldEquals("RoleProvider", borrowerProviderId, "pushProviderIndex", "0");
+    assert.entityCount("RoleProviderAdded", 0);
+
+    handleRoleProviderAdded(createRoleProviderAddedEvent());
+
+    let actualAddedEventId = "RECORD-" + hooksInstanceId + "-2";
+    assert.entityCount("RoleProviderAdded", 1);
     assert.fieldEquals(
       "RoleProviderAdded",
-      "RECORD-" + hooksInstanceId + "-1",
-      "timeToLive",
-      "4294967295"
+      actualAddedEventId,
+      "provider",
+      borrowerProviderId
     );
+    assert.fieldEquals(
+      "RoleProvider",
+      borrowerProviderId,
+      "addedEvent",
+      actualAddedEventId
+    );
+    assert.fieldEquals("HooksInstance", hooksInstanceId, "eventIndex", "3");
   });
 
   test("classifies periodic term hooks instances", () => {

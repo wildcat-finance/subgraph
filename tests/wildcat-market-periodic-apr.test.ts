@@ -5,7 +5,7 @@ import {
   test,
 } from "matchstick-as/assembly/index";
 import { newMockEvent } from "matchstick-as";
-import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { AnnualInterestBipsUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
   createHooksConfig,
@@ -58,6 +58,7 @@ function saveMarket(createConfig: boolean): void {
     lastInterestAccruedTimestamp: 0,
     lastInterestAccruedBlockNumber: 0,
     usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
     createdAt: 0,
     deployedEvent: "deployed-event",

@@ -6,7 +6,7 @@ import {
   test
 } from "matchstick-as/assembly/index";
 import { createMockedFunction, newMockEvent } from "matchstick-as";
-import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket";
 import {
   createLenderAccount,
@@ -37,6 +37,7 @@ import {
   handleWithdrawalExecuted,
   handleWithdrawalQueued
 } from "../src/wildcat-market";
+import { updateMarketTotalDebtUSD } from "../src/daily-stats";
 import { generateEventId } from "../src/utils";
 import {
   createBorrowEvent,
@@ -97,6 +98,7 @@ function saveMarket(): void {
     lastInterestAccruedTimestamp: 0,
     lastInterestAccruedBlockNumber: 0,
     usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
     createdAt: 0,
     deployedEvent: "deployed-event"
@@ -415,6 +417,27 @@ describe("market closure", () => {
 });
 
 describe("market analytics accounting", () => {
+  test("reports zero debt in USD without requiring a token price", () => {
+    clearStore();
+    dataSourceMock.setNetwork("plasma-testnet");
+    saveMarket();
+    createToken(generateTokenId(assetAddress), {
+      address: assetAddress,
+      name: "Unpriced",
+      symbol: "NOPE",
+      decimals: 18,
+      isMock: false,
+      isUsdStablecoin: false
+    });
+    let market = getMarket(marketId());
+    market.totalDebtUSD = null;
+
+    updateMarketTotalDebtUSD(market, BigInt.zero());
+    market.save();
+
+    assert.fieldEquals("Market", marketId(), "totalDebtUSD", "0");
+  });
+
   test("preserves legacy daily deltas alongside cumulative snapshots", () => {
     clearStore();
     saveMarket();

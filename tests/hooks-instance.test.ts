@@ -157,6 +157,12 @@ describe("role provider events", () => {
     assert.fieldEquals("RoleProvider", providerId, "timeToLive", "4294967295");
     assert.fieldEquals("RoleProvider", providerId, "isPullProvider", "false");
     assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "true");
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "addedEvent",
+      "RECORD-" + hooksId + "-0"
+    );
 
     handleRoleProviderUpdated(
       createRoleProviderUpdatedEvent(BigInt.zero(), 0, nullProviderIndex)
@@ -199,5 +205,62 @@ describe("role provider events", () => {
     assert.fieldEquals("RoleProvider", providerId, "pullProviderIndex", "0");
     assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "false");
     assert.fieldEquals("RoleProvider", providerId, "pushProviderIndex", "0");
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "removedEvent",
+      "RECORD-" + generateHooksInstanceId(hooksAddress) + "-1"
+    );
+  });
+
+  test("retains complete history when a provider is removed and re-added", () => {
+    clearStore();
+    saveHooksInstance();
+
+    let nullProviderIndex = 2 ** 24 - 1;
+    let providerId = generateRoleProviderId(hooksAddress, providerAddress);
+    let hooksId = generateHooksInstanceId(hooksAddress);
+
+    handleRoleProviderAdded(
+      createRoleProviderAddedEvent(BigInt.fromI32(60), 0, nullProviderIndex)
+    );
+    handleRoleProviderRemoved(
+      createRoleProviderRemovedEvent(0, nullProviderIndex)
+    );
+    handleRoleProviderAdded(
+      createRoleProviderAddedEvent(BigInt.fromI32(120), nullProviderIndex, 0)
+    );
+
+    assert.entityCount("RoleProviderAdded", 2);
+    assert.entityCount("RoleProviderRemoved", 1);
+    assert.fieldEquals(
+      "RoleProviderAdded",
+      "RECORD-" + hooksId + "-0",
+      "provider",
+      providerId
+    );
+    assert.fieldEquals(
+      "RoleProviderAdded",
+      "RECORD-" + hooksId + "-2",
+      "provider",
+      providerId
+    );
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "addedEvent",
+      "RECORD-" + hooksId + "-2"
+    );
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "removedEvent",
+      "RECORD-" + hooksId + "-1"
+    );
+    assert.fieldEquals("RoleProvider", providerId, "isApproved", "true");
+    assert.fieldEquals("RoleProvider", providerId, "timeToLive", "120");
+    assert.fieldEquals("RoleProvider", providerId, "isPullProvider", "false");
+    assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "true");
+    assert.fieldEquals("HooksInstance", hooksId, "eventIndex", "3");
   });
 });

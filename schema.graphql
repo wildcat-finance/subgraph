@@ -301,8 +301,12 @@ type RoleProvider @entity {
   isPushProvider: Boolean!
   pushProviderIndex: Int!
   isApproved: Boolean!
-  addedEvent: RoleProviderAdded @derivedFrom(field: "provider")
-  removedEvent: RoleProviderRemoved @derivedFrom(field: "provider")
+  # Most recently observed lifecycle events. These remain singular for
+  # backwards compatibility; use the plural fields for complete history.
+  addedEvent: RoleProviderAdded
+  removedEvent: RoleProviderRemoved
+  addedEvents: [RoleProviderAdded!]! @derivedFrom(field: "provider")
+  removedEvents: [RoleProviderRemoved!]! @derivedFrom(field: "provider")
   updatedEvents: [RoleProviderUpdated!]! @derivedFrom(field: "provider")
 }
 
@@ -922,7 +926,8 @@ type Market @entity {
   # False once a nonzero aggregate mutation could not be priced.
   usdTotalsComplete: Boolean!
 
-  # Legacy totalDebts() converted to USD. Null when the asset is unpriced.
+  # Legacy totalDebts() converted to USD. Zero for zero debt; otherwise null
+  # when the asset is unpriced.
   # totalDebts = normalized scaled supply + unclaimed withdrawals + fees.
   totalDebtUSD: BigDecimal
 
