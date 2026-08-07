@@ -9,6 +9,7 @@
     "auth": "graph auth --studio",
     "codegen": "graph codegen -u",
     "check:price-feed-abis": "node scripts/check-price-feed-abis.js",
+    "test:hinterlight-paths": "node scripts/hinterlight-paths.test.js",
     "prebuild": "node scripts/check-price-feed-abis.js",
     "build": "graph build",
     "deploy": "node scripts/deploy.js",

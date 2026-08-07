@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { execSync, spawnSync } = require("child_process");
+const { getHinterlightPaths } = require("./hinterlight-paths");
 require("dotenv").config();
 
 const provider = process.argv[2];
@@ -7,6 +8,8 @@ const network = process.argv[3];
 const subgraphName = process.argv[4] || network;
 const explicitVersion = process.argv[5];
 let targetSubgraphName = subgraphName;
+let publicSubgraphName = subgraphName;
+let publicQueryUrl = null;
 
 if (!network) {
   console.error(
@@ -104,7 +107,10 @@ if (provider === "hinterlight") {
   if (!/^[A-Za-z0-9_-]+$/.test(subgraphName)) {
     throw Error(`Invalid Hinterlight subgraph name: ${subgraphName}`);
   }
-  targetSubgraphName = `${subgraphName}/${version.replace(/\./g, "-")}`;
+  const hinterlightPaths = getHinterlightPaths(subgraphName, version);
+  targetSubgraphName = hinterlightPaths.internalSubgraphName;
+  publicSubgraphName = hinterlightPaths.publicSubgraphName;
+  publicQueryUrl = hinterlightPaths.publicQueryUrl;
   const missingSecrets = [
     "GRAPH_ACCESS_TOKEN",
     "GRAPH_DEPLOY_KEY",
@@ -155,7 +161,8 @@ switch (provider) {
       version,
       targetSubgraphName,
     ]);
-    console.log(`Deployed ${targetSubgraphName}@${version} to Hinterlight.`);
+    console.log(`Deployed ${publicSubgraphName} to Hinterlight.`);
+    console.log(`Queries (HTTP):     ${publicQueryUrl}`);
     break;
   }
 
