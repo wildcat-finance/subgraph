@@ -17,10 +17,14 @@
     "test": "graph test",
     "netconfig": "node ./scripts/set-addresses",
     "postnetconfig": "yarn codegen",
-    "deploy:sepolia": "yarn deploy goldsky sepolia",
-    "deploy:mainnet": "yarn deploy goldsky mainnet",
-    "deploy:plasma-testnet": "yarn deploy goldsky plasma-testnet",
-    "deploy:plasma-mainnet": "yarn deploy goldsky plasma-mainnet"
+    "deploy:goldsky:mainnet": "yarn deploy goldsky mainnet mainnet",
+    "deploy:goldsky:sepolia": "yarn deploy goldsky sepolia sepolia",
+    "deploy:goldsky:plasma-mainnet": "yarn deploy goldsky plasma-mainnet plasma-mainnet",
+    "deploy:goldsky:plasma-testnet": "yarn deploy goldsky plasma-testnet plasma-testnet",
+    "deploy:hinterlight:mainnet": "yarn deploy hinterlight mainnet mainnet",
+    "deploy:hinterlight:sepolia": "yarn deploy hinterlight sepolia sepolia",
+    "deploy:hinterlight:plasma-mainnet": "yarn deploy hinterlight plasma-mainnet plasma-mainnet",
+    "deploy:hinterlight:plasma-testnet": "yarn deploy hinterlight plasma-testnet plasma-testnet"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",
