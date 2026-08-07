@@ -27,6 +27,12 @@ let usd = Address.fromString(
 let eth = Address.fromString(
   "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 );
+let btc = Address.fromString(
+  "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+);
+let btcUsdFeed = Address.fromString(
+  "0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
+);
 
 function saveToken(address: Address, symbol: string = "TKN"): string {
   let id = generateTokenId(address);
@@ -239,6 +245,163 @@ describe("Chainlink price validation", () => {
     assert.stringEquals(price!.toString(), "6000");
   });
 
+  test("refreshes a stale cached two-hop feed and retries pricing", () => {
+    clearStore();
+    dataSourceMock.setNetwork("mainnet");
+
+    let asset = Address.fromString(
+      "0x0000000000000000000000000000000000009103"
+    );
+    let retiredFeed = Address.fromString(
+      "0x0000000000000000000000000000000000009203"
+    );
+    let replacementFeed = Address.fromString(
+      "0x0000000000000000000000000000000000009204"
+    );
+    let tokenId = saveToken(asset);
+    let token = getToken(tokenId);
+    token.priceFeed0 = retiredFeed;
+    token.priceFeed1 = btcUsdFeed;
+    token.lastPriceFeedSearchDay = 950400;
+    token.save();
+
+    mockFeedRound(
+      retiredFeed,
+      8,
+      1,
+      BigInt.fromI32(100000000),
+      1000000,
+      1
+    );
+    mockRegistryFeed(asset, usd, Address.zero());
+    mockRegistryFeed(asset, eth, Address.zero());
+    mockRegistryFeed(asset, btc, replacementFeed);
+    mockFeedRound(
+      replacementFeed,
+      8,
+      2,
+      BigInt.fromI32(100000000),
+      1999900,
+      2
+    );
+    mockFeedRound(
+      btcUsdFeed,
+      8,
+      3,
+      BigInt.fromString("6500000000000"),
+      1999900,
+      3
+    );
+
+    let price = getTokenPriceUSD(tokenId, BigInt.fromI32(2000000));
+
+    assert.assertTrue(!!price);
+    assert.stringEquals(price!.toString(), "65000");
+    let refreshedToken = getToken(tokenId);
+    assert.stringEquals(
+      refreshedToken.priceFeed0!.toHexString(),
+      replacementFeed.toHexString()
+    );
+    assert.stringEquals(
+      refreshedToken.priceFeed1!.toHexString(),
+      btcUsdFeed.toHexString()
+    );
+    assert.fieldEquals(
+      "Token",
+      tokenId,
+      "lastPriceFeedSearchDay",
+      "1987200"
+    );
+  });
+
+  test("drops an obsolete second hop when refresh finds a direct feed", () => {
+    clearStore();
+    dataSourceMock.setNetwork("mainnet");
+
+    let asset = Address.fromString(
+      "0x0000000000000000000000000000000000009104"
+    );
+    let retiredFeed = Address.fromString(
+      "0x0000000000000000000000000000000000009205"
+    );
+    let replacementFeed = Address.fromString(
+      "0x0000000000000000000000000000000000009206"
+    );
+    let tokenId = saveToken(asset);
+    let token = getToken(tokenId);
+    token.priceFeed0 = retiredFeed;
+    token.priceFeed1 = btcUsdFeed;
+    token.save();
+
+    mockFeedRound(
+      retiredFeed,
+      8,
+      1,
+      BigInt.fromI32(100000000),
+      1000000,
+      1
+    );
+    mockRegistryFeed(asset, usd, replacementFeed);
+    mockFeedRound(
+      replacementFeed,
+      8,
+      2,
+      BigInt.fromI32(250000000),
+      1999900,
+      2
+    );
+
+    let price = getTokenPriceUSD(tokenId, BigInt.fromI32(2000000));
+
+    assert.assertTrue(!!price);
+    assert.stringEquals(price!.toString(), "2.5");
+    assert.assertTrue(!getToken(tokenId).priceFeed1);
+  });
+
+  test("clears an unusable path and records the daily retry", () => {
+    clearStore();
+    dataSourceMock.setNetwork("mainnet");
+
+    let asset = Address.fromString(
+      "0x0000000000000000000000000000000000009105"
+    );
+    let retiredFeed = Address.fromString(
+      "0x0000000000000000000000000000000000009207"
+    );
+    let tokenId = saveToken(asset);
+    let token = getToken(tokenId);
+    token.priceFeed0 = retiredFeed;
+    token.save();
+
+    mockFeedRound(
+      retiredFeed,
+      8,
+      1,
+      BigInt.fromI32(100000000),
+      1000000,
+      1
+    );
+    mockRegistryFeed(asset, usd, Address.zero());
+    mockRegistryFeed(asset, eth, Address.zero());
+    mockRegistryFeed(asset, btc, Address.zero());
+
+    let first = getTokenPriceUSD(tokenId, BigInt.fromI32(2000000));
+    let second = getTokenPriceUSD(tokenId, BigInt.fromI32(2000100));
+
+    assert.assertTrue(!first);
+    assert.assertTrue(!second);
+    let refreshedToken = getToken(tokenId);
+    assert.assertTrue(!refreshedToken.priceFeed0);
+    assert.assertTrue(!refreshedToken.priceFeed1);
+    assert.fieldEquals(
+      "Token",
+      tokenId,
+      "lastPriceFeedSearchDay",
+      "1987200"
+    );
+    assert.entityCount("TokenDailyPrice", 0);
+  });
+
   test("rejects non-positive, incomplete, and stale rounds", () => {
     clearStore();
     dataSourceMock.setNetwork("mainnet");
@@ -263,12 +426,15 @@ describe("Chainlink price validation", () => {
     );
     let negativeToken = getToken(negativeId);
     negativeToken.priceFeed0 = negativeFeed;
+    negativeToken.lastPriceFeedSearchDay = 950400;
     negativeToken.save();
     let incompleteToken = getToken(incompleteId);
     incompleteToken.priceFeed0 = incompleteFeed;
+    incompleteToken.lastPriceFeedSearchDay = 950400;
     incompleteToken.save();
     let staleToken = getToken(staleId);
     staleToken.priceFeed0 = staleFeed;
+    staleToken.lastPriceFeedSearchDay = 950400;
     staleToken.save();
 
     mockFeedRound(negativeFeed, 8, 1, BigInt.fromI32(-1), 999900, 1);

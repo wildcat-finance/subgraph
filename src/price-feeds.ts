@@ -73,11 +73,11 @@ function isUsableFeed(address: Address): boolean {
   return address.toHexString() != ZERO_ADDRESS;
 }
 
-/**
- * Applies chain-specific fixed-price policy and discovers a Chainlink path.
- * Ethereum registry calls are never made on Plasma or other networks.
- */
-export function setupTokenPriceFeeds(token: Token, timestamp: BigInt): void {
+function discoverTokenPriceFeeds(
+  token: Token,
+  timestamp: BigInt,
+  replaceExisting: boolean
+): void {
   let network = dataSource.network();
   let tokenAddress = token.address.toHexString();
 
@@ -90,7 +90,7 @@ export function setupTokenPriceFeeds(token: Token, timestamp: BigInt): void {
   if (network != MAINNET) {
     return;
   }
-  if (token.priceFeed0) {
+  if (!replaceExisting && token.priceFeed0) {
     return;
   }
 
@@ -99,6 +99,8 @@ export function setupTokenPriceFeeds(token: Token, timestamp: BigInt): void {
     return;
   }
   token.lastPriceFeedSearchDay = searchDay;
+  token.priceFeed0 = null;
+  token.priceFeed1 = null;
 
   if (tokenAddress == "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2") {
     token.priceFeed0 = ETH_USD_FEED;
@@ -138,6 +140,14 @@ export function setupTokenPriceFeeds(token: Token, timestamp: BigInt): void {
   token.save();
 }
 
+/**
+ * Applies chain-specific fixed-price policy and discovers a Chainlink path.
+ * Ethereum registry calls are never made on Plasma or other networks.
+ */
+export function setupTokenPriceFeeds(token: Token, timestamp: BigInt): void {
+  discoverTokenPriceFeeds(token, timestamp, false);
+}
+
 function readFeedPrice(feed: Bytes, timestamp: BigInt): BigDecimal | null {
   let aggregator = ChainlinkAggregator.bind(Address.fromBytes(feed));
   let decimalsResult = aggregator.try_decimals();
@@ -164,6 +174,30 @@ function readFeedPrice(feed: Bytes, timestamp: BigInt): BigDecimal | null {
   return answer.toBigDecimal().div(divisor);
 }
 
+function readTokenPricePath(
+  token: Token,
+  timestamp: BigInt
+): BigDecimal | null {
+  let feed0 = token.priceFeed0;
+  if (!feed0) {
+    return null;
+  }
+
+  let price = readFeedPrice(feed0 as Bytes, timestamp);
+  if (!price) {
+    return null;
+  }
+  let feed1 = token.priceFeed1;
+  if (feed1) {
+    let secondPrice = readFeedPrice(feed1 as Bytes, timestamp);
+    if (!secondPrice) {
+      return null;
+    }
+    price = price.times(secondPrice as BigDecimal);
+  }
+  return price;
+}
+
 export function ensureTokenDailyPrice(
   tokenId: string,
   timestamp: BigInt
@@ -187,22 +221,24 @@ export function ensureTokenDailyPrice(
   if (!token.priceFeed0) {
     setupTokenPriceFeeds(token, timestamp);
   }
-  let feed0 = token.priceFeed0;
-  if (!feed0) {
-    return null;
+  let price = readTokenPricePath(token, timestamp);
+  if (
+    !price &&
+    dataSource.network() == MAINNET &&
+    token.lastPriceFeedSearchDay != startOfDay
+  ) {
+    discoverTokenPriceFeeds(token, timestamp, true);
+    price = readTokenPricePath(token, timestamp);
   }
-
-  let price = readFeedPrice(feed0 as Bytes, timestamp);
   if (!price) {
-    return null;
-  }
-  let feed1 = token.priceFeed1;
-  if (feed1) {
-    let secondPrice = readFeedPrice(feed1 as Bytes, timestamp);
-    if (!secondPrice) {
-      return null;
+    // Do not repeatedly call a dead path for every event. Discovery is already
+    // throttled by lastPriceFeedSearchDay and will run again on the next day.
+    if (dataSource.network() == MAINNET && token.priceFeed0) {
+      token.priceFeed0 = null;
+      token.priceFeed1 = null;
+      token.save();
     }
-    price = price.times(secondPrice as BigDecimal);
+    return null;
   }
 
   let dailyPrice = new TokenDailyPrice(cacheId);
