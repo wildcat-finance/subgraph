@@ -1,4 +1,10 @@
-import { Address, BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
+import {
+  Address,
+  BigDecimal,
+  BigInt,
+  Bytes,
+  log,
+} from "@graphprotocol/graph-ts";
 import {
   ChangedSpherexEngineAddress as ChangedSpherexEngineAddressEvent,
   ChangedSpherexOperator as ChangedSpherexOperatorEvent,
@@ -21,7 +27,6 @@ import {
   createMarket,
   createMarketDeployed,
   createRoleProvider,
-  createRoleProviderAdded,
   createToken,
   generateHooksConfigId,
   generateHooksInstanceDeployedId,
@@ -54,10 +59,6 @@ import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
 } from "../generated/templates";
-
-function generateRecordId(id: string, eventIndex: i32): string {
-  return "RECORD" + "-" + id + "-" + eventIndex.toString();
-}
 
 function getOrCreateHooksFactory(address: Address): HooksFactory {
   let hooksFactory = HooksFactory.load(address.toHex());
@@ -124,29 +125,20 @@ export function handleHooksInstanceDeployed(
   }
 
   if (hooksWithProvider != null) {
+    // RoleProviderAdded logs are emitted before HooksInstanceDeployed. Reserve
+    // their established event-index slots without manufacturing duplicate
+    // lifecycle records from this factory state snapshot.
     let eventIndex = 0;
     let pullProviders = hooksContract.getPullProviders();
     let pushProviders = hooksContract.getPushProviders();
     for (let i = 0; i < pullProviders.length; i++) {
       let pullProvider = pullProviders[i];
-      decodeAndCreateRoleProvider(
-        event,
-        hooksInstance,
-        hooksInstanceId,
-        eventIndex,
-        pullProvider
-      );
+      decodeAndCreateRoleProvider(hooksInstance, pullProvider);
       eventIndex = eventIndex + 1;
     }
     for (let i = 0; i < pushProviders.length; i++) {
       let pushProvider = pushProviders[i];
-      decodeAndCreateRoleProvider(
-        event,
-        hooksInstance,
-        hooksInstanceId,
-        eventIndex,
-        pushProvider
-      );
+      decodeAndCreateRoleProvider(hooksInstance, pushProvider);
       eventIndex = eventIndex + 1;
     }
     hooksWithProvider.eventIndex = eventIndex;
@@ -299,10 +291,7 @@ export function handleHooksTemplateFeesUpdated(
   hooksFactory.save();
 }
 function decodeAndCreateRoleProvider(
-  event: ethereum.Event,
   hooksAddress: Bytes,
-  hooksInstanceId: string,
-  eventIndex: i32,
   encodedRoleProvider: BigInt
 ): RoleProvider {
   let nullProviderIndex = 2 ** 24 - 1;
@@ -324,21 +313,8 @@ function decodeAndCreateRoleProvider(
     .toI32();
   let isPullProvider = pullProviderIndex !== nullProviderIndex;
   let isPushProvider = pushProviderIndex !== nullProviderIndex;
+  let hooksInstanceId = generateHooksInstanceId(hooksAddress);
   let providerId = generateRoleProviderId(hooksAddress, providerAddress);
-  createRoleProviderAdded(generateRecordId(hooksInstanceId, eventIndex), {
-    blockNumber: event.block.number.toI32(),
-    blockTimestamp: event.block.timestamp.toI32(),
-    eventIndex: eventIndex as i32,
-    isPullProvider: isPullProvider,
-    isPushProvider: isPushProvider,
-    provider: providerId,
-    hooks: hooksInstanceId,
-    pullProviderIndex: pullProviderIndex,
-    pushProviderIndex: pushProviderIndex,
-    timeToLive: timeToLive,
-    transactionHash: event.transaction.hash,
-    blockLogIndex: event.logIndex.toI32(),
-  });
   return createRoleProvider(providerId, {
     isApproved: true,
     isPullProvider: isPullProvider,
@@ -348,6 +324,8 @@ function decodeAndCreateRoleProvider(
     pushProviderIndex: pushProviderIndex,
     timeToLive: timeToLive,
     providerAddress: providerAddress,
+    addedEvent: null,
+    removedEvent: null,
   });
 }
 
@@ -507,6 +485,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       hooksFactory: hooksFactory.id,
       version: version,
       usdTotalsComplete: true,
+      totalDebtUSD: BigDecimal.zero(),
       numCollateralContracts: 0,
     });
 

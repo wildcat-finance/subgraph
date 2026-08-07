@@ -284,6 +284,11 @@ export function updateMarketTotalDebtUSD(
   market: Market,
   timestamp: BigInt
 ): void {
+  let totalDebt = calculateTotalDebt(market);
+  if (totalDebt.isZero()) {
+    market.totalDebtUSD = BigDecimal.zero();
+    return;
+  }
   let multiplier = getTokenPriceMultiplier(
     market.decimals,
     market.asset,
@@ -294,7 +299,7 @@ export function updateMarketTotalDebtUSD(
     return;
   }
   market.totalDebtUSD = amountToUSD(
-    calculateTotalDebt(market),
+    totalDebt,
     multiplier as BigDecimal
   );
 }

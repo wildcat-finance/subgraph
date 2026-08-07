@@ -145,6 +145,12 @@ describe("WildcatMarketController", () => {
       generateTokenId(assetAddress)
     );
     assert.fieldEquals(
+      "Market",
+      generateMarketId(marketAddress),
+      "totalDebtUSD",
+      "0"
+    );
+    assert.fieldEquals(
       "ProtocolStats",
       generateProtocolStatsId(),
       "numMarkets",

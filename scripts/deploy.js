@@ -6,29 +6,31 @@ require("dotenv").config();
 const provider = process.argv[2];
 const network = process.argv[3];
 const subgraphName = process.argv[4] || network;
-const explicitVersion = process.argv[5];
+const version = process.argv[5];
 let targetSubgraphName = subgraphName;
 let publicSubgraphName = subgraphName;
 let publicQueryUrl = null;
 
 if (!network) {
   console.error(
-    "Usage: yarn deploy <provider> <network> [subgraph-name] [version-label]"
+    "Usage: yarn deploy <provider> <network> <subgraph-name> <version-label>"
   );
   process.exit(1);
 }
 
 if (!provider) {
   console.error(
-    "Usage: yarn deploy <provider> <network> [subgraph-name] [version-label]"
+    "Usage: yarn deploy <provider> <network> <subgraph-name> <version-label>"
   );
   process.exit(1);
 }
 
-if (provider === "hinterlight" && !explicitVersion) {
+if (!version) {
   console.error(
-    "Hinterlight deployments require an explicit version label.\n" +
-      "Example: yarn deploy:hinterlight:mainnet v2.0.22.4"
+    "Deployments require an explicit version label.\n" +
+      "Examples:\n" +
+      "  yarn deploy:goldsky:sepolia v2.1.6\n" +
+      "  yarn deploy:hinterlight:sepolia v2.1.6"
   );
   process.exit(1);
 }
@@ -88,22 +90,14 @@ function runGraph(args, { allowExistingSubgraph = false } = {}) {
   }
 }
 
-const version =
-  explicitVersion ||
-  process.env.SUBGRAPH_VERSION_LABEL ||
-  execSync("node scripts/next-version.js").toString().trim();
-
-if (!/^[A-Za-z0-9._-]+$/.test(version)) {
-  throw Error(`Invalid subgraph version label: ${version}`);
+if (!/^v[0-9]+(?:\.[0-9]+){2,3}$/.test(version)) {
+  console.error(
+    "Version labels must use the release format vMAJOR.MINOR.PATCH[.REVISION]"
+  );
+  process.exit(1);
 }
 
 if (provider === "hinterlight") {
-  if (!/^v[0-9]+(?:\.[0-9]+){2,3}$/.test(version)) {
-    console.error(
-      "Hinterlight version labels must use the release format vMAJOR.MINOR.PATCH[.REVISION]"
-    );
-    process.exit(1);
-  }
   if (!/^[A-Za-z0-9_-]+$/.test(subgraphName)) {
     throw Error(`Invalid Hinterlight subgraph name: ${subgraphName}`);
   }

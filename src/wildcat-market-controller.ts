@@ -1,4 +1,4 @@
-import { BigInt } from "@graphprotocol/graph-ts";
+import { BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import {
   createLenderAuthorizationChange,
   createMarket,
@@ -140,6 +140,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     hooksFactory: null,
     version: version,
     usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
   });
   controller.numMarkets = controller.numMarkets + 1;
