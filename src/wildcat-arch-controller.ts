@@ -1,4 +1,3 @@
-import { Bytes } from "@graphprotocol/graph-ts";
 import {
   createBorrowerRegistrationChange,
   createControllerAdded,
@@ -36,7 +35,9 @@ import {
 } from "../generated/WildcatArchController/WildcatArchController";
 import { WildcatMarketControllerFactory } from "../generated/WildcatArchController/WildcatMarketControllerFactory";
 import {
+  Controller,
   ControllerFactory,
+  HooksFactory,
   OwnershipHandoverCanceled,
   OwnershipHandoverRequested,
   OwnershipTransferred,
@@ -83,7 +84,7 @@ export function handleBorrowerRemoved(event: BorrowerRemovedEvent): void {
 
   createBorrowerRegistrationChange(generateEventId(event), {
     registration: borrowerStatus.id,
-    isRegistered: true,
+    isRegistered: false,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
@@ -185,9 +186,18 @@ export function handleControllerRemoved(event: ControllerRemovedEvent): void {
 }
 
 export function handleMarketAdded(event: MarketAddedEvent): void {
+  let controllerAddress = event.params.controller;
+  let controller = Controller.load(generateControllerId(controllerAddress));
+  let hooksFactory = HooksFactory.load(controllerAddress.toHexString());
+  let marketId = generateMarketId(event.params.market);
   createMarketAdded(generateEventId(event), {
-    controller: event.params.controller.toHex(),
-    market: event.params.market.toHex(),
+    controllerAddress,
+    controller: controller == null ? null : controller.id,
+    hooksFactory: hooksFactory == null ? null : hooksFactory.id,
+    marketAddress: event.params.market,
+    // MarketAdded is emitted before MarketDeployed for new markets, so retain
+    // the eventual entity ID even when the Market does not exist yet.
+    market: marketId,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,

@@ -3,6 +3,7 @@ import { Address, ethereum } from "@graphprotocol/graph-ts";
 import {
   BorrowerAdded,
   BorrowerRemoved,
+  MarketAdded,
 } from "../generated/WildcatArchController/WildcatArchController";
 
 export function createBorrowerAddedEvent(borrower: Address): BorrowerAdded {
@@ -19,6 +20,24 @@ export function createBorrowerRemovedEvent(borrower: Address): BorrowerRemoved {
   event.parameters = new Array();
   event.parameters.push(
     new ethereum.EventParam("borrower", ethereum.Value.fromAddress(borrower))
+  );
+  return event;
+}
+
+export function createMarketAddedEvent(
+  controller: Address,
+  market: Address
+): MarketAdded {
+  let event = changetype<MarketAdded>(newMockEvent());
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam(
+      "controller",
+      ethereum.Value.fromAddress(controller)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam("market", ethereum.Value.fromAddress(market))
   );
   return event;
 }

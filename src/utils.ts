@@ -84,7 +84,7 @@ export function calculateBatchInterestEarned(
 }
 
 export function satSub(a: BigInt, b: BigInt): BigInt {
-  if (a.gt(b)) {
+  if (a.lt(b)) {
     return BigInt.zero();
   }
   return a.minus(b);
