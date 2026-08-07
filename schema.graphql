@@ -730,7 +730,8 @@ type WithdrawalBatch @entity {
   interestAccrualRecords: [WithdrawalBatchInterestAccrued!]!
     @derivedFrom(field: "batch")
   creation: WithdrawalBatchCreated! @derivedFrom(field: "batch")
-  expiration: WithdrawalBatchExpired @derivedFrom(field: "batch")
+  # Stored explicitly so mappings and consumers can inspect expiration state.
+  expiration: WithdrawalBatchExpired
 }
 
 type WithdrawalBatchInterestAccrued @entity(immutable: true) {
@@ -757,13 +758,28 @@ type LenderWithdrawalStatus @entity {
   executions: [WithdrawalExecution!]! @derivedFrom(field: "status")
 }
 
-type Token @entity(immutable: true) {
+type Token @entity {
   id: ID!
   address: Bytes!
   name: String!
   symbol: String!
   decimals: Int!
   isMock: Boolean!
+  # Explicit fixed-$1 policy for configured token addresses.
+  isUsdStablecoin: Boolean!
+  # Chainlink feed path. priceFeed1 is populated only for two-hop pricing.
+  priceFeed0: Bytes
+  priceFeed1: Bytes
+  # UTC start-of-day for the last mainnet feed-discovery attempt.
+  lastPriceFeedSearchDay: Int!
+}
+
+type TokenDailyPrice @entity {
+  id: ID!
+  token: Token!
+  # UTC start-of-day timestamp for this cached price.
+  timestamp: Int!
+  priceUSD: BigDecimal!
 }
 
 type Market @entity {
@@ -836,6 +852,26 @@ type Market @entity {
   totalProtocolFeesAccrued: BigInt!
   # all time deposits
   totalDeposited: BigInt!
+  # all time withdrawal requests
+  totalWithdrawalsRequested: BigInt!
+  # all time executed withdrawals
+  totalWithdrawalsExecuted: BigInt!
+
+  # ----------------------------- Cumulative USD ----------------------------- #
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  totalDepositedUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  # False once a nonzero aggregate mutation could not be priced.
+  usdTotalsComplete: Boolean!
+
+  # Legacy totalDebts() converted to USD. Null when the asset is unpriced.
+  # totalDebts = normalized scaled supply + unclaimed withdrawals + fees.
+  totalDebtUSD: BigDecimal
 
   eventIndex: Int!
   delinquencyStatusChangedIndex: Int!
@@ -891,6 +927,159 @@ type Market @entity {
     @derivedFrom(field: "market")
 
   dailyStats: [MarketDailyStats!]! @derivedFrom(field: "market")
+  tokenDailyPrice: TokenDailyPrice
+}
+
+# -------------------------------------------------------------------------- #
+#                         Protocol / Borrower / Lender Stats                 #
+# -------------------------------------------------------------------------- #
+
+type ProtocolStats @entity {
+  id: ID! # PROTOCOL_STATS
+
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  usdTotalsComplete: Boolean!
+
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+  numActiveBorrowers: Int!
+  numActiveLenders: Int!
+  numActiveLenderAccounts: Int!
+}
+
+type ProtocolDailyStats @entity {
+  id: ID! # PROTOCOL-<dayTimestamp>
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  dayDepositedUSD: BigDecimal!
+  dayBorrowedUSD: BigDecimal!
+  dayRepaidUSD: BigDecimal!
+  dayWithdrawalsRequestedUSD: BigDecimal!
+  dayWithdrawalsExecutedUSD: BigDecimal!
+  dayBaseInterestAccruedUSD: BigDecimal!
+  dayDelinquencyFeesAccruedUSD: BigDecimal!
+  dayProtocolFeesAccruedUSD: BigDecimal!
+
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
+
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+  numActiveBorrowers: Int!
+  numActiveLenders: Int!
+  numActiveLenderAccounts: Int!
+}
+
+type BorrowerStats @entity {
+  id: ID! # BORROWER-STATS-<address>
+  borrower: Bytes!
+
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  usdTotalsComplete: Boolean!
+
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+  numBatchesExpired: Int!
+  numBatchesExpiredUnpaid: Int!
+  numBatchesPaidLate: Int!
+}
+
+type BorrowerDailyStats @entity {
+  id: ID! # BORROWER-DAILY-<address>-<dayTimestamp>
+  borrower: Bytes!
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  dayDepositedUSD: BigDecimal!
+  dayBorrowedUSD: BigDecimal!
+  dayRepaidUSD: BigDecimal!
+  dayWithdrawalsRequestedUSD: BigDecimal!
+  dayWithdrawalsExecutedUSD: BigDecimal!
+  dayBaseInterestAccruedUSD: BigDecimal!
+  dayDelinquencyFeesAccruedUSD: BigDecimal!
+  dayProtocolFeesAccruedUSD: BigDecimal!
+
+  totalDepositedUSD: BigDecimal!
+  totalBorrowedUSD: BigDecimal!
+  totalRepaidUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalBaseInterestAccruedUSD: BigDecimal!
+  totalDelinquencyFeesAccruedUSD: BigDecimal!
+  totalProtocolFeesAccruedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
+
+  numMarkets: Int!
+  numActiveMarkets: Int!
+  numDelinquentMarkets: Int!
+  numClosedMarkets: Int!
+}
+
+type LenderStats @entity {
+  id: ID! # LENDER-STATS-<address>
+  lender: Bytes!
+  firstSeenTimestamp: Int!
+
+  totalDepositedUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalInterestEarnedUSD: BigDecimal!
+  usdTotalsComplete: Boolean!
+
+  numMarkets: Int!
+  numActiveMarkets: Int!
+}
+
+type LenderDailyStats @entity {
+  id: ID! # LENDER-DAILY-<address>-<dayTimestamp>
+  lender: Bytes!
+  startTimestamp: Int!
+  endTimestamp: Int!
+
+  dayDepositedUSD: BigDecimal!
+  dayWithdrawalsRequestedUSD: BigDecimal!
+  dayWithdrawalsExecutedUSD: BigDecimal!
+  dayInterestEarnedUSD: BigDecimal!
+
+  totalDepositedUSD: BigDecimal!
+  totalWithdrawalsRequestedUSD: BigDecimal!
+  totalWithdrawalsExecutedUSD: BigDecimal!
+  totalInterestEarnedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
+
+  numMarkets: Int!
+  numActiveMarkets: Int!
 }
 
 type MarketDailyStats @entity {
@@ -898,11 +1087,48 @@ type MarketDailyStats @entity {
   startTimestamp: Int!
   endTimestamp: Int!
   market: Market!
+
+  # Legacy v2.0.22.x fields. These remain daily deltas.
   totalDeposited: BigInt!
   totalWithdrawalsRequested: BigInt!
   totalWithdrawalsExecuted: BigInt!
   totalBorrowed: BigInt!
   totalRepaid: BigInt!
+
+  # Explicit daily aliases and additional daily values.
+  dayDeposited: BigInt!
+  dayWithdrawalsRequested: BigInt!
+  dayWithdrawalsExecuted: BigInt!
+  dayBorrowed: BigInt!
+  dayRepaid: BigInt!
+  dayBaseInterestAccrued: BigInt!
+  dayDelinquencyFeesAccrued: BigInt!
+  dayProtocolFeesAccrued: BigInt!
+
+  # Cumulative market snapshots. These names deliberately do not reuse the
+  # legacy daily total* fields above.
+  cumulativeDeposited: BigInt!
+  cumulativeWithdrawalsRequested: BigInt!
+  cumulativeWithdrawalsExecuted: BigInt!
+  cumulativeBorrowed: BigInt!
+  cumulativeRepaid: BigInt!
+  cumulativeBaseInterestAccrued: BigInt!
+  cumulativeDelinquencyFeesAccrued: BigInt!
+  cumulativeProtocolFeesAccrued: BigInt!
+
+  cumulativeDepositedUSD: BigDecimal!
+  cumulativeWithdrawalsRequestedUSD: BigDecimal!
+  cumulativeWithdrawalsExecutedUSD: BigDecimal!
+  cumulativeBorrowedUSD: BigDecimal!
+  cumulativeRepaidUSD: BigDecimal!
+  cumulativeBaseInterestAccruedUSD: BigDecimal!
+  cumulativeDelinquencyFeesAccruedUSD: BigDecimal!
+  cumulativeProtocolFeesAccruedUSD: BigDecimal!
+  cumulativeUsdTotalsComplete: Boolean!
+
+  scaledTotalSupply: BigInt!
+  scaleFactor: BigInt!
+  usdPrice: BigDecimal
 }
 
 type MarketInterestAccrued @entity(immutable: true) {
@@ -933,6 +1159,7 @@ type DelinquencyStatusChanged @entity(immutable: true) {
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
+  blockLogIndex: Int!
 }
 
 type AnnualInterestBipsUpdated @entity(immutable: true) {
@@ -1070,8 +1297,10 @@ type ReserveRatioBipsUpdated @entity(immutable: true) {
 type SanctionedAccountAssetsQueuedForWithdrawal @entity(immutable: true) {
   id: ID!
   account: Bytes! # address
+  expiry: BigInt! # uint32
   scaledAmount: BigInt! # uint256
   normalizedAmount: BigInt! # uint256
+  # Backward-compatible alias retained from the old schema.
   amount: BigInt! # uint256
   blockNumber: Int!
   blockTimestamp: Int!

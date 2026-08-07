@@ -1,4 +1,4 @@
-import { Address } from "@graphprotocol/graph-ts";
+import { Address, BigInt } from "@graphprotocol/graph-ts";
 import {
   createController,
   createToken,
@@ -15,8 +15,12 @@ import { WildcatMarketController as WildcatMarketControllerTemplate } from "../g
 import { Token } from "../generated/schema";
 import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
 import { isNullAddress } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
 
-function createTokenIfNotExists(asset: Address): string | null {
+function createTokenIfNotExists(
+  asset: Address,
+  timestamp: BigInt
+): string | null {
   if (isNullAddress(asset)) {
     return null;
   }
@@ -26,13 +30,16 @@ function createTokenIfNotExists(asset: Address): string | null {
     let erc20 = IERC20.bind(asset);
     let result = erc20.try_isMock();
     let isMock = !result.reverted && result.value;
-    return createToken(assetId, {
+    let token = createToken(assetId, {
       address: asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
       isMock: isMock,
-    }).id;
+      isUsdStablecoin: false,
+    });
+    setupTokenPriceFeeds(token, timestamp);
+    return token.id;
   }
   return token.id;
 }
@@ -65,7 +72,8 @@ export function handleUpdateProtocolFeeConfiguration(
   controllerFactory.feeRecipient = feeRecipient;
   controllerFactory.originationFeeAmount = originationFeeAmount;
   controllerFactory.originationFeeAsset = createTokenIfNotExists(
-    originationFeeAsset
+    originationFeeAsset,
+    event.block.timestamp
   );
   controllerFactory.protocolFeeBips = protocolFeeBips;
   controllerFactory.save();

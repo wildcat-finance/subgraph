@@ -24,6 +24,8 @@ import {
   TemporaryExcessReserveRatioUpdated,
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
+import { recordMarketCreated } from "./daily-stats";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -87,14 +89,16 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
   if (Token.load(assetId) == null) {
     let erc20 = IERC20.bind(event.params.asset);
     let result = erc20.try_isMock();
-    // let isMock = !result.reverted && result.value;
-    createToken(assetId, {
+    let isMock = !result.reverted && result.value;
+    let token = createToken(assetId, {
       address: event.params.asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
-      isMock: true,
+      isMock,
+      isUsdStablecoin: false,
     });
+    setupTokenPriceFeeds(token, event.block.timestamp);
   }
   const marketId = generateMarketId(event.params.market);
   MarketTemplate.create(event.params.market);
@@ -135,10 +139,12 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     hooks: null,
     hooksFactory: null,
     version: version,
+    usdTotalsComplete: true,
     numCollateralContracts: 0,
   });
   controller.numMarkets = controller.numMarkets + 1;
   controller.save();
+  recordMarketCreated(controller.borrower, event.block.timestamp);
 }
 
 export function handleTemporaryExcessReserveRatioActivated(

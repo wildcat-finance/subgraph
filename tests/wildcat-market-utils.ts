@@ -11,6 +11,7 @@ import {
   MarketClosed,
   MaxTotalSupplyUpdated,
   ReserveRatioBipsUpdated,
+  SanctionedAccountAssetsQueuedForWithdrawal,
   SanctionedAccountAssetsSentToEscrow,
   SanctionedAccountWithdrawalSentToEscrow,
   InterestAndFeesAccrued,
@@ -237,6 +238,42 @@ export function createSanctionedAccountAssetsSentToEscrowEvent(
   );
 
   return sanctionedAccountAssetsSentToEscrowEvent;
+}
+
+export function createSanctionedAccountAssetsQueuedForWithdrawalEvent(
+  account: Address,
+  expiry: BigInt,
+  scaledAmount: BigInt,
+  normalizedAmount: BigInt
+): SanctionedAccountAssetsQueuedForWithdrawal {
+  let event = changetype<SanctionedAccountAssetsQueuedForWithdrawal>(
+    newMockEvent()
+  );
+
+  event.parameters = new Array();
+  event.parameters.push(
+    new ethereum.EventParam("account", ethereum.Value.fromAddress(account))
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "expiry",
+      ethereum.Value.fromUnsignedBigInt(expiry)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "scaledAmount",
+      ethereum.Value.fromUnsignedBigInt(scaledAmount)
+    )
+  );
+  event.parameters.push(
+    new ethereum.EventParam(
+      "normalizedAmount",
+      ethereum.Value.fromUnsignedBigInt(normalizedAmount)
+    )
+  );
+
+  return event;
 }
 
 export function createSanctionedAccountWithdrawalSentToEscrowEvent(

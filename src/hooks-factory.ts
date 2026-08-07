@@ -48,6 +48,8 @@ import {
   Token,
 } from "../generated/schema";
 import { generateEventId, isNullAddress } from "./utils";
+import { setupTokenPriceFeeds } from "./price-feeds";
+import { recordMarketCreated } from "./daily-stats";
 import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
@@ -167,7 +169,7 @@ export function handleHooksInstanceDeployed(
   CombinedHooksTemplate.create(hooksInstance);
 }
 
-function createTokenIfNotExists(asset: Address): Token | null {
+function createTokenIfNotExists(asset: Address, timestamp: BigInt): Token | null {
   if (isNullAddress(asset)) {
     return null;
   }
@@ -177,19 +179,22 @@ function createTokenIfNotExists(asset: Address): Token | null {
     let erc20 = IERC20.bind(asset);
     let result = erc20.try_isMock();
     let isMock = !result.reverted && result.value;
-    return createToken(assetId, {
+    let token = createToken(assetId, {
       address: asset,
       name: erc20.name(),
       symbol: erc20.symbol(),
       decimals: erc20.decimals(),
       isMock: isMock,
+      isUsdStablecoin: false,
     });
+    setupTokenPriceFeeds(token, timestamp);
+    return token;
   }
   return token;
 }
 
-function getOrCreateTokenId(asset: Address): string | null {
-  let token = createTokenIfNotExists(asset);
+function getOrCreateTokenId(asset: Address, timestamp: BigInt): string | null {
+  let token = createTokenIfNotExists(asset, timestamp);
   if (token == null) {
     return null;
   }
@@ -210,7 +215,10 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
       hooksTemplate: hooksTemplateId,
       feeRecipient: event.params.feeRecipient,
       originationFeeAmount: event.params.originationFeeAmount,
-      originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
+      originationFeeAsset: getOrCreateTokenId(
+        event.params.originationFeeAsset,
+        event.block.timestamp
+      ),
       // originationFeeAsset: event.params.originationFeeAsset,
       protocolFeeBips: event.params.protocolFeeBips,
     }
@@ -222,7 +230,10 @@ export function handleHooksTemplateAdded(event: HooksTemplateAddedEvent): void {
     // originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
 
     // originationFeeAsset: event.params.originationFeeAsset,
-    originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
+    originationFeeAsset: getOrCreateTokenId(
+      event.params.originationFeeAsset,
+      event.block.timestamp
+    ),
     protocolFeeBips: event.params.protocolFeeBips,
     hooksFactory: hooksFactory.id,
     name: event.params.name,
@@ -269,14 +280,18 @@ export function handleHooksTemplateFeesUpdated(
       hooksTemplate: hooksTemplateId,
       feeRecipient: event.params.feeRecipient,
       originationFeeAmount: event.params.originationFeeAmount,
-      originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
+      originationFeeAsset: getOrCreateTokenId(
+        event.params.originationFeeAsset,
+        event.block.timestamp
+      ),
       protocolFeeBips: event.params.protocolFeeBips,
     }
   );
   hooksTemplateEntity.feeRecipient = event.params.feeRecipient;
   hooksTemplateEntity.originationFeeAmount = event.params.originationFeeAmount;
   hooksTemplateEntity.originationFeeAsset = getOrCreateTokenId(
-    event.params.originationFeeAsset
+    event.params.originationFeeAsset,
+    event.block.timestamp
   );
   hooksTemplateEntity.protocolFeeBips = event.params.protocolFeeBips;
   hooksTemplateEntity.save();
@@ -435,7 +450,7 @@ function decodeAndCreateHooksConfig(
 
 export function handleMarketDeployed(event: MarketDeployedEvent): void {
   let params = event.params;
-  let asset = createTokenIfNotExists(params.asset);
+  let asset = createTokenIfNotExists(params.asset, event.block.timestamp);
   if (asset != null) {
     let marketId = generateMarketId(params.market);
     MarketTemplate.create(params.market);
@@ -491,10 +506,12 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       hooks: hooks.id,
       hooksFactory: hooksFactory.id,
       version: version,
+      usdTotalsComplete: true,
       numCollateralContracts: 0,
     });
 
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
+    recordMarketCreated(hooks.borrower, event.block.timestamp);
   }
 }

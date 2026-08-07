@@ -267,11 +267,23 @@ templates:
         - HooksTemplateAdded
         - HooksTemplateDisabled
         - HooksTemplateFeesUpdated
+        - MarketDailyStats
+        - TokenDailyPrice
+        - ProtocolStats
+        - ProtocolDailyStats
+        - BorrowerStats
+        - BorrowerDailyStats
+        - LenderStats
+        - LenderDailyStats
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
         - name: IERC20
           file: ./abis/IERC20.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
       eventHandlers:
         - event: AnnualInterestBipsUpdated(uint256)
           handler: handleAnnualInterestBipsUpdated

@@ -1,6 +1,7 @@
 import {
   assert,
   clearStore,
+  dataSourceMock,
   describe,
   test
 } from "matchstick-as/assembly/index";
@@ -10,22 +11,46 @@ import { StateUpdated } from "../generated/templates/WildcatMarket/WildcatMarket
 import {
   createLenderAccount,
   createMarket,
+  createToken,
+  createWithdrawalBatch,
+  generateBorrowerStatsId,
   generateLenderAccountId,
+  generateLenderStatsId,
   generateMarketId,
+  generateProtocolStatsId,
   generateTokenId,
+  generateWithdrawalBatchId,
   getMarket
 } from "../generated/UncrashableEntityHelpers";
 import {
+  handleBorrow,
+  handleDeposit,
+  handleFeesCollected,
   handleInterestAndFeesAccrued,
   handleMarketClosed,
+  handleSanctionedAccountAssetsQueuedForWithdrawal,
   handleStateUpdated,
-  handleTransfer
+  handleTransfer,
+  handleWithdrawalBatchClosed,
+  handleWithdrawalBatchExpired,
+  handleWithdrawalBatchPayment,
+  handleWithdrawalExecuted,
+  handleWithdrawalQueued
 } from "../src/wildcat-market";
 import { generateEventId } from "../src/utils";
 import {
+  createBorrowEvent,
+  createDepositEvent,
+  createFeesCollectedEvent,
   createMarketClosedEvent,
+  createSanctionedAccountAssetsQueuedForWithdrawalEvent,
   createScaleFactorUpdatedEvent,
-  createTransferEvent
+  createTransferEvent,
+  createWithdrawalBatchClosedEvent,
+  createWithdrawalBatchExpiredEvent,
+  createWithdrawalBatchPaymentEvent,
+  createWithdrawalExecutedEvent,
+  createWithdrawalQueuedEvent
 } from "./wildcat-market-utils";
 
 let marketAddress = Address.fromString(
@@ -52,7 +77,7 @@ function saveMarket(): void {
     version: "V2",
     controller: null,
     hooksFactory: "hooks-factory",
-    hooks: "hooks",
+    hooks: Address.zero().toHex(),
     borrower: Address.zero(),
     sentinel: Address.zero(),
     feeRecipient: Address.zero(),
@@ -71,10 +96,25 @@ function saveMarket(): void {
     scaleFactor: BigInt.fromI32(10).pow(27),
     lastInterestAccruedTimestamp: 0,
     lastInterestAccruedBlockNumber: 0,
+    usdTotalsComplete: true,
     numCollateralContracts: 0,
     createdAt: 0,
     deployedEvent: "deployed-event"
   });
+}
+
+function saveStableToken(decimals: i32): void {
+  createToken(generateTokenId(assetAddress), {
+    address: assetAddress,
+    name: "Test USD",
+    symbol: "TUSD",
+    decimals,
+    isMock: false,
+    isUsdStablecoin: true
+  });
+  let market = getMarket(marketId());
+  market.decimals = decimals;
+  market.save();
 }
 
 function saveLender(
@@ -370,6 +410,349 @@ describe("market closure", () => {
       "RECORD-".concat(marketId()).concat("-0"),
       "timestamp",
       "777"
+    );
+  });
+});
+
+describe("market analytics accounting", () => {
+  test("preserves legacy daily deltas alongside cumulative snapshots", () => {
+    clearStore();
+    saveMarket();
+    saveStableToken(6);
+
+    let deposit = createDepositEvent(
+      lenderAddress,
+      BigInt.fromI32(1500000),
+      BigInt.fromI32(1500000)
+    );
+    deposit.address = marketAddress;
+    handleDeposit(deposit);
+
+    let borrow = createBorrowEvent(BigInt.fromI32(500000));
+    borrow.address = marketAddress;
+    handleBorrow(borrow);
+
+    let dailyId = marketId().concat("-0");
+    assert.fieldEquals("Market", marketId(), "totalDeposited", "1500000");
+    assert.fieldEquals("Market", marketId(), "totalBorrowed", "500000");
+    assert.fieldEquals("Market", marketId(), "totalDepositedUSD", "1.5");
+    assert.fieldEquals("Market", marketId(), "totalBorrowedUSD", "0.5");
+    assert.fieldEquals("Market", marketId(), "totalDebtUSD", "1.5");
+    assert.fieldEquals("Market", marketId(), "usdTotalsComplete", "true");
+
+    assert.fieldEquals("MarketDailyStats", dailyId, "totalDeposited", "1500000");
+    assert.fieldEquals("MarketDailyStats", dailyId, "dayDeposited", "1500000");
+    assert.fieldEquals(
+      "MarketDailyStats",
+      dailyId,
+      "cumulativeDeposited",
+      "1500000"
+    );
+    assert.fieldEquals("MarketDailyStats", dailyId, "totalBorrowed", "500000");
+    assert.fieldEquals("MarketDailyStats", dailyId, "dayBorrowed", "500000");
+    assert.fieldEquals(
+      "MarketDailyStats",
+      dailyId,
+      "cumulativeBorrowed",
+      "500000"
+    );
+    assert.fieldEquals("MarketDailyStats", dailyId, "usdPrice", "1");
+
+    let protocolId = generateProtocolStatsId();
+    assert.fieldEquals("ProtocolStats", protocolId, "totalDepositedUSD", "1.5");
+    assert.fieldEquals("ProtocolStats", protocolId, "totalBorrowedUSD", "0.5");
+    assert.fieldEquals("ProtocolStats", protocolId, "numActiveMarkets", "1");
+    assert.fieldEquals("ProtocolStats", protocolId, "numActiveBorrowers", "1");
+    assert.fieldEquals("ProtocolStats", protocolId, "numActiveLenders", "1");
+    assert.fieldEquals(
+      "ProtocolStats",
+      protocolId,
+      "numActiveLenderAccounts",
+      "1"
+    );
+    assert.fieldEquals("ProtocolDailyStats", "PROTOCOL-0", "numActiveMarkets", "1");
+    assert.fieldEquals("ProtocolDailyStats", "PROTOCOL-0", "dayDepositedUSD", "1.5");
+    assert.fieldEquals("ProtocolDailyStats", "PROTOCOL-0", "dayBorrowedUSD", "0.5");
+  });
+
+  test("marks aggregates incomplete instead of treating a missing price as zero", () => {
+    clearStore();
+    dataSourceMock.setNetwork("plasma-testnet");
+    saveMarket();
+    createToken(generateTokenId(assetAddress), {
+      address: assetAddress,
+      name: "Unpriced",
+      symbol: "NOPE",
+      decimals: 18,
+      isMock: false,
+      isUsdStablecoin: false
+    });
+
+    let deposit = createDepositEvent(
+      lenderAddress,
+      BigInt.fromI32(100),
+      BigInt.fromI32(100)
+    );
+    deposit.address = marketAddress;
+    handleDeposit(deposit);
+
+    let market = getMarket(marketId());
+    assert.assertTrue(!market.totalDebtUSD);
+    assert.fieldEquals("Market", marketId(), "totalDepositedUSD", "0");
+    assert.fieldEquals("Market", marketId(), "usdTotalsComplete", "false");
+    assert.fieldEquals(
+      "ProtocolStats",
+      generateProtocolStatsId(),
+      "usdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals(
+      "BorrowerStats",
+      generateBorrowerStatsId(Address.zero()),
+      "usdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals(
+      "LenderStats",
+      generateLenderStatsId(lenderAddress),
+      "usdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals(
+      "ProtocolDailyStats",
+      "PROTOCOL-0",
+      "dayUsdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals(
+      "MarketDailyStats",
+      marketId().concat("-0"),
+      "cumulativeUsdTotalsComplete",
+      "false"
+    );
+  });
+
+  test("computes full legacy debt with ray rounding and non-supply components", () => {
+    clearStore();
+    saveMarket();
+    saveStableToken(0);
+    let market = getMarket(marketId());
+    market.scaledTotalSupply = BigInt.fromI32(3);
+    market.scaleFactor = BigInt.fromI32(15).times(BigInt.fromI32(10).pow(26));
+    market.normalizedUnclaimedWithdrawals = BigInt.fromI32(7);
+    market.pendingProtocolFees = BigInt.fromI32(13);
+    market.save();
+
+    let fees = createFeesCollectedEvent(BigInt.fromI32(2));
+    fees.address = marketAddress;
+    handleFeesCollected(fees);
+
+    // rayMul(3, 1.5 RAY) rounds 4.5 to 5; 5 + 7 + 11 = 23.
+    assert.fieldEquals("Market", marketId(), "pendingProtocolFees", "11");
+    assert.fieldEquals("Market", marketId(), "totalDebtUSD", "23");
+  });
+
+  test("does not classify withdrawal-batch payments as requests or repayments", () => {
+    clearStore();
+    saveMarket();
+    saveStableToken(0);
+    let ray = BigInt.fromI32(10).pow(27);
+    let expiry = BigInt.fromI32(1000);
+    let market = getMarket(marketId());
+    market.scaledTotalSupply = BigInt.fromI32(10);
+    market.scaledPendingWithdrawals = BigInt.fromI32(10);
+    market.save();
+    let batch = createWithdrawalBatch(
+      generateWithdrawalBatchId(marketAddress, expiry),
+      {
+        market: marketId(),
+        expiry,
+        lastScaleFactor: ray,
+        lastUpdatedTimestamp: 0
+      }
+    );
+    batch.scaledTotalAmount = BigInt.fromI32(10);
+    batch.save();
+
+    let payment = createWithdrawalBatchPaymentEvent(
+      expiry,
+      BigInt.fromI32(4),
+      BigInt.fromI32(4)
+    );
+    payment.address = marketAddress;
+    handleWithdrawalBatchPayment(payment);
+
+    assert.fieldEquals("Market", marketId(), "totalWithdrawalsRequested", "0");
+    assert.fieldEquals("Market", marketId(), "totalRepaid", "0");
+    assert.fieldEquals("Market", marketId(), "scaledTotalSupply", "6");
+    assert.fieldEquals("Market", marketId(), "scaledPendingWithdrawals", "6");
+    assert.fieldEquals(
+      "Market",
+      marketId(),
+      "normalizedUnclaimedWithdrawals",
+      "4"
+    );
+    assert.fieldEquals("Market", marketId(), "totalDebtUSD", "10");
+    assert.fieldEquals(
+      "MarketDailyStats",
+      marketId().concat("-0"),
+      "totalWithdrawalsRequested",
+      "0"
+    );
+    assert.fieldEquals(
+      "ProtocolStats",
+      generateProtocolStatsId(),
+      "totalRepaidUSD",
+      "0"
+    );
+  });
+
+  test("stores expiration shortfall and counts same-block late closure once", () => {
+    clearStore();
+    saveMarket();
+    let expiry = BigInt.fromI32(1000);
+    let batchId = generateWithdrawalBatchId(marketAddress, expiry);
+    let batch = createWithdrawalBatch(batchId, {
+      market: marketId(),
+      expiry,
+      lastScaleFactor: BigInt.fromI32(10).pow(27),
+      lastUpdatedTimestamp: 0
+    });
+    batch.scaledTotalAmount = BigInt.fromI32(10);
+    batch.scaledAmountBurned = BigInt.fromI32(4);
+    batch.save();
+
+    let expired = createWithdrawalBatchExpiredEvent(
+      expiry,
+      BigInt.fromI32(10),
+      BigInt.fromI32(4),
+      BigInt.fromI32(4)
+    );
+    expired.address = marketAddress;
+    handleWithdrawalBatchExpired(expired);
+
+    let closed = createWithdrawalBatchClosedEvent(expiry);
+    closed.address = marketAddress;
+    handleWithdrawalBatchClosed(closed);
+    handleWithdrawalBatchClosed(closed);
+
+    let expirationId = generateEventId(expired);
+    assert.fieldEquals("WithdrawalBatch", batchId, "expiration", expirationId);
+    assert.fieldEquals("WithdrawalBatchExpired", expirationId, "normalizedAmountOwed", "6");
+    let borrowerId = generateBorrowerStatsId(Address.zero());
+    assert.fieldEquals("BorrowerStats", borrowerId, "numBatchesExpired", "1");
+    assert.fieldEquals(
+      "BorrowerStats",
+      borrowerId,
+      "numBatchesExpiredUnpaid",
+      "1"
+    );
+    assert.fieldEquals("BorrowerStats", borrowerId, "numBatchesPaidLate", "1");
+  });
+
+  test("attributes post-queue batch interest to the lender on completion", () => {
+    clearStore();
+    saveMarket();
+    saveStableToken(0);
+    let ray = BigInt.fromI32(10).pow(27);
+    let expiry = BigInt.fromI32(1000);
+
+    let deposit = createDepositEvent(
+      lenderAddress,
+      BigInt.fromI32(10),
+      BigInt.fromI32(10)
+    );
+    deposit.address = marketAddress;
+    handleDeposit(deposit);
+
+    createWithdrawalBatch(generateWithdrawalBatchId(marketAddress, expiry), {
+      market: marketId(),
+      expiry,
+      lastScaleFactor: ray,
+      lastUpdatedTimestamp: 0
+    });
+    let queued = createWithdrawalQueuedEvent(
+      expiry,
+      lenderAddress,
+      BigInt.fromI32(10),
+      BigInt.fromI32(10)
+    );
+    queued.address = marketAddress;
+    handleWithdrawalQueued(queued);
+
+    let market = getMarket(marketId());
+    market.scaleFactor = BigInt.fromI32(12).times(BigInt.fromI32(10).pow(26));
+    market.save();
+    let payment = createWithdrawalBatchPaymentEvent(
+      expiry,
+      BigInt.fromI32(10),
+      BigInt.fromI32(12)
+    );
+    payment.address = marketAddress;
+    handleWithdrawalBatchPayment(payment);
+    let closed = createWithdrawalBatchClosedEvent(expiry);
+    closed.address = marketAddress;
+    handleWithdrawalBatchClosed(closed);
+    let executed = createWithdrawalExecutedEvent(
+      expiry,
+      lenderAddress,
+      BigInt.fromI32(12)
+    );
+    executed.address = marketAddress;
+    handleWithdrawalExecuted(executed);
+
+    let lenderStatsId = generateLenderStatsId(lenderAddress);
+    assert.fieldEquals(
+      "LenderStats",
+      lenderStatsId,
+      "totalInterestEarnedUSD",
+      "2"
+    );
+    assert.fieldEquals(
+      "LenderDailyStats",
+      "LENDER-DAILY-".concat(lenderAddress.toHex()).concat("-0"),
+      "dayInterestEarnedUSD",
+      "2"
+    );
+  });
+});
+
+describe("sanctioned withdrawal records", () => {
+  test("persists queued assets using the emitted expiry and amounts", () => {
+    clearStore();
+    let event = createSanctionedAccountAssetsQueuedForWithdrawalEvent(
+      lenderAddress,
+      BigInt.fromI32(111),
+      BigInt.fromI32(222),
+      BigInt.fromI32(333)
+    );
+    event.address = marketAddress;
+    handleSanctionedAccountAssetsQueuedForWithdrawal(event);
+
+    let eventId = generateEventId(event);
+    assert.fieldEquals(
+      "SanctionedAccountAssetsQueuedForWithdrawal",
+      eventId,
+      "expiry",
+      "111"
+    );
+    assert.fieldEquals(
+      "SanctionedAccountAssetsQueuedForWithdrawal",
+      eventId,
+      "scaledAmount",
+      "222"
+    );
+    assert.fieldEquals(
+      "SanctionedAccountAssetsQueuedForWithdrawal",
+      eventId,
+      "normalizedAmount",
+      "333"
+    );
+    assert.fieldEquals(
+      "SanctionedAccountAssetsQueuedForWithdrawal",
+      eventId,
+      "amount",
+      "333"
     );
   });
 });
