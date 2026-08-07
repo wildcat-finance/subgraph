@@ -151,4 +151,59 @@ describe("hooks factory role provider decoding", () => {
       "4294967295"
     );
   });
+
+  test("classifies periodic term hooks instances", () => {
+    clearStore();
+
+    createHooksFactory(factoryAddress.toHex(), {
+      archController: "arch-controller",
+      isRegistered: true,
+      sentinel: Address.zero(),
+    });
+    createHooksTemplate(generateHooksTemplateId(hooksTemplate), {
+      name: "PeriodicTermHooks",
+      feeRecipient: Address.zero(),
+      protocolFeeBips: 0,
+      originationFeeAsset: null,
+      originationFeeAmount: BigInt.zero(),
+      hooksFactory: factoryAddress.toHex(),
+    });
+
+    createMockedFunction(hooksInstance, "borrower", "borrower():(address)")
+      .withArgs([])
+      .returns([ethereum.Value.fromAddress(borrower)]);
+    createMockedFunction(hooksInstance, "name", "name():(string)")
+      .withArgs([])
+      .returns([ethereum.Value.fromString("periodic term hooks")]);
+    createMockedFunction(
+      hooksInstance,
+      "getPullProviders",
+      "getPullProviders():(uint256[])"
+    )
+      .withArgs([])
+      .returns([
+        ethereum.Value.fromUnsignedBigIntArray(new Array<BigInt>()),
+      ]);
+    createMockedFunction(
+      hooksInstance,
+      "getPushProviders",
+      "getPushProviders():(uint256[])"
+    )
+      .withArgs([])
+      .returns([
+        ethereum.Value.fromUnsignedBigIntArray(new Array<BigInt>()),
+      ]);
+
+    handleHooksInstanceDeployed(createHooksInstanceDeployedEvent());
+
+    let hooksInstanceId = generateHooksInstanceId(hooksInstance);
+    assert.fieldEquals(
+      "HooksInstance",
+      hooksInstanceId,
+      "kind",
+      "PeriodicTerm"
+    );
+    assert.fieldEquals("HooksInstance", hooksInstanceId, "eventIndex", "0");
+    assert.entityCount("HooksInstanceDeployed", 1);
+  });
 });

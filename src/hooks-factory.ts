@@ -37,6 +37,7 @@ import {
 } from "../generated/UncrashableEntityHelpers";
 import { OpenTermHooks as IOpenTermHooks } from "../generated/HooksFactory/OpenTermHooks";
 import { FixedTermHooks as IFixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
+import { PeriodicTermHooks as IPeriodicTermHooks } from "../generated/HooksFactory/PeriodicTermHooks";
 import { CombinedHooks } from "../generated/HooksFactory/CombinedHooks";
 import { IERC20 } from "../generated/HooksFactory/IERC20";
 import {
@@ -112,6 +113,14 @@ export function handleHooksInstanceDeployed(
       hooksFactory: hooksFactory.id,
       hooksTemplate: hooksTemplateId,
       kind: "FixedTerm",
+    });
+  } else if (hooksTemplate.name == "PeriodicTermHooks") {
+    hooksWithProvider = createHooksInstance(hooksInstanceId, {
+      borrower: borrower,
+      name: name,
+      hooksFactory: hooksFactory.id,
+      hooksTemplate: hooksTemplateId,
+      kind: "PeriodicTerm",
     });
   } else {
     createHooksInstance(hooksInstanceId, {
@@ -389,7 +398,15 @@ function decodeAndCreateHooksConfig(
   let allowForceBuyBacks: boolean = false;
   let allowTermReduction: boolean = false;
   let fixedTermEndTime: i32 = 0;
+  let firstWithdrawalWindowStart: i32 = 0;
+  let periodDuration: i32 = 0;
+  let withdrawalWindowDuration: i32 = 0;
+  let periodicTermClosed: boolean = false;
   let minimumDeposit: BigInt | null = null;
+  let pendingAprChangeAnnualInterestBips: i32 = 0;
+  let pendingAprChangeProposalTimestamp: i32 = 0;
+  let pendingAprChangeResponseWindowStart: i32 = 0;
+  let pendingAprChangeResponseWindowEnd: i32 = 0;
   if (versionString == "OpenTermHooks") {
     let openTermHooksContract = IOpenTermHooks.bind(
       Address.fromBytes(hooksAddress)
@@ -400,11 +417,10 @@ function decodeAndCreateHooksConfig(
     depositRequiresAccess = hookedMarket.depositRequiresAccess;
     transferRequiresAccess = hookedMarket.transferRequiresAccess;
     transfersDisabled = hookedMarket.transfersDisabled;
-    allowForceBuyBacks = false;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
     minimumDeposit = hookedMarket.minimumDeposit;
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
-  } else {
-    // @todo handle unknown hooks kind
+  } else if (versionString == "FixedTermHooks") {
     let fixedTermHooksContract = IFixedTermHooks.bind(
       Address.fromBytes(hooksAddress)
     );
@@ -419,7 +435,23 @@ function decodeAndCreateHooksConfig(
     allowTermReduction = hookedMarket.allowTermReduction;
     fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
     minimumDeposit = hookedMarket.minimumDeposit;
-    allowForceBuyBacks = false;
+    allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
+  } else if (versionString == "PeriodicTermHooks") {
+    let periodicTermHooksContract = IPeriodicTermHooks.bind(
+      Address.fromBytes(hooksAddress)
+    );
+    let hookedMarket = periodicTermHooksContract.getHookedMarket(
+      Address.fromBytes(market)
+    );
+    depositRequiresAccess = hookedMarket.depositRequiresAccess;
+    transferRequiresAccess = hookedMarket.transferRequiresAccess;
+    queueWithdrawalRequiresAccess = hookedMarket.withdrawalRequiresAccess;
+    transfersDisabled = hookedMarket.transfersDisabled;
+    firstWithdrawalWindowStart = hookedMarket.firstWithdrawalWindowStart.toI32();
+    periodDuration = hookedMarket.periodDuration.toI32();
+    withdrawalWindowDuration = hookedMarket.withdrawalWindowDuration.toI32();
+    periodicTermClosed = hookedMarket.isClosed;
+    minimumDeposit = hookedMarket.minimumDeposit;
   }
 
   return createHooksConfig(generateHooksConfigId(market), {
@@ -445,6 +477,14 @@ function decodeAndCreateHooksConfig(
     allowTermReduction: allowTermReduction,
     fixedTermEndTime: fixedTermEndTime,
     minimumDeposit: minimumDeposit,
+    firstWithdrawalWindowStart: firstWithdrawalWindowStart,
+    periodDuration: periodDuration,
+    withdrawalWindowDuration: withdrawalWindowDuration,
+    periodicTermClosed: periodicTermClosed,
+    pendingAprChangeAnnualInterestBips: pendingAprChangeAnnualInterestBips,
+    pendingAprChangeProposalTimestamp: pendingAprChangeProposalTimestamp,
+    pendingAprChangeResponseWindowStart: pendingAprChangeResponseWindowStart,
+    pendingAprChangeResponseWindowEnd: pendingAprChangeResponseWindowEnd,
   });
 }
 

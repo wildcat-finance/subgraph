@@ -42,6 +42,8 @@ dataSources:
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./abis/PeriodicTermHooks.json
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
         - name: IERC20
@@ -377,6 +379,9 @@ templates:
         - HooksConfig
         - DisabledForceBuyBacks
         - FixedTermUpdated
+        - PeriodicTermUpdated
+        - PeriodicTermClosed
+        - AnnualInterestBipsReductionProposed
       abis:
         - name: CombinedHooks
           file: ./abis/CombinedHooks.json
@@ -384,6 +389,8 @@ templates:
           file: ./abis/OpenTermHooks.json
         - name: FixedTermHooks
           file: ./abis/FixedTermHooks.json
+        - name: PeriodicTermHooks
+          file: ./abis/PeriodicTermHooks.json
       eventHandlers:
         - event: AccountAccessGranted(indexed address,indexed address,uint32)
           handler: handleAccountAccessGranted
@@ -417,4 +424,14 @@ templates:
           handler: handleTemporaryExcessReserveRatioUpdated
         - event: FixedTermUpdated(address,uint32)
           handler: handleFixedTermUpdated
+        - event: PeriodicTermUpdated(address,uint32,uint32,uint32)
+          handler: handlePeriodicTermUpdated
+        - event: PeriodicTermClosed(address)
+          handler: handlePeriodicTermClosed
+        - event: AnnualInterestBipsReductionProposed(indexed address,uint16,uint32,uint32,uint32)
+          handler: handleAnnualInterestBipsReductionProposed
+        - event: AnnualInterestBipsReductionProposalCancelled(indexed address)
+          handler: handleAnnualInterestBipsReductionProposalCancelled
+        - event: AnnualInterestBipsReductionExecuted(indexed address,uint16)
+          handler: handleAnnualInterestBipsReductionExecuted
       file: ./src/hooks-instance.ts
