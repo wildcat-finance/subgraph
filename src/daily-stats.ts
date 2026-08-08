@@ -11,7 +11,6 @@ import {
   ProtocolDailyStats,
   BorrowerDailyStats,
   LenderDailyStats,
-  Token,
   Market,
   MarketDailyStats,
 } from "../generated/schema";
@@ -35,56 +34,55 @@ import { calculateTotalDebt } from "./utils";
 // -------------------------------------------------------------------------- //
 
 /**
- * Returns the USD multiplier for 1 whole token unit, or BigDecimal.zero() if
- * no price is available. Call once per handler, then multiply by individual
- * amounts to avoid repeated Token.load + ensureTokenDailyPrice calls.
+ * Returns the USD multiplier for one raw token unit, or null when no valid
+ * price observation can be made for this event.
  */
 export function getTokenPriceMultiplier(
   decimals: i32,
   tokenId: string,
   event: ethereum.Event
-): BigDecimal {
-  let token = Token.load(tokenId);
-  if (token == null) return BigDecimal.zero();
-
+): BigDecimal | null {
   let daily = ensureTokenDailyPrice(tokenId, event);
-  if (daily == null) return BigDecimal.zero();
-  let priceValue = daily.priceUSD;
-
+  if (!daily) return null;
   let divisor = BigInt.fromI32(10).pow(u8(decimals)).toBigDecimal();
-  // multiplier = priceUSD / 10^decimals
-  return priceValue.div(divisor);
+  return daily.priceUSD.div(divisor);
 }
 
-/** Converts a raw token amount to USD using a pre-computed multiplier. */
-export function amountToUSD(amount: BigInt, multiplier: BigDecimal): BigDecimal {
+export function amountToUSD(
+  amount: BigInt,
+  multiplier: BigDecimal
+): BigDecimal {
   return amount.toBigDecimal().times(multiplier);
 }
 
-/**
- * Returns USD value of a token amount, or BigDecimal.zero() if no price.
- * Convenience wrapper — prefer getTokenPriceMultiplier + amountToUSD when
- * converting multiple amounts with the same token in one handler.
- */
 export function computeUsdDelta(
   amount: BigInt,
   decimals: i32,
   tokenId: string,
   event: ethereum.Event
-): BigDecimal {
-  let m = getTokenPriceMultiplier(decimals, tokenId, event);
-  if (m.equals(BigDecimal.zero())) return BigDecimal.zero();
-  return amount.toBigDecimal().times(m);
+): BigDecimal | null {
+  let multiplier = getTokenPriceMultiplier(decimals, tokenId, event);
+  if (!multiplier) return null;
+  return amountToUSD(amount, multiplier as BigDecimal);
 }
 
 export function setMarketTotalDebtUSD(
   market: Market,
-  priceMul: BigDecimal
+  priceMultiplier: BigDecimal | null
 ): void {
   let totalDebt = calculateTotalDebt(market);
-  market.totalDebtUSD = priceMul.equals(BigDecimal.zero())
-    ? BigDecimal.zero()
-    : amountToUSD(totalDebt, priceMul);
+  if (totalDebt.isZero()) {
+    market.totalDebtUSD = BigDecimal.zero();
+    return;
+  }
+  if (!priceMultiplier) {
+    market.totalDebtUSD = null;
+    return;
+  }
+  market.totalDebtUSD = amountToUSD(
+    totalDebt,
+    priceMultiplier as BigDecimal
+  );
 }
 
 export function updateMarketTotalDebtUSD(
@@ -102,24 +100,52 @@ export function updateMarketTotalDebtUSD(
 // -------------------------------------------------------------------------- //
 
 export function getOrCreateProtocolStats(): ProtocolStats {
-  let id = generateProtocolStatsId();
-  return getOrInitializeProtocolStats(id, {}).entity;
+  return getOrInitializeProtocolStats(generateProtocolStatsId(), {
+    usdTotalsComplete: true,
+  }).entity;
 }
 
 export function getOrCreateBorrowerStats(borrower: Bytes): BorrowerStats {
-  let id = generateBorrowerStatsId(borrower);
-  return getOrInitializeBorrowerStats(id, {
+  return getOrInitializeBorrowerStats(generateBorrowerStatsId(borrower), {
     borrower,
     profile: borrower.toHexString(),
+    usdTotalsComplete: true,
   }).entity;
 }
 
-export function getOrCreateLenderStats(lender: Bytes, timestamp: BigInt): LenderStats {
-  let id = generateLenderStatsId(lender);
-  return getOrInitializeLenderStats(id, {
+export function getOrCreateLenderStats(
+  lender: Bytes,
+  timestamp: BigInt
+): LenderStats {
+  return getOrInitializeLenderStats(generateLenderStatsId(lender), {
     lender,
     firstSeenTimestamp: timestamp.toI32(),
+    usdTotalsComplete: true,
   }).entity;
+}
+
+export function recordMarketCreated(
+  borrower: Bytes,
+  timestamp: BigInt
+): void {
+  let protocolStats = getOrCreateProtocolStats();
+  let borrowerStats = getOrCreateBorrowerStats(borrower);
+  protocolStats.numMarkets = protocolStats.numMarkets + 1;
+  borrowerStats.numMarkets = borrowerStats.numMarkets + 1;
+
+  let protocolDaily = getOrCreateProtocolDailyStats(
+    timestamp,
+    protocolStats
+  );
+  let borrowerDaily = getOrCreateBorrowerDailyStats(
+    borrower,
+    timestamp,
+    borrowerStats
+  );
+  protocolStats.save();
+  borrowerStats.save();
+  protocolDaily.save();
+  borrowerDaily.save();
 }
 
 // -------------------------------------------------------------------------- //
@@ -130,194 +156,256 @@ function dayTimestamp(timestamp: BigInt): i32 {
   return (timestamp.toI32() / 86400) * 86400;
 }
 
-export function refreshProtocolDailyFromStats(entity: ProtocolDailyStats, ps: ProtocolStats): void {
-  entity.totalDepositedUSD = ps.totalDepositedUSD;
-  entity.totalBorrowedUSD = ps.totalBorrowedUSD;
-  entity.totalRepaidUSD = ps.totalRepaidUSD;
-  entity.totalWithdrawalsRequestedUSD = ps.totalWithdrawalsRequestedUSD;
-  entity.totalWithdrawalsExecutedUSD = ps.totalWithdrawalsExecutedUSD;
-  entity.totalBaseInterestAccruedUSD = ps.totalBaseInterestAccruedUSD;
-  entity.totalDelinquencyFeesAccruedUSD = ps.totalDelinquencyFeesAccruedUSD;
-  entity.totalProtocolFeesAccruedUSD = ps.totalProtocolFeesAccruedUSD;
-  entity.numMarkets = ps.numMarkets;
-  entity.numActiveMarkets = ps.numActiveMarkets;
-  entity.numDelinquentMarkets = ps.numDelinquentMarkets;
-  entity.numClosedMarkets = ps.numClosedMarkets;
-  entity.numActiveBorrowers = ps.numActiveBorrowers;
-  entity.numActiveLenders = ps.numActiveLenders;
-  entity.numActiveLenderAccounts = ps.numActiveLenderAccounts;
+export function refreshProtocolDailyFromStats(
+  entity: ProtocolDailyStats,
+  stats: ProtocolStats
+): void {
+  entity.totalDepositedUSD = stats.totalDepositedUSD;
+  entity.totalBorrowedUSD = stats.totalBorrowedUSD;
+  entity.totalRepaidUSD = stats.totalRepaidUSD;
+  entity.totalWithdrawalsRequestedUSD = stats.totalWithdrawalsRequestedUSD;
+  entity.totalWithdrawalsExecutedUSD = stats.totalWithdrawalsExecutedUSD;
+  entity.totalBaseInterestAccruedUSD = stats.totalBaseInterestAccruedUSD;
+  entity.totalDelinquencyFeesAccruedUSD = stats.totalDelinquencyFeesAccruedUSD;
+  entity.totalProtocolFeesAccruedUSD = stats.totalProtocolFeesAccruedUSD;
+  entity.cumulativeUsdTotalsComplete = stats.usdTotalsComplete;
+  entity.numMarkets = stats.numMarkets;
+  entity.numActiveMarkets = stats.numActiveMarkets;
+  entity.numDelinquentMarkets = stats.numDelinquentMarkets;
+  entity.numClosedMarkets = stats.numClosedMarkets;
+  entity.numActiveBorrowers = stats.numActiveBorrowers;
+  entity.numActiveLenders = stats.numActiveLenders;
+  entity.numActiveLenderAccounts = stats.numActiveLenderAccounts;
 }
 
-export function getOrCreateProtocolDailyStats(timestamp: BigInt, ps: ProtocolStats): ProtocolDailyStats {
-  let startOfDay = dayTimestamp(timestamp);
-  let id = "PROTOCOL-" + startOfDay.toString();
-  let result = getOrInitializeProtocolDailyStats(id, {
-    startTimestamp: startOfDay,
-    endTimestamp: startOfDay + 86400,
-    totalDepositedUSD: ps.totalDepositedUSD,
-    totalBorrowedUSD: ps.totalBorrowedUSD,
-    totalRepaidUSD: ps.totalRepaidUSD,
-    totalWithdrawalsRequestedUSD: ps.totalWithdrawalsRequestedUSD,
-    totalWithdrawalsExecutedUSD: ps.totalWithdrawalsExecutedUSD,
-    totalBaseInterestAccruedUSD: ps.totalBaseInterestAccruedUSD,
-    totalDelinquencyFeesAccruedUSD: ps.totalDelinquencyFeesAccruedUSD,
-    totalProtocolFeesAccruedUSD: ps.totalProtocolFeesAccruedUSD,
-    numActiveBorrowers: ps.numActiveBorrowers,
-    numActiveLenderAccounts: ps.numActiveLenderAccounts,
-    numActiveLenders: ps.numActiveLenders,
-    numActiveMarkets: ps.numActiveMarkets,
-    numDelinquentMarkets: ps.numDelinquentMarkets,
-    numClosedMarkets: ps.numClosedMarkets,
-    numMarkets: ps.numMarkets,
-  });
-  if (!result.wasCreated) {
-    result.entity.totalDepositedUSD = ps.totalDepositedUSD;
-    result.entity.totalBorrowedUSD = ps.totalBorrowedUSD;
-    result.entity.totalRepaidUSD = ps.totalRepaidUSD;
-    result.entity.totalWithdrawalsRequestedUSD = ps.totalWithdrawalsRequestedUSD;
-    result.entity.totalWithdrawalsExecutedUSD = ps.totalWithdrawalsExecutedUSD;
-    result.entity.totalBaseInterestAccruedUSD = ps.totalBaseInterestAccruedUSD;
-    result.entity.totalDelinquencyFeesAccruedUSD = ps.totalDelinquencyFeesAccruedUSD;
-    result.entity.totalProtocolFeesAccruedUSD = ps.totalProtocolFeesAccruedUSD;
-    result.entity.numActiveBorrowers = ps.numActiveBorrowers;
-    result.entity.numActiveLenderAccounts = ps.numActiveLenderAccounts;
-    result.entity.numActiveLenders = ps.numActiveLenders;
-    result.entity.numActiveMarkets = ps.numActiveMarkets;
-    result.entity.numDelinquentMarkets = ps.numDelinquentMarkets;
-    result.entity.numClosedMarkets = ps.numClosedMarkets;
-    result.entity.numMarkets = ps.numMarkets;
-  }
+export function getOrCreateProtocolDailyStats(
+  timestamp: BigInt,
+  stats: ProtocolStats
+): ProtocolDailyStats {
+  let start = dayTimestamp(timestamp);
+  let result = getOrInitializeProtocolDailyStats(
+    "PROTOCOL-" + start.toString(),
+    {
+      startTimestamp: start,
+      endTimestamp: start + 86400,
+      totalDepositedUSD: stats.totalDepositedUSD,
+      totalBorrowedUSD: stats.totalBorrowedUSD,
+      totalRepaidUSD: stats.totalRepaidUSD,
+      totalWithdrawalsRequestedUSD: stats.totalWithdrawalsRequestedUSD,
+      totalWithdrawalsExecutedUSD: stats.totalWithdrawalsExecutedUSD,
+      totalBaseInterestAccruedUSD: stats.totalBaseInterestAccruedUSD,
+      totalDelinquencyFeesAccruedUSD: stats.totalDelinquencyFeesAccruedUSD,
+      totalProtocolFeesAccruedUSD: stats.totalProtocolFeesAccruedUSD,
+      dayUsdTotalsComplete: true,
+      cumulativeUsdTotalsComplete: stats.usdTotalsComplete,
+      numMarkets: stats.numMarkets,
+      numActiveMarkets: stats.numActiveMarkets,
+      numDelinquentMarkets: stats.numDelinquentMarkets,
+      numClosedMarkets: stats.numClosedMarkets,
+      numActiveBorrowers: stats.numActiveBorrowers,
+      numActiveLenders: stats.numActiveLenders,
+      numActiveLenderAccounts: stats.numActiveLenderAccounts,
+    }
+  );
+  refreshProtocolDailyFromStats(result.entity, stats);
   return result.entity;
 }
 
-export function getOrCreateBorrowerDailyStats(borrower: Bytes, timestamp: BigInt, bs: BorrowerStats): BorrowerDailyStats {
-  let startOfDay = dayTimestamp(timestamp);
-  let id = "BORROWER-DAILY-" + borrower.toHex() + "-" + startOfDay.toString();
+function refreshBorrowerDailyFromStats(
+  entity: BorrowerDailyStats,
+  stats: BorrowerStats
+): void {
+  entity.totalDepositedUSD = stats.totalDepositedUSD;
+  entity.totalBorrowedUSD = stats.totalBorrowedUSD;
+  entity.totalRepaidUSD = stats.totalRepaidUSD;
+  entity.totalWithdrawalsRequestedUSD = stats.totalWithdrawalsRequestedUSD;
+  entity.totalWithdrawalsExecutedUSD = stats.totalWithdrawalsExecutedUSD;
+  entity.totalBaseInterestAccruedUSD = stats.totalBaseInterestAccruedUSD;
+  entity.totalDelinquencyFeesAccruedUSD = stats.totalDelinquencyFeesAccruedUSD;
+  entity.totalProtocolFeesAccruedUSD = stats.totalProtocolFeesAccruedUSD;
+  entity.cumulativeUsdTotalsComplete = stats.usdTotalsComplete;
+  entity.numMarkets = stats.numMarkets;
+  entity.numActiveMarkets = stats.numActiveMarkets;
+  entity.numDelinquentMarkets = stats.numDelinquentMarkets;
+  entity.numClosedMarkets = stats.numClosedMarkets;
+}
 
-  let result = getOrInitializeBorrowerDailyStats(id, {
-    startTimestamp: startOfDay,
-    endTimestamp: startOfDay + 86400,
-    borrower: borrower,
-    profile: borrower.toHexString(),
-    numMarkets: bs.numMarkets,
-    numActiveMarkets: bs.numActiveMarkets,
-    numDelinquentMarkets: bs.numDelinquentMarkets,
-    numClosedMarkets: bs.numClosedMarkets,
-    totalBaseInterestAccruedUSD: bs.totalBaseInterestAccruedUSD,
-    totalDelinquencyFeesAccruedUSD: bs.totalDelinquencyFeesAccruedUSD,
-    totalProtocolFeesAccruedUSD: bs.totalProtocolFeesAccruedUSD,
-    totalDepositedUSD: bs.totalDepositedUSD,
-    totalBorrowedUSD: bs.totalBorrowedUSD,
-    totalRepaidUSD: bs.totalRepaidUSD,
-    totalWithdrawalsRequestedUSD: bs.totalWithdrawalsRequestedUSD,
-    totalWithdrawalsExecutedUSD: bs.totalWithdrawalsExecutedUSD,
-  });
-  if (!result.wasCreated) {
-    result.entity.numMarkets = bs.numMarkets;
-    result.entity.numActiveMarkets = bs.numActiveMarkets;
-    result.entity.numDelinquentMarkets = bs.numDelinquentMarkets;
-    result.entity.numClosedMarkets = bs.numClosedMarkets;
-    result.entity.totalBaseInterestAccruedUSD = bs.totalBaseInterestAccruedUSD;
-    result.entity.totalDelinquencyFeesAccruedUSD = bs.totalDelinquencyFeesAccruedUSD;
-    result.entity.totalProtocolFeesAccruedUSD = bs.totalProtocolFeesAccruedUSD;
-    result.entity.totalDepositedUSD = bs.totalDepositedUSD;
-    result.entity.totalBorrowedUSD = bs.totalBorrowedUSD;
-    result.entity.totalRepaidUSD = bs.totalRepaidUSD;
-    result.entity.totalWithdrawalsRequestedUSD = bs.totalWithdrawalsRequestedUSD;
-    result.entity.totalWithdrawalsExecutedUSD = bs.totalWithdrawalsExecutedUSD;
-  }
-
+export function getOrCreateBorrowerDailyStats(
+  borrower: Bytes,
+  timestamp: BigInt,
+  stats: BorrowerStats
+): BorrowerDailyStats {
+  let start = dayTimestamp(timestamp);
+  let result = getOrInitializeBorrowerDailyStats(
+    "BORROWER-DAILY-" + borrower.toHex() + "-" + start.toString(),
+    {
+      startTimestamp: start,
+      endTimestamp: start + 86400,
+      borrower,
+      profile: borrower.toHexString(),
+      totalDepositedUSD: stats.totalDepositedUSD,
+      totalBorrowedUSD: stats.totalBorrowedUSD,
+      totalRepaidUSD: stats.totalRepaidUSD,
+      totalWithdrawalsRequestedUSD: stats.totalWithdrawalsRequestedUSD,
+      totalWithdrawalsExecutedUSD: stats.totalWithdrawalsExecutedUSD,
+      totalBaseInterestAccruedUSD: stats.totalBaseInterestAccruedUSD,
+      totalDelinquencyFeesAccruedUSD: stats.totalDelinquencyFeesAccruedUSD,
+      totalProtocolFeesAccruedUSD: stats.totalProtocolFeesAccruedUSD,
+      dayUsdTotalsComplete: true,
+      cumulativeUsdTotalsComplete: stats.usdTotalsComplete,
+      numMarkets: stats.numMarkets,
+      numActiveMarkets: stats.numActiveMarkets,
+      numDelinquentMarkets: stats.numDelinquentMarkets,
+      numClosedMarkets: stats.numClosedMarkets,
+    }
+  );
+  refreshBorrowerDailyFromStats(result.entity, stats);
   return result.entity;
 }
 
-export function getOrCreateLenderDailyStats(lender: Bytes, timestamp: BigInt, ls: LenderStats): LenderDailyStats {
-  let startOfDay = dayTimestamp(timestamp);
-  let id = "LENDER-DAILY-" + lender.toHex() + "-" + startOfDay.toString();
+function refreshLenderDailyFromStats(
+  entity: LenderDailyStats,
+  stats: LenderStats
+): void {
+  entity.totalDepositedUSD = stats.totalDepositedUSD;
+  entity.totalWithdrawalsRequestedUSD = stats.totalWithdrawalsRequestedUSD;
+  entity.totalWithdrawalsExecutedUSD = stats.totalWithdrawalsExecutedUSD;
+  entity.totalInterestEarnedUSD = stats.totalInterestEarnedUSD;
+  entity.cumulativeUsdTotalsComplete = stats.usdTotalsComplete;
+  entity.numMarkets = stats.numMarkets;
+  entity.numActiveMarkets = stats.numActiveMarkets;
+}
 
-  let result = getOrInitializeLenderDailyStats(id, {
-    startTimestamp: startOfDay,
-    endTimestamp: startOfDay + 86400,
-    lender: lender,
-    numMarkets: ls.numMarkets,
-    numActiveMarkets: ls.numActiveMarkets,
-    totalDepositedUSD: ls.totalDepositedUSD,
-    totalWithdrawalsRequestedUSD: ls.totalWithdrawalsRequestedUSD,
-    totalWithdrawalsExecutedUSD: ls.totalWithdrawalsExecutedUSD,
-    totalInterestEarnedUSD: ls.totalInterestEarnedUSD,
-  });
-  if (!result.wasCreated) {
-    result.entity.numMarkets = ls.numMarkets;
-    result.entity.numActiveMarkets = ls.numActiveMarkets;
-    result.entity.totalDepositedUSD = ls.totalDepositedUSD;
-    result.entity.totalWithdrawalsRequestedUSD = ls.totalWithdrawalsRequestedUSD;
-    result.entity.totalWithdrawalsExecutedUSD = ls.totalWithdrawalsExecutedUSD;
-    result.entity.totalInterestEarnedUSD = ls.totalInterestEarnedUSD;
-  }
-
+export function getOrCreateLenderDailyStats(
+  lender: Bytes,
+  timestamp: BigInt,
+  stats: LenderStats
+): LenderDailyStats {
+  let start = dayTimestamp(timestamp);
+  let result = getOrInitializeLenderDailyStats(
+    "LENDER-DAILY-" + lender.toHex() + "-" + start.toString(),
+    {
+      startTimestamp: start,
+      endTimestamp: start + 86400,
+      lender,
+      totalDepositedUSD: stats.totalDepositedUSD,
+      totalWithdrawalsRequestedUSD: stats.totalWithdrawalsRequestedUSD,
+      totalWithdrawalsExecutedUSD: stats.totalWithdrawalsExecutedUSD,
+      totalInterestEarnedUSD: stats.totalInterestEarnedUSD,
+      dayUsdTotalsComplete: true,
+      cumulativeUsdTotalsComplete: stats.usdTotalsComplete,
+      numMarkets: stats.numMarkets,
+      numActiveMarkets: stats.numActiveMarkets,
+    }
+  );
+  refreshLenderDailyFromStats(result.entity, stats);
   return result.entity;
+}
+
+function refreshMarketDailyFromMarket(
+  entity: MarketDailyStats,
+  market: Market
+): void {
+  entity.scaledTotalSupply = market.scaledTotalSupply;
+  entity.scaleFactor = market.scaleFactor;
+  entity.totalBorrowed = market.totalBorrowed;
+  entity.totalRepaid = market.totalRepaid;
+  entity.totalBaseInterestAccrued = market.totalBaseInterestAccrued;
+  entity.totalDelinquencyFeesAccrued = market.totalDelinquencyFeesAccrued;
+  entity.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued;
+  entity.totalDeposited = market.totalDeposited;
+  entity.totalWithdrawalsRequested = market.totalWithdrawalsRequested;
+  entity.totalWithdrawalsExecuted = market.totalWithdrawalsExecuted;
+  entity.totalBorrowedUSD = market.totalBorrowedUSD;
+  entity.totalRepaidUSD = market.totalRepaidUSD;
+  entity.totalBaseInterestAccruedUSD = market.totalBaseInterestAccruedUSD;
+  entity.totalDelinquencyFeesAccruedUSD = market.totalDelinquencyFeesAccruedUSD;
+  entity.totalProtocolFeesAccruedUSD = market.totalProtocolFeesAccruedUSD;
+  entity.totalDepositedUSD = market.totalDepositedUSD;
+  entity.totalWithdrawalsRequestedUSD = market.totalWithdrawalsRequestedUSD;
+  entity.totalWithdrawalsExecutedUSD = market.totalWithdrawalsExecutedUSD;
+  entity.cumulativeUsdTotalsComplete = market.usdTotalsComplete;
 }
 
 export function getOrCreateMarketDailyStats(
   market: Market,
   event: ethereum.Event
 ): MarketDailyStats {
-  let timestamp = event.block.timestamp;
-  let startOfDay = dayTimestamp(timestamp);
-  let id = market.id.concat("-").concat(startOfDay.toString());
+  let start = dayTimestamp(event.block.timestamp);
   let dailyPrice = ensureTokenDailyPrice(market.asset, event);
-  if (dailyPrice != null) {
-    market.tokenDailyPrice = dailyPrice.id;
-  }
   let usdPrice: BigDecimal | null = null;
-  if (dailyPrice != null) {
+  if (dailyPrice) {
+    market.tokenDailyPrice = dailyPrice.id;
     usdPrice = dailyPrice.priceUSD;
   }
-  let result = getOrInitializeMarketDailyStats(id, {
-    startTimestamp: startOfDay,
-    endTimestamp: startOfDay + 86400,
-    market: market.id,
-    scaledTotalSupply: market.scaledTotalSupply,
-    scaleFactor: market.scaleFactor,
-    usdPrice: usdPrice,
-    totalBorrowed: market.totalBorrowed,
-    totalRepaid: market.totalRepaid,
-    totalBaseInterestAccrued: market.totalBaseInterestAccrued,
-    totalDelinquencyFeesAccrued: market.totalDelinquencyFeesAccrued,
-    totalProtocolFeesAccrued: market.totalProtocolFeesAccrued,
-    totalDeposited: market.totalDeposited,
-    totalWithdrawalsRequested: market.totalWithdrawalsRequested,
-    totalWithdrawalsExecuted: market.totalWithdrawalsExecuted,
-    totalBorrowedUSD: market.totalBorrowedUSD,
-    totalRepaidUSD: market.totalRepaidUSD,
-    totalBaseInterestAccruedUSD: market.totalBaseInterestAccruedUSD,
-    totalDelinquencyFeesAccruedUSD: market.totalDelinquencyFeesAccruedUSD,
-    totalProtocolFeesAccruedUSD: market.totalProtocolFeesAccruedUSD,
-    totalDepositedUSD: market.totalDepositedUSD,
-    totalWithdrawalsRequestedUSD: market.totalWithdrawalsRequestedUSD,
-    totalWithdrawalsExecutedUSD: market.totalWithdrawalsExecutedUSD,
-  });
-  if (!result.wasCreated) {
-    result.entity.scaledTotalSupply = market.scaledTotalSupply;
-    result.entity.scaleFactor = market.scaleFactor;
-    result.entity.totalBorrowed = market.totalBorrowed;
-    result.entity.totalRepaid = market.totalRepaid;
-    result.entity.totalBaseInterestAccrued = market.totalBaseInterestAccrued;
-    result.entity.totalDelinquencyFeesAccrued = market.totalDelinquencyFeesAccrued;
-    result.entity.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued;
-    result.entity.totalDeposited = market.totalDeposited;
-    result.entity.totalWithdrawalsRequested = market.totalWithdrawalsRequested;
-    result.entity.totalWithdrawalsExecuted = market.totalWithdrawalsExecuted;
-    result.entity.totalBorrowedUSD = market.totalBorrowedUSD;
-    result.entity.totalRepaidUSD = market.totalRepaidUSD;
-    result.entity.totalBaseInterestAccruedUSD = market.totalBaseInterestAccruedUSD;
-    result.entity.totalDelinquencyFeesAccruedUSD = market.totalDelinquencyFeesAccruedUSD;
-    result.entity.totalProtocolFeesAccruedUSD = market.totalProtocolFeesAccruedUSD;
-    result.entity.totalDepositedUSD = market.totalDepositedUSD;
-    result.entity.totalWithdrawalsRequestedUSD = market.totalWithdrawalsRequestedUSD;
-    result.entity.totalWithdrawalsExecutedUSD = market.totalWithdrawalsExecutedUSD;
-  }
-
+  let result = getOrInitializeMarketDailyStats(
+    market.id + "-" + start.toString(),
+    {
+      startTimestamp: start,
+      endTimestamp: start + 86400,
+      market: market.id,
+      scaledTotalSupply: market.scaledTotalSupply,
+      scaleFactor: market.scaleFactor,
+      usdPrice,
+      totalBorrowed: market.totalBorrowed,
+      totalRepaid: market.totalRepaid,
+      totalBaseInterestAccrued: market.totalBaseInterestAccrued,
+      totalDelinquencyFeesAccrued: market.totalDelinquencyFeesAccrued,
+      totalProtocolFeesAccrued: market.totalProtocolFeesAccrued,
+      totalDeposited: market.totalDeposited,
+      totalWithdrawalsRequested: market.totalWithdrawalsRequested,
+      totalWithdrawalsExecuted: market.totalWithdrawalsExecuted,
+      totalBorrowedUSD: market.totalBorrowedUSD,
+      totalRepaidUSD: market.totalRepaidUSD,
+      totalBaseInterestAccruedUSD: market.totalBaseInterestAccruedUSD,
+      totalDelinquencyFeesAccruedUSD: market.totalDelinquencyFeesAccruedUSD,
+      totalProtocolFeesAccruedUSD: market.totalProtocolFeesAccruedUSD,
+      totalDepositedUSD: market.totalDepositedUSD,
+      totalWithdrawalsRequestedUSD: market.totalWithdrawalsRequestedUSD,
+      totalWithdrawalsExecutedUSD: market.totalWithdrawalsExecutedUSD,
+      dayUsdTotalsComplete: true,
+      cumulativeUsdTotalsComplete: market.usdTotalsComplete,
+    }
+  );
+  result.entity.usdPrice = usdPrice;
+  refreshMarketDailyFromMarket(result.entity, market);
   return result.entity;
+}
+
+export function markProtocolUsdIncomplete(
+  stats: ProtocolStats,
+  daily: ProtocolDailyStats
+): void {
+  stats.usdTotalsComplete = false;
+  daily.dayUsdTotalsComplete = false;
+  daily.cumulativeUsdTotalsComplete = false;
+}
+
+export function markBorrowerUsdIncomplete(
+  stats: BorrowerStats,
+  daily: BorrowerDailyStats
+): void {
+  stats.usdTotalsComplete = false;
+  daily.dayUsdTotalsComplete = false;
+  daily.cumulativeUsdTotalsComplete = false;
+}
+
+export function markLenderUsdIncomplete(
+  stats: LenderStats,
+  daily: LenderDailyStats
+): void {
+  stats.usdTotalsComplete = false;
+  daily.dayUsdTotalsComplete = false;
+  daily.cumulativeUsdTotalsComplete = false;
+}
+
+export function markMarketUsdIncomplete(
+  market: Market,
+  daily: MarketDailyStats
+): void {
+  market.usdTotalsComplete = false;
+  daily.dayUsdTotalsComplete = false;
+  daily.cumulativeUsdTotalsComplete = false;
 }
 
 // -------------------------------------------------------------------------- //

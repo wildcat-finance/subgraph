@@ -38,12 +38,21 @@
     "wrappers": false
   },
   "pricing": {
-    "mode": "NONE",
-    "feedDecimals": null,
+    "mode": "USD_PEG",
     "feedRegistry": null,
     "denominations": null,
     "bridgeFeeds": null,
-    "stablecoins": [],
+    "stablecoins": [
+      "0x8756591e2695da611a927f2a3f23dd5bc3dd97c6",
+      "0x98b1ffa19befdcc43df4edd6569dff8f01900aa6",
+      "0x998b1d2b82b03b3f9eadace173496e9a00117650",
+      "0xc69cec70647a144561acc63c4380b8d81fcf5f18",
+      "0xd48ca6f2506afb586a283740a657ce5158f0c213",
+      "0xd8f42112168a7459f6590811e95e5ff8b70e3e53",
+      "0xe4183d4562f6c06a5d312c82078be55cb4b8cb64",
+      "0xe59e9598017a59b33ccf2a88ce15d0e3a79ab682",
+      "0xf925dc937d10c3cda5914457d18db1ffb0f460d2"
+    ],
     "directFeeds": [],
     "syntheticPrices": []
   },

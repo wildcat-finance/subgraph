@@ -104,6 +104,9 @@ describe("wildcat market controller", () => {
     createMockedFunction(market, "decimals", "decimals():(uint8)").returns([
       ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(6)),
     ]);
+    createMockedFunction(asset, "balanceOf", "balanceOf(address):(uint256)")
+      .withArgs([ethereum.Value.fromAddress(market)])
+      .returns([ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(1234))]);
 
     let event = createMarketDeployedEvent(controller, market, asset);
     handleMarketDeployed(event);
@@ -125,19 +128,37 @@ describe("wildcat market controller", () => {
       borrower.toHexString()
     );
     assert.fieldEquals(
+      "ProtocolDailyStats",
+      "PROTOCOL-0",
+      "numMarkets",
+      "1"
+    );
+    assert.fieldEquals(
+      "BorrowerDailyStats",
+      "BORROWER-DAILY-" + borrower.toHexString() + "-0",
+      "numMarkets",
+      "1"
+    );
+    assert.fieldEquals(
       "Market",
       id,
       "controller",
       generateControllerId(controller)
     );
     assert.fieldEquals("Market", id, "asset", generateTokenId(asset));
+    assert.fieldEquals("Market", id, "totalAssets", "1234");
     assert.fieldEquals(
       "Market",
       id,
       "createdAtTransaction",
       event.transaction.hash.toHexString()
     );
-    assert.fieldEquals("MarketSnapshot", id, "source", "EVENT_PROJECTION");
+    assert.fieldEquals(
+      "MarketSnapshot",
+      id,
+      "source",
+      "EVENT_AND_CONTRACT_CALL"
+    );
     assert.fieldEquals("MarketSnapshot", id, "annualInterestBips", "500");
   });
 });

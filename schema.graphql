@@ -116,6 +116,7 @@ enum IndexerDiagnosticKind {
 
 enum PricingMode {
   CHAINLINK
+  USD_PEG
   SYNTHETIC_TESTNET
   NONE
 }
@@ -556,8 +557,13 @@ type RoleProvider @entity {
   isPushProvider: Boolean!
   pushProviderIndex: Int!
   isApproved: Boolean!
-  addedEvent: RoleProviderAdded @derivedFrom(field: "provider")
-  removedEvent: RoleProviderRemoved @derivedFrom(field: "provider")
+  # Most recently observed lifecycle events. The plural derived fields retain
+  # the complete indexed remove/re-add history without making singular
+  # relations ambiguous.
+  addedEvent: RoleProviderAdded
+  removedEvent: RoleProviderRemoved
+  addedEvents: [RoleProviderAdded!]! @derivedFrom(field: "provider")
+  removedEvents: [RoleProviderRemoved!]! @derivedFrom(field: "provider")
   updatedEvents: [RoleProviderUpdated!]! @derivedFrom(field: "provider")
 }
 
@@ -1139,6 +1145,8 @@ type Token @entity {
   priceSource: PriceSourceKind
   priceFeed0: Bytes
   priceFeed1: Bytes
+  # UTC start-of-day for the last dynamic feed-discovery attempt.
+  lastPriceFeedSearchDay: Int!
 }
 
 "First price observation used for a token on a UTC day; analytics only."
@@ -1148,6 +1156,10 @@ type TokenDailyPrice @entity(immutable: true) {
   timestamp: Int!
   priceUSD: BigDecimal!
   source: PriceSourceKind!
+  # Exact feeds used for this immutable observation. Both are null for fixed
+  # pegs and synthetic testnet prices; feed1 is set only for two-hop paths.
+  feed0: Bytes
+  feed1: Bytes
   observedAtBlock: BigInt!
   observedAtTimestamp: BigInt!
   observedAtTransaction: Bytes!
@@ -1237,6 +1249,9 @@ type Market @entity {
 
   # ---------------------------------- State --------------------------------- #
   isClosed: Boolean!
+  # Balance of the underlying asset held by the market at the indexed block.
+  # Direct ERC-20 transfers are reflected on the next StateUpdated event.
+  totalAssets: BigInt!
   maxTotalSupply: BigInt!
   pendingProtocolFees: BigInt!
   # Underlying assets reserved for withdrawals which have been paid
@@ -1307,8 +1322,13 @@ type Market @entity {
   # all time withdrawals executed in USD
   totalWithdrawalsExecutedUSD: BigDecimal!
 
-  # Current total debt in USD (scaledTotalSupply * scaleFactor / RAY * priceUSD)
-  totalDebtUSD: BigDecimal!
+  # False once a nonzero cumulative mutation could not be priced. This flag is
+  # monotonic for the lifetime of the indexed market.
+  usdTotalsComplete: Boolean!
+
+  # Current total debt in USD. Zero means the debt is actually zero; null means
+  # nonzero debt could not be priced.
+  totalDebtUSD: BigDecimal
 
   eventIndex: Int!
   delinquencyStatusChangedIndex: Int!
@@ -1409,6 +1429,7 @@ type MarketSnapshot @entity {
   market: Market!
   source: SnapshotSource!
   isClosed: Boolean!
+  totalAssets: BigInt!
   maxTotalSupply: BigInt!
   protocolFeeBips: Int!
   pendingProtocolFees: BigInt!
@@ -1452,6 +1473,7 @@ type ProtocolStats @entity {
   totalBaseInterestAccruedUSD: BigDecimal!
   totalDelinquencyFeesAccruedUSD: BigDecimal!
   totalProtocolFeesAccruedUSD: BigDecimal!
+  usdTotalsComplete: Boolean!
 
   # Counts
   numMarkets: Int!
@@ -1487,6 +1509,8 @@ type ProtocolDailyStats @entity {
   totalBaseInterestAccruedUSD: BigDecimal!
   totalDelinquencyFeesAccruedUSD: BigDecimal!
   totalProtocolFeesAccruedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
 
   # Count snapshots
   numMarkets: Int!
@@ -1512,6 +1536,7 @@ type BorrowerStats @entity {
   totalBaseInterestAccruedUSD: BigDecimal!
   totalDelinquencyFeesAccruedUSD: BigDecimal!
   totalProtocolFeesAccruedUSD: BigDecimal!
+  usdTotalsComplete: Boolean!
 
   # Counts
   numMarkets: Int!
@@ -1553,6 +1578,8 @@ type BorrowerDailyStats @entity {
   totalBaseInterestAccruedUSD: BigDecimal!
   totalDelinquencyFeesAccruedUSD: BigDecimal!
   totalProtocolFeesAccruedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
 
   # Count snapshots
   numMarkets: Int!
@@ -1571,6 +1598,7 @@ type LenderStats @entity {
   totalWithdrawalsRequestedUSD: BigDecimal!
   totalWithdrawalsExecutedUSD: BigDecimal!
   totalInterestEarnedUSD: BigDecimal!
+  usdTotalsComplete: Boolean!
 
   # Counts
   numMarkets: Int!
@@ -1594,6 +1622,8 @@ type LenderDailyStats @entity {
   totalWithdrawalsRequestedUSD: BigDecimal!
   totalWithdrawalsExecutedUSD: BigDecimal!
   totalInterestEarnedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
 
   # Count snapshots
   numMarkets: Int!
@@ -1635,6 +1665,8 @@ type MarketDailyStats @entity {
   totalDepositedUSD: BigDecimal!
   totalWithdrawalsRequestedUSD: BigDecimal!
   totalWithdrawalsExecutedUSD: BigDecimal!
+  dayUsdTotalsComplete: Boolean!
+  cumulativeUsdTotalsComplete: Boolean!
 
   scaledTotalSupply: BigInt!
   scaleFactor: BigInt!

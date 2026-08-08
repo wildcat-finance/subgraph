@@ -20,7 +20,7 @@ const HOOKS_TEMPLATE_IDENTITIES = {
   FixedTerm: "FixedTermHooks",
   PeriodicTerm: "PeriodicTermHooks",
 };
-const PRICING_MODES = ["CHAINLINK", "SYNTHETIC_TESTNET", "NONE"];
+const PRICING_MODES = ["CHAINLINK", "USD_PEG", "SYNTHETIC_TESTNET", "NONE"];
 const REQUIRED_HOOKS_ABIS = [
   "HooksFactory",
   "WildcatMarket",
@@ -100,6 +100,13 @@ function assertAddress(value, context) {
   }
 }
 
+function assertNonZeroAddress(value, context) {
+  assertAddress(value, context);
+  if (value.toLowerCase() === "0x0000000000000000000000000000000000000000") {
+    fail(context, "must not be the zero address");
+  }
+}
+
 function assertStartBlock(value, context) {
   if (!Number.isSafeInteger(value) || value < 0) {
     fail(context, "must be a non-negative safe integer");
@@ -147,7 +154,6 @@ function validatePricing(pricing, context) {
     pricing,
     [
       "mode",
-      "feedDecimals",
       "feedRegistry",
       "denominations",
       "bridgeFeeds",
@@ -172,7 +178,7 @@ function validatePricing(pricing, context) {
 
   const stablecoins = new Set();
   pricing.stablecoins.forEach((address, index) => {
-    assertAddress(address, `${context}.stablecoins[${index}]`);
+    assertNonZeroAddress(address, `${context}.stablecoins[${index}]`);
     const normalized = address.toLowerCase();
     if (stablecoins.has(normalized)) {
       fail(`${context}.stablecoins[${index}]`, `duplicates address ${address}`);
@@ -184,8 +190,8 @@ function validatePricing(pricing, context) {
   pricing.directFeeds.forEach((entry, index) => {
     const entryContext = `${context}.directFeeds[${index}]`;
     assertExactKeys(entry, ["token", "feed"], entryContext);
-    assertAddress(entry.token, `${entryContext}.token`);
-    assertAddress(entry.feed, `${entryContext}.feed`);
+    assertNonZeroAddress(entry.token, `${entryContext}.token`);
+    assertNonZeroAddress(entry.feed, `${entryContext}.feed`);
     const normalized = entry.token.toLowerCase();
     if (directFeedTokens.has(normalized)) {
       fail(`${entryContext}.token`, `duplicates token ${entry.token}`);
@@ -221,25 +227,22 @@ function validatePricing(pricing, context) {
   });
 
   if (pricing.mode === "CHAINLINK") {
-    if (!Number.isInteger(pricing.feedDecimals) || pricing.feedDecimals <= 0) {
-      fail(`${context}.feedDecimals`, "must be a positive integer for CHAINLINK");
-    }
-    assertAddress(pricing.feedRegistry, `${context}.feedRegistry`);
+    assertNonZeroAddress(pricing.feedRegistry, `${context}.feedRegistry`);
     assertExactKeys(
       pricing.denominations,
       ["usd", "eth", "btc"],
       `${context}.denominations`
     );
-    assertAddress(pricing.denominations.usd, `${context}.denominations.usd`);
-    assertAddress(pricing.denominations.eth, `${context}.denominations.eth`);
-    assertAddress(pricing.denominations.btc, `${context}.denominations.btc`);
+    assertNonZeroAddress(pricing.denominations.usd, `${context}.denominations.usd`);
+    assertNonZeroAddress(pricing.denominations.eth, `${context}.denominations.eth`);
+    assertNonZeroAddress(pricing.denominations.btc, `${context}.denominations.btc`);
     assertExactKeys(
       pricing.bridgeFeeds,
       ["ethUsd", "btcUsd"],
       `${context}.bridgeFeeds`
     );
-    assertAddress(pricing.bridgeFeeds.ethUsd, `${context}.bridgeFeeds.ethUsd`);
-    assertAddress(pricing.bridgeFeeds.btcUsd, `${context}.bridgeFeeds.btcUsd`);
+    assertNonZeroAddress(pricing.bridgeFeeds.ethUsd, `${context}.bridgeFeeds.ethUsd`);
+    assertNonZeroAddress(pricing.bridgeFeeds.btcUsd, `${context}.bridgeFeeds.btcUsd`);
     if (pricing.syntheticPrices.length !== 0) {
       fail(`${context}.syntheticPrices`, "must be empty for CHAINLINK");
     }
@@ -247,15 +250,26 @@ function validatePricing(pricing, context) {
   }
 
   if (
-    pricing.feedDecimals !== null ||
     pricing.feedRegistry !== null ||
     pricing.denominations !== null ||
     pricing.bridgeFeeds !== null
   ) {
     fail(context, `${pricing.mode} must not declare Chainlink configuration`);
   }
-  if (pricing.stablecoins.length !== 0 || pricing.directFeeds.length !== 0) {
-    fail(context, `${pricing.mode} must not declare address-based Chainlink assets`);
+  if (pricing.directFeeds.length !== 0) {
+    fail(`${context}.directFeeds`, `must be empty for ${pricing.mode}`);
+  }
+  if (pricing.mode === "USD_PEG") {
+    if (pricing.stablecoins.length === 0) {
+      fail(`${context}.stablecoins`, "must not be empty for USD_PEG");
+    }
+    if (pricing.syntheticPrices.length !== 0) {
+      fail(`${context}.syntheticPrices`, "must be empty for USD_PEG");
+    }
+    return;
+  }
+  if (pricing.stablecoins.length !== 0) {
+    fail(`${context}.stablecoins`, `must be empty for ${pricing.mode}`);
   }
   if (
     pricing.mode === "SYNTHETIC_TESTNET" &&

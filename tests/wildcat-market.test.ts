@@ -1,5 +1,10 @@
 import { assert, clearStore, describe, test } from "matchstick-as/assembly";
-import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import {
+  Address,
+  BigDecimal,
+  BigInt,
+  ethereum,
+} from "@graphprotocol/graph-ts";
 import { Token } from "../generated/schema";
 import {
   createLenderAccount,
@@ -70,6 +75,7 @@ function seedTransferMarket(
   token.decimals = 0;
   token.isMock = false;
   token.isUsdStablecoin = true;
+  token.lastPriceFeedSearchDay = -1;
   token.save();
 
   let market = createMarket(generateMarketId(MARKET), {
@@ -96,6 +102,7 @@ function seedTransferMarket(
     delinquencyFeeBips: 0,
     asset: token.id,
     withdrawalBatchDuration: 0,
+    totalAssets: BigInt.zero(),
     maxTotalSupply: BigInt.fromI32(1_000_000),
     annualInterestBips: 500,
     commitmentFeeBips: null,
@@ -104,6 +111,8 @@ function seedTransferMarket(
     scaleFactor,
     lastInterestAccruedTimestamp: 100,
     lastInterestAccruedBlockNumber: 1,
+    usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     tokenWrapper: null,
     numCollateralContracts: 0,
     createdAt: event.block.timestamp.toI32(),
@@ -177,12 +186,15 @@ describe("wildcat market", () => {
       delinquencyFeeBips: 0,
       asset: "asset",
       withdrawalBatchDuration: 0,
+      totalAssets: BigInt.zero(),
       maxTotalSupply: BigInt.zero(),
       annualInterestBips: 1200,
       reserveRatioBips: 0,
       scaleFactor: BigInt.zero(),
       lastInterestAccruedTimestamp: 0,
       lastInterestAccruedBlockNumber: 0,
+      usdTotalsComplete: true,
+      totalDebtUSD: BigDecimal.zero(),
       numCollateralContracts: 0,
       createdAt: 0,
       createdAtBlock: BigInt.zero(),
@@ -319,6 +331,12 @@ describe("wildcat market", () => {
       "LenderDailyStats",
       lenderDailyStatsId,
       "dayInterestEarnedUSD",
+      "10"
+    );
+    assert.fieldEquals(
+      "LenderDailyStats",
+      lenderDailyStatsId,
+      "totalInterestEarnedUSD",
       "10"
     );
     assert.fieldEquals(

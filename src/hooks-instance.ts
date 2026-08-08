@@ -469,7 +469,8 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
     roleProvider.entity.isApproved = true;
     roleProvider.entity.save();
   }
-  createRoleProviderAdded(generateHooksInstanceEventId(hooks), {
+  let roleProviderAddedId = generateHooksInstanceEventId(hooks);
+  createRoleProviderAdded(roleProviderAddedId, {
     hooks: hooks.id,
     isPullProvider: roleProvider.entity.isPullProvider,
     pullProviderIndex: roleProvider.entity.pullProviderIndex,
@@ -483,6 +484,8 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
     eventIndex: hooks.eventIndex,
     timeToLive: roleProvider.entity.timeToLive,
   });
+  roleProvider.entity.addedEvent = roleProviderAddedId;
+  roleProvider.entity.save();
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -495,7 +498,8 @@ export function handleRoleProviderRemoved(
     generateRoleProviderId(event.address, event.params.providerAddress)
   );
 
-  createRoleProviderRemoved(generateHooksInstanceEventId(hooks), {
+  let roleProviderRemovedId = generateHooksInstanceEventId(hooks);
+  createRoleProviderRemoved(roleProviderRemovedId, {
     hooks: hooks.id,
     provider: roleProvider.id,
     blockNumber: event.block.number.toI32(),
@@ -511,6 +515,7 @@ export function handleRoleProviderRemoved(
   roleProvider.timeToLive = BigInt.zero();
   roleProvider.pullProviderIndex = 0;
   roleProvider.pushProviderIndex = 0;
+  roleProvider.removedEvent = roleProviderRemovedId;
   roleProvider.save();
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();

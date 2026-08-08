@@ -1,27 +1,66 @@
 #!/usr/bin/env node
-const { execSync } = require("child_process");
+const { execSync, spawnSync } = require("child_process");
+const { getHinterlightPaths } = require("./hinterlight-paths");
 require("dotenv").config();
 
 const provider = process.argv[2];
 const network = process.argv[3];
-const subgraphName = process.argv[4] || network;
-const devDeployKey = process.env.DEV_DEPLOY_KEY;
-const devIpfsUrl = process.env.DEV_IPFS_URL;
-const devNodeUrl = process.env.DEV_NODE_URL;
-const sentioApiKey = process.env.SENTIO_API_KEY;
+const subgraphName = process.argv[4];
+const version = process.argv[5];
+let targetSubgraphName = subgraphName;
+let publicSubgraphName = subgraphName;
+let publicQueryUrl = null;
 
-if (!network) {
-  console.error("Usage: yarn deploy <provider> <network> [subgraph-name] [version-label]");
+if (!provider || !network || !subgraphName) {
+  console.error(
+    "Usage: yarn deploy <provider> <network> <subgraph-name> <version-label>"
+  );
   process.exit(1);
 }
 
-if (!provider) {
-  console.error("Usage: yarn deploy <provider> <network> [subgraph-name] [version-label]");
+if (!version) {
+  console.error(
+    "Deployments require an explicit version label.\n" +
+      "Examples:\n" +
+      "  yarn deploy:goldsky:sepolia v2.5.8\n" +
+      "  yarn deploy:hinterlight:sepolia v2.5.8"
+  );
   process.exit(1);
 }
 
-if (provider === "sentio" && !sentioApiKey) {
-  console.error("SENTIO_API_KEY must be set");
+if (!/^v[0-9]+(?:\.[0-9]+){2,3}$/.test(version)) {
+  console.error(
+    "Version labels must use the release format vMAJOR.MINOR.PATCH[.REVISION]"
+  );
+  process.exit(1);
+}
+
+const supportedProviders = new Set([
+  "dev",
+  "thegraph",
+  "goldsky",
+  "hinterlight",
+]);
+if (!supportedProviders.has(provider)) {
+  console.error(
+    "Unknown provider. Use: dev | thegraph | goldsky | hinterlight"
+  );
+  process.exit(1);
+}
+
+const supportedNetworks = new Set([
+  "mainnet",
+  "sepolia",
+  "plasma-mainnet",
+  "plasma-testnet",
+]);
+if (!supportedNetworks.has(network)) {
+  console.error(`Unknown network: ${network}`);
+  process.exit(1);
+}
+
+if (!/^[A-Za-z0-9][A-Za-z0-9_/-]*$/.test(subgraphName)) {
+  console.error(`Invalid subgraph name: ${subgraphName}`);
   process.exit(1);
 }
 
@@ -30,74 +69,170 @@ function run(cmd) {
   execSync(cmd, { stdio: "inherit" });
 }
 
-const explicitVersion = process.argv[5];
-if (provider === "sentio" && !explicitVersion) {
-  console.error(
-    `Sentio deployments require an explicit immutable version label.\n` +
-      `Example: yarn deploy:${network}-sentio v2.5.7`
-  );
-  process.exit(1);
+const graphCliPath = require.resolve("@graphprotocol/graph-cli/bin/run");
+const sensitiveGraphFlags = new Set([
+  "--access-token",
+  "--deploy-key",
+  "--headers",
+]);
+
+function formatGraphCommand(args) {
+  const formatted = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    formatted.push(arg);
+    if (sensitiveGraphFlags.has(arg) && i + 1 < args.length) {
+      formatted.push("<redacted>");
+      i += 1;
+    }
+  }
+  return `graph ${formatted.join(" ")}`;
 }
 
-const version =
-  explicitVersion ||
-  execSync("node scripts/next-version")
-    .toString()
-    .trim();
+function runGraph(args, { allowExistingSubgraph = false } = {}) {
+  console.log("> " + formatGraphCommand(args));
+  const result = spawnSync(process.execPath, [graphCliPath, ...args], {
+    encoding: allowExistingSubgraph ? "utf8" : undefined,
+    stdio: allowExistingSubgraph ? "pipe" : "inherit",
+  });
 
-if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(version)) {
-  console.error(
-    "Version labels must start with an alphanumeric character and contain only letters, numbers, periods, underscores, or hyphens"
-  );
-  process.exit(1);
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (allowExistingSubgraph) {
+    const stdout = result.stdout || "";
+    const stderr = result.stderr || "";
+    const output = stdout + stderr;
+    if (result.status !== 0 && /subgraph already exists/i.test(output)) {
+      console.log("Subgraph already exists; continuing with deployment.");
+      return;
+    }
+    process.stdout.write(stdout);
+    process.stderr.write(stderr);
+  }
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Graph CLI exited with status ${result.status ?? "unknown"}`
+    );
+  }
+}
+
+function requireEnvironment(names) {
+  const missing = names.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    console.error(
+      `Missing required environment variables: ${missing.join(", ")}`
+    );
+    process.exit(1);
+  }
+}
+
+if (provider === "hinterlight") {
+  if (!/^[A-Za-z0-9_-]+$/.test(subgraphName)) {
+    console.error(`Invalid Hinterlight subgraph name: ${subgraphName}`);
+    process.exit(1);
+  }
+  const hinterlightPaths = getHinterlightPaths(subgraphName, version);
+  targetSubgraphName = hinterlightPaths.internalSubgraphName;
+  publicSubgraphName = hinterlightPaths.publicSubgraphName;
+  publicQueryUrl = hinterlightPaths.publicQueryUrl;
+  requireEnvironment([
+    "GRAPH_ACCESS_TOKEN",
+    "GRAPH_DEPLOY_KEY",
+    "IPFS_BEARER_TOKEN",
+  ]);
+}
+
+if (provider === "dev") {
+  requireEnvironment(["DEV_DEPLOY_KEY", "DEV_NODE_URL", "DEV_IPFS_URL"]);
 }
 
 console.log(
-  `Deploying ${subgraphName}@${version} to ${network} with ${provider}`
+  `Deploying ${targetSubgraphName}@${version} to ${network} with ${provider}`
 );
 
-// always do netconfig + build to set the correct addresses and ensure the ABIs are correct
+// Always generate and build for the selected network before deployment.
 run(`yarn netconfig ${network}`);
-run(`yarn build`);
+run("yarn build");
 
 switch (provider) {
-  case "dev":
-    if (!devDeployKey || !devNodeUrl || !devIpfsUrl) {
-      console.error("DEV_DEPLOY_KEY, DEV_NODE_URL, and DEV_IPFS_URL must be set");
-      process.exit(1);
-    }
-    // Graph name can't contain periods or hyphens
-    const deployId = `${subgraphName}_${version.replaceAll(/[.\-]/g, '_')}`;
-    // Try to create subgraph if it doesn't exist
-    try {
-      run(`graph create --node ${devNodeUrl} --access-token ${devDeployKey} ${deployId}`);
-    } catch (err) {}
-    run(`graph deploy --node ${devNodeUrl} --ipfs ${devIpfsUrl} --deploy-key ${devDeployKey} --headers '{"Authorization": "Bearer ${devDeployKey}"}' --version-label ${version} ${deployId}`);
-    console.log(`Deployed ${subgraphName}@${version} to dev with name ${deployId}`);
+  case "hinterlight": {
+    runGraph(
+      [
+        "create",
+        "--node",
+        "https://graph.hinterlight.net/deploy/",
+        "--access-token",
+        process.env.GRAPH_ACCESS_TOKEN,
+        targetSubgraphName,
+      ],
+      { allowExistingSubgraph: true }
+    );
+    runGraph([
+      "deploy",
+      "--node",
+      "https://graph.hinterlight.net/deploy/",
+      "--ipfs",
+      "https://ipfs.hinterlight.net",
+      "--deploy-key",
+      process.env.GRAPH_DEPLOY_KEY,
+      "--headers",
+      JSON.stringify({
+        Authorization: `Bearer ${process.env.IPFS_BEARER_TOKEN}`,
+      }),
+      "--version-label",
+      version,
+      targetSubgraphName,
+    ]);
+    console.log(`Deployed ${publicSubgraphName} to Hinterlight.`);
+    console.log(`Queries (HTTP):     ${publicQueryUrl}`);
     break;
+  }
+
+  case "dev": {
+    const deployId = `${subgraphName}_${version.replace(/[.-]/g, "_")}`;
+    runGraph(
+      [
+        "create",
+        "--node",
+        process.env.DEV_NODE_URL,
+        "--access-token",
+        process.env.DEV_DEPLOY_KEY,
+        deployId,
+      ],
+      { allowExistingSubgraph: true }
+    );
+    runGraph([
+      "deploy",
+      "--node",
+      process.env.DEV_NODE_URL,
+      "--ipfs",
+      process.env.DEV_IPFS_URL,
+      "--deploy-key",
+      process.env.DEV_DEPLOY_KEY,
+      "--headers",
+      JSON.stringify({
+        Authorization: `Bearer ${process.env.DEV_DEPLOY_KEY}`,
+      }),
+      "--version-label",
+      version,
+      deployId,
+    ]);
+    console.log(
+      `Deployed ${subgraphName}@${version} to dev with name ${deployId}`
+    );
+    break;
+  }
+
   case "thegraph":
     run(
       `graph deploy --node https://api.studio.thegraph.com/deploy/ ${subgraphName} --version-label ${version}`
     );
     break;
 
-  case "sentio":
-    run(
-      `graph deploy --node https://app.sentio.xyz/api/v1/graph-node --ipfs https://app.sentio.xyz/api/v1/ipfs ${subgraphName} --version-label ${version} --deploy-key "$SENTIO_API_KEY"`
-    );
-    break;
-
-  case "alchemy":
-    throw Error(`Alchemy subgraph support is deprecated. Use Goldsky instead.`)
-    // run(
-    //   `graph deploy ${network} --version-label ${version} --node https://subgraphs.alchemy.com/api/subgraphs/deploy --ipfs https://ipfs.satsuma.xyz --deploy-key ${process.env.ALCHEMY_DEPLOY_KEY}`
-    // );
-
   case "goldsky":
     run(`goldsky subgraph deploy ${subgraphName}/${version} --path .`);
     break;
-
-  default:
-    console.error("Unknown provider. Use: thegraph | alchemy | goldsky | sentio | dev");
-    process.exit(1);
 }

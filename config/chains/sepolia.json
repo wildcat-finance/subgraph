@@ -217,7 +217,6 @@
   },
   "pricing": {
     "mode": "SYNTHETIC_TESTNET",
-    "feedDecimals": null,
     "feedRegistry": null,
     "denominations": null,
     "bridgeFeeds": null,

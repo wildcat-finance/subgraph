@@ -5,6 +5,7 @@ import { IWildcatMarketRevolving } from "../generated/templates/WildcatMarket/IW
 
 function copyMarketState(market: Market, snapshot: MarketSnapshot): void {
   snapshot.isClosed = market.isClosed;
+  snapshot.totalAssets = market.totalAssets;
   snapshot.maxTotalSupply = market.maxTotalSupply;
   snapshot.protocolFeeBips = market.protocolFeeBips;
   snapshot.pendingProtocolFees = market.pendingProtocolFees;
@@ -74,9 +75,10 @@ export function createInitialMarketSnapshot(
   return snapshot;
 }
 
-export function saveMarketAndSnapshot(
+function saveMarketAndSnapshotInternal(
   event: ethereum.Event,
-  market: Market
+  market: Market,
+  includesContractCall: boolean
 ): void {
   let snapshot = MarketSnapshot.load(market.id);
   if (snapshot == null) {
@@ -89,10 +91,24 @@ export function saveMarketAndSnapshot(
   stampMarketSnapshot(
     event,
     snapshot,
-    market.marketKind == "REVOLVING"
+    includesContractCall || market.marketKind == "REVOLVING"
       ? "EVENT_AND_CONTRACT_CALL"
       : "EVENT_PROJECTION"
   );
   market.save();
   snapshot.save();
+}
+
+export function saveMarketAndSnapshot(
+  event: ethereum.Event,
+  market: Market
+): void {
+  saveMarketAndSnapshotInternal(event, market, false);
+}
+
+export function saveMarketAndSnapshotWithContractCall(
+  event: ethereum.Event,
+  market: Market
+): void {
+  saveMarketAndSnapshotInternal(event, market, true);
 }

@@ -45,6 +45,7 @@ const ASSET_ADDRESS = addressFrom("0x5000000000000000000000000000000000000005");
 const LEGACY_MARKET_ADDRESS = addressFrom("0x6000000000000000000000000000000000000006");
 const REVOLVING_MARKET_ADDRESS = addressFrom("0x7000000000000000000000000000000000000007");
 const REPAYER_ADDRESS = addressFrom("0x8000000000000000000000000000000000000008");
+const RAY = BigInt.fromString("1000000000000000000000000000");
 
 function addressFrom(hex: string): Address {
   return Address.fromBytes(Bytes.fromHexString(hex));
@@ -71,6 +72,7 @@ function seedToken(address: Address): void {
   token.decimals = 18;
   token.isMock = false;
   token.isUsdStablecoin = false;
+  token.lastPriceFeedSearchDay = -1;
   token.save();
 }
 
@@ -170,6 +172,7 @@ function seedMarket(address: Address, marketKind: string): void {
   market.asset = generateTokenId(ASSET_ADDRESS);
   market.withdrawalBatchDuration = 3600;
   market.isClosed = false;
+  market.totalAssets = BigInt.zero();
   market.maxTotalSupply = BigInt.fromI32(1_000_000);
   market.pendingProtocolFees = BigInt.zero();
   market.normalizedUnclaimedWithdrawals = BigInt.zero();
@@ -204,6 +207,7 @@ function seedMarket(address: Address, marketKind: string): void {
   market.totalDepositedUSD = BigDecimal.zero();
   market.totalWithdrawalsRequestedUSD = BigDecimal.zero();
   market.totalWithdrawalsExecutedUSD = BigDecimal.zero();
+  market.usdTotalsComplete = true;
   market.totalDebtUSD = BigDecimal.zero();
   market.eventIndex = 0;
   market.delinquencyStatusChangedIndex = 0;
@@ -242,6 +246,13 @@ function createHooksMarketDeployedEvent(
   marketAddress: Address,
   assetAddress: Address
 ): MarketDeployed {
+  createMockedFunction(
+    assetAddress,
+    "balanceOf",
+    "balanceOf(address):(uint256)"
+  )
+    .withArgs([ethereum.Value.fromAddress(marketAddress)])
+    .returns([ethereum.Value.fromUnsignedBigInt(BigInt.zero())]);
   let event = changetype<MarketDeployed>(newMockEvent());
   event.address = factoryAddress;
   event.parameters = new Array();
@@ -617,6 +628,18 @@ describe("RCF v2 subgraph regression coverage", () => {
       LEGACY_FACTORY_ADDRESS.toHexString()
     );
     assert.fieldEquals(
+      "ProtocolDailyStats",
+      "PROTOCOL-0",
+      "numMarkets",
+      "1"
+    );
+    assert.fieldEquals(
+      "BorrowerDailyStats",
+      "BORROWER-DAILY-" + LEGACY_FACTORY_ADDRESS.toHexString() + "-0",
+      "numMarkets",
+      "1"
+    );
+    assert.fieldEquals(
       "Market",
       LEGACY_MARKET_ADDRESS.toHexString(),
       "asset",
@@ -626,7 +649,7 @@ describe("RCF v2 subgraph regression coverage", () => {
       "MarketSnapshot",
       LEGACY_MARKET_ADDRESS.toHexString(),
       "source",
-      "EVENT_PROJECTION"
+      "EVENT_AND_CONTRACT_CALL"
     );
     assert.fieldEquals(
       "HooksConfig",
@@ -788,6 +811,31 @@ describe("RCF v2 subgraph regression coverage", () => {
       "drawnAmount",
       "9000"
     );
+    assert.fieldEquals(
+      "Market",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "usdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals("ProtocolStats", "PROTOCOL_STATS", "usdTotalsComplete", "false");
+    assert.fieldEquals(
+      "BorrowerStats",
+      "BORROWER-STATS-" + LEGACY_FACTORY_ADDRESS.toHexString(),
+      "usdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals(
+      "ProtocolDailyStats",
+      "PROTOCOL-0",
+      "dayUsdTotalsComplete",
+      "false"
+    );
+    assert.fieldEquals(
+      "MarketDailyStats",
+      REVOLVING_MARKET_ADDRESS.toHexString() + "-0",
+      "dayUsdTotalsComplete",
+      "false"
+    );
 
     resetStore();
   });
@@ -832,8 +880,15 @@ describe("RCF v2 subgraph regression coverage", () => {
     seedToken(ASSET_ADDRESS);
     seedMarket(LEGACY_MARKET_ADDRESS, "STANDARD");
 
-    let event = createStateUpdatedEvent(BigInt.fromI32(1), false);
+    let event = createStateUpdatedEvent(RAY, false);
     event.address = LEGACY_MARKET_ADDRESS;
+    createMockedFunction(
+      ASSET_ADDRESS,
+      "balanceOf",
+      "balanceOf(address):(uint256)"
+    )
+      .withArgs([ethereum.Value.fromAddress(LEGACY_MARKET_ADDRESS)])
+      .returns([ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(12_345))]);
 
     handleStateUpdated(event);
 
@@ -853,6 +908,100 @@ describe("RCF v2 subgraph regression coverage", () => {
       "MarketSnapshot",
       LEGACY_MARKET_ADDRESS.toHexString(),
       "scaleFactor",
+      RAY.toString()
+    );
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "totalAssets",
+      "12345"
+    );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "totalAssets",
+      "12345"
+    );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "source",
+      "EVENT_AND_CONTRACT_CALL"
+    );
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "totalDebtUSD",
+      "null"
+    );
+
+    resetStore();
+  });
+
+  test("state updates retain exact zero USD debt without a price", () => {
+    resetStore();
+    seedArchController();
+    seedToken(ASSET_ADDRESS);
+    seedMarket(LEGACY_MARKET_ADDRESS, "STANDARD");
+    let market = Market.load(LEGACY_MARKET_ADDRESS.toHexString());
+    if (market != null) {
+      market.scaledTotalSupply = BigInt.zero();
+      market.save();
+    }
+
+    let event = createStateUpdatedEvent(BigInt.fromI32(1), false);
+    event.address = LEGACY_MARKET_ADDRESS;
+    createMockedFunction(
+      ASSET_ADDRESS,
+      "balanceOf",
+      "balanceOf(address):(uint256)"
+    )
+      .withArgs([ethereum.Value.fromAddress(LEGACY_MARKET_ADDRESS)])
+      .returns([ethereum.Value.fromUnsignedBigInt(BigInt.zero())]);
+
+    handleStateUpdated(event);
+
+    assert.fieldEquals(
+      "Market",
+      LEGACY_MARKET_ADDRESS.toHexString(),
+      "totalDebtUSD",
+      "0"
+    );
+
+    resetStore();
+  });
+
+  test("market daily price recovers when pricing becomes available later", () => {
+    resetStore();
+    seedArchController();
+    seedToken(ASSET_ADDRESS);
+    seedMarket(LEGACY_MARKET_ADDRESS, "STANDARD");
+
+    let first = createBorrowEvent(BigInt.fromI32(1));
+    first.address = LEGACY_MARKET_ADDRESS;
+    handleBorrow(first);
+    assert.fieldEquals(
+      "MarketDailyStats",
+      LEGACY_MARKET_ADDRESS.toHexString() + "-0",
+      "usdPrice",
+      "null"
+    );
+
+    let token = Token.load(generateTokenId(ASSET_ADDRESS));
+    if (token != null) {
+      token.isUsdStablecoin = true;
+      token.priceSource = "USD_PEG";
+      token.save();
+    }
+    let second = createDebtRepaidEvent(REPAYER_ADDRESS, BigInt.fromI32(1));
+    second.address = LEGACY_MARKET_ADDRESS;
+    second.logIndex = BigInt.fromI32(2);
+    handleDebtRepaid(second);
+
+    assert.fieldEquals(
+      "MarketDailyStats",
+      LEGACY_MARKET_ADDRESS.toHexString() + "-0",
+      "usdPrice",
       "1"
     );
 
@@ -870,6 +1019,8 @@ describe("RCF v2 subgraph regression coverage", () => {
     if (market != null) {
       market.commitmentFeeBips = BigInt.fromI32(150);
       market.drawnAmount = BigInt.fromI32(4000);
+      market.timeDelinquent = 90_000;
+      market.isIncurringPenalties = true;
       market.save();
     }
 
@@ -895,6 +1046,42 @@ describe("RCF v2 subgraph regression coverage", () => {
       REVOLVING_MARKET_ADDRESS.toHexString(),
       "commitmentFeeBips",
       "150"
+    );
+    assert.fieldEquals(
+      "Market",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "annualInterestBips",
+      "0"
+    );
+    assert.fieldEquals(
+      "Market",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "reserveRatioBips",
+      "10000"
+    );
+    assert.fieldEquals(
+      "Market",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "timeDelinquent",
+      "0"
+    );
+    assert.fieldEquals(
+      "Market",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "isIncurringPenalties",
+      "false"
+    );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "annualInterestBips",
+      "0"
+    );
+    assert.fieldEquals(
+      "MarketSnapshot",
+      REVOLVING_MARKET_ADDRESS.toHexString(),
+      "reserveRatioBips",
+      "10000"
     );
 
     resetStore();

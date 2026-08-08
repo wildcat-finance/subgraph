@@ -204,19 +204,9 @@ describe("hooks factory", () => {
       "pushProviderIndex",
       "0"
     );
-    assert.fieldEquals(
-      "RoleProviderAdded",
-      "RECORD-" + hooksInstanceId + "-0",
-      "timeToLive",
-      "60"
-    );
-    assert.fieldEquals(
-      "RoleProviderAdded",
-      "RECORD-" + hooksInstanceId + "-1",
-      "timeToLive",
-      "4294967295"
-    );
     assert.entityCount("RoleProvider", 2);
-    assert.entityCount("RoleProviderAdded", 2);
+    // Factory snapshots describe current state; they are not emitted lifecycle
+    // events and must not fabricate immutable RoleProviderAdded records.
+    assert.entityCount("RoleProviderAdded", 0);
   });
 });

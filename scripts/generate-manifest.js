@@ -117,9 +117,6 @@ function addDeploymentContext(dataSource, config) {
     deploymentCollateralEnabled: stringContext(String(config.features.collateral)),
     deploymentWrappersEnabled: stringContext(String(config.features.wrappers)),
     pricingMode: stringContext(pricing.mode),
-    pricingFeedDecimals: stringContext(
-      pricing.feedDecimals === null ? "" : String(pricing.feedDecimals)
-    ),
     pricingFeedRegistry: stringContext(pricing.feedRegistry || ""),
     pricingUsdDenomination: stringContext(pricing.denominations?.usd || ""),
     pricingEthDenomination: stringContext(pricing.denominations?.eth || ""),

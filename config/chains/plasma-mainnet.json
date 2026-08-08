@@ -38,12 +38,13 @@
     "wrappers": false
   },
   "pricing": {
-    "mode": "NONE",
-    "feedDecimals": null,
+    "mode": "USD_PEG",
     "feedRegistry": null,
     "denominations": null,
     "bridgeFeeds": null,
-    "stablecoins": [],
+    "stablecoins": [
+      "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+    ],
     "directFeeds": [],
     "syntheticPrices": []
   },

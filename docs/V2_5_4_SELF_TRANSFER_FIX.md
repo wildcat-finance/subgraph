@@ -156,7 +156,7 @@ Add at least these Matchstick cases:
 
 1. Implement and test the handler change on the development machine.
 2. Set the package/release version and all provider labels to `2.5.4`.
-3. Deploy the same build to Hinterlight, Goldsky, and Sentio under new release
+3. Deploy the same build to Hinterlight and Goldsky under new release
    names.
 4. Wait for each deployment to reach chain head and verify the fixed-block
    fixtures.

@@ -29,7 +29,7 @@ import { setupTokenPriceFeeds } from "./price-feeds";
 import { readTokenMetadata } from "./token-metadata";
 import { generateEventId } from "./utils";
 
-function getOrCreateToken(tokenAddress: Address): Token {
+function getOrCreateToken(tokenAddress: Address, timestamp: BigInt): Token {
   let tokenId = generateTokenId(tokenAddress);
   let token = Token.load(tokenId);
   if (token != null) {
@@ -44,7 +44,7 @@ function getOrCreateToken(tokenAddress: Address): Token {
     decimals: metadata.decimals,
     isMock: metadata.isMock,
   });
-  setupTokenPriceFeeds(token);
+  setupTokenPriceFeeds(token, timestamp);
   return token;
 }
 
@@ -141,8 +141,8 @@ export function handleWrapperDeployed(event: WrapperDeployedEvent): void {
   wrapper.factory = factory.id;
   wrapper.market = null;
   wrapper.marketAddress = marketAddress;
-  wrapper.marketToken = getOrCreateToken(marketAddress).id;
-  wrapper.token = getOrCreateToken(wrapperAddress).id;
+  wrapper.marketToken = getOrCreateToken(marketAddress, event.block.timestamp).id;
+  wrapper.token = getOrCreateToken(wrapperAddress, event.block.timestamp).id;
   wrapper.blockNumber = event.block.number.toI32();
   wrapper.blockTimestamp = event.block.timestamp.toI32();
   wrapper.transactionHash = event.transaction.hash;

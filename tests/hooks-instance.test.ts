@@ -4,7 +4,12 @@ import {
   describe,
   test,
 } from "matchstick-as/assembly/index";
-import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import {
+  Address,
+  BigDecimal,
+  BigInt,
+  ethereum,
+} from "@graphprotocol/graph-ts";
 import {
   AnnualInterestBipsReductionExecuted,
   AnnualInterestBipsReductionProposalCancelled,
@@ -81,12 +86,15 @@ function saveMarket(): void {
     delinquencyFeeBips: 0,
     asset: "asset",
     withdrawalBatchDuration: 0,
+    totalAssets: BigInt.zero(),
     maxTotalSupply: BigInt.zero(),
     annualInterestBips: 1200,
     reserveRatioBips: 0,
     scaleFactor: BigInt.zero(),
     lastInterestAccruedTimestamp: 0,
     lastInterestAccruedBlockNumber: 0,
+    usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
     createdAt: 0,
     createdAtBlock: BigInt.zero(),
@@ -574,6 +582,12 @@ describe("role provider events", () => {
       "timeToLive",
       "4294967295"
     );
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "addedEvent",
+      "RECORD-" + hooksId + "-0"
+    );
 
     handleRoleProviderUpdated(
       createRoleProviderUpdatedEvent(BigInt.zero(), 0, nullProviderIndex)
@@ -598,7 +612,7 @@ describe("role provider events", () => {
     assert.fieldEquals("HooksInstance", hooksId, "eventIndex", "2");
   });
 
-  test("clears current push-provider state when the provider is removed", () => {
+  test("preserves lifecycle history across removal and re-addition", () => {
     clearStore();
     saveHooksInstance();
 
@@ -623,7 +637,40 @@ describe("role provider events", () => {
     assert.fieldEquals("RoleProvider", providerId, "pullProviderIndex", "0");
     assert.fieldEquals("RoleProvider", providerId, "isPushProvider", "false");
     assert.fieldEquals("RoleProvider", providerId, "pushProviderIndex", "0");
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "addedEvent",
+      "RECORD-" + hooksId + "-0"
+    );
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "removedEvent",
+      "RECORD-" + hooksId + "-1"
+    );
     assert.entityCount("RoleProviderRemoved", 1);
-    assert.fieldEquals("HooksInstance", hooksId, "eventIndex", "2");
+
+    handleRoleProviderAdded(
+      createRoleProviderAddedEvent(BigInt.fromI32(120), 0, nullProviderIndex)
+    );
+
+    assert.fieldEquals("RoleProvider", providerId, "isApproved", "true");
+    assert.fieldEquals("RoleProvider", providerId, "timeToLive", "120");
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "addedEvent",
+      "RECORD-" + hooksId + "-2"
+    );
+    assert.fieldEquals(
+      "RoleProvider",
+      providerId,
+      "removedEvent",
+      "RECORD-" + hooksId + "-1"
+    );
+    assert.entityCount("RoleProviderAdded", 2);
+    assert.entityCount("RoleProviderRemoved", 1);
+    assert.fieldEquals("HooksInstance", hooksId, "eventIndex", "3");
   });
 });

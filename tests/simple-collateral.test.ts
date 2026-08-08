@@ -9,6 +9,7 @@ import {
 } from "matchstick-as/assembly";
 import {
   Address,
+  BigDecimal,
   BigInt,
   DataSourceContext,
   ethereum,
@@ -113,6 +114,7 @@ function seedCollateralAsset(): void {
   token.decimals = 18;
   token.isMock = false;
   token.isUsdStablecoin = false;
+  token.lastPriceFeedSearchDay = -1;
   token.save();
 }
 
@@ -450,6 +452,7 @@ describe("simple collateral", () => {
       delinquencyFeeBips: 0,
       asset: generateTokenId(COLLATERAL_ASSET),
       withdrawalBatchDuration: 3600,
+      totalAssets: BigInt.zero(),
       maxTotalSupply: BigInt.fromI32(1_000_000),
       annualInterestBips: 500,
       commitmentFeeBips: null,
@@ -458,6 +461,8 @@ describe("simple collateral", () => {
       scaleFactor: BigInt.fromString("1000000000000000000000000000"),
       lastInterestAccruedTimestamp: 0,
       lastInterestAccruedBlockNumber: 0,
+      usdTotalsComplete: true,
+      totalDebtUSD: BigDecimal.zero(),
       tokenWrapper: null,
       numCollateralContracts: 0,
       createdAt: 1000,

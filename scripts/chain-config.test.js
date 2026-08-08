@@ -265,7 +265,6 @@ test("rejects factory metadata that cannot be encoded in mapping context", () =>
 test("keeps every analytics price source explicit in chain configuration", () => {
   const mainnet = loadChainConfig("mainnet");
   assert.equal(mainnet.pricing.mode, "CHAINLINK");
-  assert.equal(mainnet.pricing.feedDecimals, 8);
   assert.equal(mainnet.pricing.directFeeds.length, 2);
 
   const sepolia = loadChainConfig("sepolia");
@@ -274,6 +273,18 @@ test("keeps every analytics price source explicit in chain configuration", () =>
     sepolia.pricing.syntheticPrices.map(({ symbol }) => symbol),
     ["USDC", "USDT", "DAI", "WETH", "WBTC", "ZRX"]
   );
+
+  const plasmaMainnet = loadChainConfig("plasma-mainnet");
+  assert.equal(plasmaMainnet.pricing.mode, "USD_PEG");
+  assert.deepEqual(plasmaMainnet.pricing.stablecoins, [
+    "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+  ]);
+
+  const plasmaTestnet = loadChainConfig("plasma-testnet");
+  assert.equal(plasmaTestnet.pricing.mode, "USD_PEG");
+  assert.equal(plasmaTestnet.pricing.stablecoins.length, 9);
+  assert.equal(plasmaTestnet.pricing.directFeeds.length, 0);
+  assert.equal(plasmaTestnet.pricing.syntheticPrices.length, 0);
 });
 
 test("rejects mixed or incomplete pricing modes", () => {
@@ -284,5 +295,30 @@ test("rejects mixed or incomplete pricing modes", () => {
   assert.throws(
     () => validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
     /must not declare Chainlink configuration/
+  );
+});
+
+test("rejects zero-address pricing configuration", () => {
+  const abiFamilies = loadAbiFamilies();
+  const stablecoin = clone(loadChainConfig("plasma-mainnet", { abiFamilies }));
+  stablecoin.pricing.stablecoins[0] =
+    "0x0000000000000000000000000000000000000000";
+  assert.throws(
+    () =>
+      validateChainConfig(stablecoin, abiFamilies, {
+        expectedNetwork: "plasma-mainnet",
+      }),
+    /must not be the zero address/
+  );
+
+  const directFeed = clone(loadChainConfig("mainnet", { abiFamilies }));
+  directFeed.pricing.directFeeds[0].feed =
+    "0x0000000000000000000000000000000000000000";
+  assert.throws(
+    () =>
+      validateChainConfig(directFeed, abiFamilies, {
+        expectedNetwork: "mainnet",
+      }),
+    /must not be the zero address/
   );
 });

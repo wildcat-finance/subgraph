@@ -106,12 +106,42 @@ before moving to the V2.5 endpoint.
 
 `TokenDailyPrice` retains `token`, `timestamp`, and `priceUSD` and adds explicit
 source and observation provenance. It is immutable and represents the first
-price observation used for a token on a UTC day. `Token.priceSource` describes
-the configured price path.
+price observation used for a token on a UTC day. `feed0` and `feed1` retain the
+exact Chainlink path used for that observation even if the token's configured
+path changes later. `Token.priceSource` describes the currently configured
+price path. `Token.lastPriceFeedSearchDay` exposes the UTC day of the latest
+dynamic discovery attempt for operational diagnostics.
 
 Mainnet uses configured Chainlink sources. Sepolia uses explicitly configured
-synthetic testnet pricing. Chains with `pricingMode: NONE` leave activity
-unpriced rather than fabricating zero-value USD activity.
+synthetic testnet pricing. Plasma Mainnet and Plasma Testnet use address-scoped
+`USD_PEG` configuration and never fall through to Ethereum Chainlink sources.
+Chains with `pricingMode: NONE` leave activity unpriced rather than fabricating
+zero-value USD activity.
+
+Chainlink observations now validate each feed's own decimals and
+`latestRoundData`: answers must be positive, complete, non-future, and no more
+than seven days old. Dead or missing paths are cleared and discovery retries on
+the next UTC day.
+
+`Market.totalDebtUSD` is nullable. A value of `0` means the indexed debt is
+actually zero; `null` means nonzero debt could not be priced. `Market`,
+`ProtocolStats`, `BorrowerStats`, and `LenderStats` expose
+`usdTotalsComplete`; their daily entities expose `dayUsdTotalsComplete` and
+`cumulativeUsdTotalsComplete`. Once an unpriced nonzero flow occurs, the
+affected cumulative flag remains false for that deployment. Daily flags apply
+to that UTC bucket. Consumers must not interpret a numeric USD aggregate as
+complete unless its corresponding flag is true.
+
+`Market.totalAssets` and `MarketSnapshot.totalAssets` expose the asset balance
+observed on each `StateUpdated`.
+
+## Role-provider lifecycle
+
+`RoleProvider.addedEvent` and `removedEvent` are nullable pointers to the most
+recent actual lifecycle events. `addedEvents` and `removedEvents` retain the
+complete indexed remove/re-add history. Provider arrays read while indexing a
+hooks instance initialize current provider state but no longer create synthetic
+`RoleProviderAdded` entities.
 
 `Borrower` is the canonical address identity joining registration, markets,
 `BorrowerStats`, `BorrowerDailyStats`, and sanctions data. Existing borrower

@@ -5,7 +5,12 @@ import {
   newMockEvent,
   test,
 } from "matchstick-as/assembly/index";
-import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
+import {
+  Address,
+  BigDecimal,
+  BigInt,
+  ethereum,
+} from "@graphprotocol/graph-ts";
 import { Market, Token } from "../generated/schema";
 import {
   createMarket,
@@ -51,6 +56,9 @@ const LENDER = Address.fromString(
   "0x3000000000000000000000000000000000000003"
 );
 const RAY = BigInt.fromString("1000000000000000000000000000");
+const INTEREST_SCALE_FACTOR = BigInt.fromString(
+  "1100000000000000000000000000"
+);
 
 function positionEvent(
   event: ethereum.Event,
@@ -70,6 +78,7 @@ function seedMarket(event: ethereum.Event): Market {
   token.decimals = 6;
   token.isMock = false;
   token.isUsdStablecoin = true;
+  token.lastPriceFeedSearchDay = -1;
   token.save();
 
   let market = createMarket(generateMarketId(MARKET), {
@@ -95,12 +104,15 @@ function seedMarket(event: ethereum.Event): Market {
     delinquencyFeeBips: 0,
     asset: token.id,
     withdrawalBatchDuration: 3600,
+    totalAssets: BigInt.zero(),
     maxTotalSupply: BigInt.fromI32(1_000_000),
     annualInterestBips: 500,
     reserveRatioBips: 1000,
     scaleFactor: RAY,
     lastInterestAccruedTimestamp: 100,
     lastInterestAccruedBlockNumber: 1,
+    usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
     createdAt: event.block.timestamp.toI32(),
     createdAtBlock: event.block.number,
@@ -148,10 +160,16 @@ describe("withdrawal projections", () => {
     positionEvent(queued, 4);
     handleWithdrawalQueued(queued);
 
+    let marketAfterQueue = Market.load(generateMarketId(MARKET));
+    if (marketAfterQueue != null) {
+      marketAfterQueue.scaleFactor = INTEREST_SCALE_FACTOR;
+      marketAfterQueue.save();
+    }
+
     let payment = createWithdrawalBatchPaymentEvent(
       expiry,
       BigInt.fromI32(40),
-      BigInt.fromI32(40)
+      BigInt.fromI32(44)
     );
     positionEvent(payment, 5);
     handleWithdrawalBatchPayment(payment);
@@ -167,7 +185,7 @@ describe("withdrawal projections", () => {
       expiry,
       BigInt.fromI32(40),
       BigInt.fromI32(40),
-      BigInt.fromI32(40)
+      BigInt.fromI32(44)
     );
     positionEvent(expired, 6);
     handleWithdrawalBatchExpired(expired);
@@ -179,7 +197,7 @@ describe("withdrawal projections", () => {
     let executed = createWithdrawalExecutedEvent(
       expiry,
       LENDER,
-      BigInt.fromI32(40)
+      BigInt.fromI32(44)
     );
     positionEvent(executed, 8);
     handleWithdrawalExecuted(executed);
@@ -229,6 +247,7 @@ describe("withdrawal projections", () => {
     assert.fieldEquals("WithdrawalBatch", batchId, "isExpired", "true");
     assert.fieldEquals("WithdrawalBatch", batchId, "isClosed", "true");
     assert.fieldEquals("WithdrawalBatch", batchId, "isCompleted", "true");
+    assert.fieldEquals("WithdrawalBatch", batchId, "totalInterestEarned", "4");
     assert.fieldEquals("WithdrawalBatch", batchId, "updatedAtLogIndex", "8");
 
     assert.fieldEquals(
@@ -236,6 +255,12 @@ describe("withdrawal projections", () => {
       statusId,
       "isCompleted",
       "true"
+    );
+    assert.fieldEquals(
+      "LenderWithdrawalStatus",
+      statusId,
+      "normalizedAmountWithdrawn",
+      "44"
     );
     assert.fieldEquals(
       "LenderWithdrawalStatus",
@@ -248,6 +273,12 @@ describe("withdrawal projections", () => {
       statusId,
       "updatedAtLogIndex",
       "8"
+    );
+    assert.fieldEquals(
+      "LenderStats",
+      "LENDER-STATS-" + LENDER.toHexString(),
+      "totalInterestEarnedUSD",
+      "0.000004"
     );
 
     assert.entityCount("MarketEvent", 10);
@@ -274,6 +305,64 @@ describe("withdrawal projections", () => {
       generateEventId(sanctioned),
       "expiry",
       expiry.toString()
+    );
+  });
+
+  test("counts an expired deficit closed later in the same block as paid late", () => {
+    clearStore();
+
+    let creationEvent = changetype<ethereum.Event>(newMockEvent());
+    positionEvent(creationEvent, 0);
+    seedMarket(creationEvent);
+
+    let authorization = createAuthorizationStatusUpdatedEvent(LENDER, 3);
+    positionEvent(authorization, 1);
+    handleAuthorizationStatusUpdated(authorization);
+    let deposit = createDepositEvent(
+      LENDER,
+      BigInt.fromI32(100),
+      BigInt.fromI32(100)
+    );
+    positionEvent(deposit, 2);
+    handleDeposit(deposit);
+
+    let expiry = BigInt.fromI32(3600);
+    let batchCreated = createWithdrawalBatchCreatedEvent(expiry);
+    positionEvent(batchCreated, 3);
+    handleWithdrawalBatchCreated(batchCreated);
+    let queued = createWithdrawalQueuedEvent(
+      expiry,
+      LENDER,
+      BigInt.fromI32(40),
+      BigInt.fromI32(40)
+    );
+    positionEvent(queued, 4);
+    handleWithdrawalQueued(queued);
+
+    let expired = createWithdrawalBatchExpiredEvent(
+      expiry,
+      BigInt.fromI32(40),
+      BigInt.fromI32(20),
+      BigInt.fromI32(20)
+    );
+    positionEvent(expired, 5);
+    handleWithdrawalBatchExpired(expired);
+    let payment = createWithdrawalBatchPaymentEvent(
+      expiry,
+      BigInt.fromI32(20),
+      BigInt.fromI32(20)
+    );
+    positionEvent(payment, 6);
+    handleWithdrawalBatchPayment(payment);
+    let closed = createWithdrawalBatchClosedEvent(expiry);
+    positionEvent(closed, 7);
+    handleWithdrawalBatchClosed(closed);
+
+    assert.fieldEquals(
+      "BorrowerStats",
+      "BORROWER-STATS-" + Address.zero().toHexString(),
+      "numBatchesPaidLate",
+      "1"
     );
   });
 });

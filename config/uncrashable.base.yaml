@@ -142,7 +142,6 @@ entitySettings:
       totalDepositedUSD: {}
       totalWithdrawalsRequestedUSD: {}
       totalWithdrawalsExecutedUSD: {}
-      totalDebtUSD: {}
       tokenDailyPrice: {}
       originalAnnualInterestBips: {}
       temporaryReserveRatioActive: {}
@@ -203,6 +202,7 @@ entitySettings:
       isUsdStablecoin: {}
       priceFeed0: {}
       priceFeed1: {}
+      lastPriceFeedSearchDay: {}
     entityId:
       - type: constant
         value: "TKN"

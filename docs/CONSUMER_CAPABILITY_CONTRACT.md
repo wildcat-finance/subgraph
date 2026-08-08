@@ -74,6 +74,10 @@ Market lists can hydrate the current indexed values required by the SDK and
 app, including standard and revolving fields. Every mutable snapshot identifies
 the block and timestamp at which it was updated.
 
+`Market.totalAssets` and `MarketSnapshot.totalAssets` are refreshed from the
+asset balance on every `StateUpdated`. They remain indexed snapshots, not a
+replacement for a live read when a transaction depends on the current balance.
+
 ### STATE-02: Lender account snapshots
 
 Consumers can discover lender positions and indexed balances, deposits,
@@ -91,6 +95,11 @@ unpaid behavior.
 Consumers can query hooks instances, hook-specific configuration, role
 providers, lender access observations, known-lender state, and access-change
 history.
+
+Factory-time provider arrays initialize current `RoleProvider` state only.
+Actual add/remove events populate immutable `addedEvents`/`removedEvents` and
+the current provider's latest `addedEvent`/`removedEvent` pointers; factory
+snapshots must not fabricate lifecycle events.
 
 ### STATE-05: Wrappers, collateral, and sanctions
 
@@ -175,9 +184,16 @@ following outputs.
 ### AN-06: Price observations
 
 Token price observations expose token, timestamp, price, source, and source
-chain/feed provenance. Stablecoin treatment is explicit. Missing pricing does
-not fabricate zero-value economic activity; it produces an unpriced/null result
-that consumers can identify.
+chain/feed provenance, including the exact `feed0` and optional `feed1` used.
+Stablecoin treatment is explicit and address-scoped. Mainnet Chainlink rounds
+must have valid decimals, a positive answer, complete round metadata, a
+non-future update time, and a bounded age. Plasma's configured dollar assets use
+the explicit `USD_PEG` mode and do not call Ethereum price feeds.
+
+Missing pricing does not fabricate zero-value economic activity. Nonzero debt
+without a price produces nullable `Market.totalDebtUSD`; cumulative and daily
+market, protocol, borrower, and lender aggregates expose completeness flags so
+consumers can distinguish partial USD totals from complete zero values.
 
 ## Current reference consumers
 

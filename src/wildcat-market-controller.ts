@@ -1,4 +1,4 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import {
   createLenderAuthorizationChange,
   createMarket,
@@ -13,6 +13,7 @@ import {
   getOrInitializeToken,
 } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket } from "../generated/templates/WildcatMarket/WildcatMarket";
+import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
 import {
   LenderAuthorized as LenderAuthorizedEvent,
   LenderDeauthorized as LenderDeauthorizedEvent,
@@ -24,7 +25,7 @@ import {
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId, loadExistingMarket } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
-import { getOrCreateProtocolStats, getOrCreateBorrowerStats } from "./daily-stats";
+import { recordMarketCreated } from "./daily-stats";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -101,7 +102,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       decimals: metadata.decimals,
       isMock: metadata.isMock,
     });
-    setupTokenPriceFeeds(newToken);
+    setupTokenPriceFeeds(newToken, event.block.timestamp);
   }
   const marketId = generateMarketId(event.params.market);
   MarketTemplate.createWithContext(
@@ -138,6 +139,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     protocolFeeBips: controllerFactory.protocolFeeBips,
     sentinel: controllerFactory.sentinel,
     scaleFactor: BigInt.fromI32(10).pow(27),
+    totalAssets: IERC20.bind(event.params.asset).balanceOf(event.params.market),
     maxTotalSupply: event.params.maxTotalSupply,
     lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
     lastInterestAccruedBlockNumber: event.block.number.toI32(),
@@ -160,21 +162,16 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     commitmentFeeBips: null,
     drawnAmount: null,
     version: version,
+    usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
   });
-  createInitialMarketSnapshot(event, market, "EVENT_PROJECTION");
+  createInitialMarketSnapshot(event, market, "EVENT_AND_CONTRACT_CALL");
   recordMarketEvent(event, market, "MARKET_DEPLOYED");
   controller.numMarkets = controller.numMarkets + 1;
   controller.save();
 
-  // Update protocol and borrower stats
-  let ps = getOrCreateProtocolStats();
-  ps.numMarkets = ps.numMarkets + 1;
-  ps.save();
-
-  let bs = getOrCreateBorrowerStats(controller.borrower);
-  bs.numMarkets = bs.numMarkets + 1;
-  bs.save();
+  recordMarketCreated(controller.borrower, event.block.timestamp);
 }
 
 export function handleTemporaryExcessReserveRatioActivated(

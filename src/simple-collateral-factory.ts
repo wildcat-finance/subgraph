@@ -35,7 +35,7 @@ import { setupTokenPriceFeeds } from "./price-feeds";
 import { readTokenMetadata } from "./token-metadata";
 import { generateEventId } from "./utils";
 
-function getOrCreateToken(address: Address): Token {
+function getOrCreateToken(address: Address, timestamp: BigInt): Token {
   let id = generateTokenId(address);
   let token = Token.load(id);
   if (token != null) {
@@ -49,7 +49,7 @@ function getOrCreateToken(address: Address): Token {
     decimals: metadata.decimals,
     isMock: metadata.isMock,
   });
-  setupTokenPriceFeeds(token);
+  setupTokenPriceFeeds(token, timestamp);
   return token;
 }
 
@@ -57,7 +57,10 @@ export function handleCollateralContractCreated(
   event: CollateralContractCreated
 ): void {
   let factory = getOrCreateCollateralFactory(event);
-  let collateralAsset = getOrCreateToken(event.params.collateralToken);
+  let collateralAsset = getOrCreateToken(
+    event.params.collateralToken,
+    event.block.timestamp
+  );
   let collateralId = event.params.collateralContract.toHexString();
   let collateral = SimpleCollateralContract.load(collateralId);
   if (collateral == null) {

@@ -1,4 +1,4 @@
-import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   ChangedSpherexEngineAddress as ChangedSpherexEngineAddressEvent,
   ChangedSpherexOperator as ChangedSpherexOperatorEvent,
@@ -15,7 +15,6 @@ import {
   createMarket,
   createMarketDeployed,
   createRoleProvider,
-  createRoleProviderAdded,
   createToken,
   generateHooksConfigId,
   generateHooksInstanceDeployedId,
@@ -31,6 +30,7 @@ import { FixedTermHooksForceBuyBack as IFixedTermHooksForceBuyBack } from "../ge
 import { PeriodicTermHooks as IPeriodicTermHooks } from "../generated/HooksFactory/PeriodicTermHooks";
 import { CombinedHooks } from "../generated/HooksFactory/CombinedHooks";
 import { IWildcatMarketRevolving } from "../generated/HooksFactory/IWildcatMarketRevolving";
+import { IERC20 } from "../generated/HooksFactory/IERC20";
 import {
   HooksInstance,
   HooksConfig,
@@ -42,7 +42,7 @@ import {
 import { readTokenMetadata } from "./token-metadata";
 import { generateEventId, isNullAddress } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
-import { getOrCreateProtocolStats, getOrCreateBorrowerStats } from "./daily-stats";
+import { recordMarketCreated } from "./daily-stats";
 import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
@@ -67,10 +67,6 @@ import { recordIndexerDiagnostic } from "./indexer-diagnostics";
 import { createInitialMarketSnapshot } from "./market-domain";
 import { recordMarketEvent } from "./market-event-domain";
 import { getOrCreateBorrower } from "./borrower-domain";
-
-function generateRecordId(id: string, eventIndex: i32): string {
-  return "RECORD" + "-" + id + "-" + eventIndex.toString();
-}
 
 export function handleChangedSpherexEngineAddress(
   event: ChangedSpherexEngineAddressEvent
@@ -130,10 +126,8 @@ export function handleHooksInstanceDeployedForMarketType(
   for (let i = 0; i < pullProviders.length; i++) {
     let pullProvider = pullProviders[i];
     decodeAndCreateRoleProvider(
-      event,
       hooksInstance,
       hooksInstanceId,
-      eventIndex,
       pullProvider
     );
     eventIndex = eventIndex + 1;
@@ -141,10 +135,8 @@ export function handleHooksInstanceDeployedForMarketType(
   for (let i = 0; i < pushProviders.length; i++) {
     let pushProvider = pushProviders[i];
     decodeAndCreateRoleProvider(
-      event,
       hooksInstance,
       hooksInstanceId,
-      eventIndex,
       pushProvider
     );
     eventIndex = eventIndex + 1;
@@ -184,7 +176,7 @@ export function handleHooksInstanceDeployed(
   );
 }
 
-function createTokenIfNotExists(asset: Address): Token | null {
+function createTokenIfNotExists(asset: Address, timestamp: BigInt): Token | null {
   if (isNullAddress(asset)) {
     return null;
   }
@@ -199,14 +191,14 @@ function createTokenIfNotExists(asset: Address): Token | null {
       decimals: metadata.decimals,
       isMock: metadata.isMock,
     });
-    setupTokenPriceFeeds(newToken);
+    setupTokenPriceFeeds(newToken, timestamp);
     return newToken;
   }
   return token;
 }
 
-function getOrCreateTokenId(asset: Address): string | null {
-  let token = createTokenIfNotExists(asset);
+function getOrCreateTokenId(asset: Address, timestamp: BigInt): string | null {
+  let token = createTokenIfNotExists(asset, timestamp);
   if (token == null) {
     return null;
   }
@@ -224,7 +216,10 @@ export function handleHooksTemplateAddedForMarketType(
   marketType: string
 ): void {
   let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
-  let originationFeeAssetId = getOrCreateTokenId(originationFeeAsset);
+  let originationFeeAssetId = getOrCreateTokenId(
+    originationFeeAsset,
+    event.block.timestamp
+  );
   let template = getOrCreateHooksTemplate(
     event,
     hooksTemplate,
@@ -298,7 +293,10 @@ export function handleHooksTemplateFeesUpdatedForMarketType(
   marketType: string
 ): void {
   let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
-  let originationFeeAssetId = getOrCreateTokenId(originationFeeAsset);
+  let originationFeeAssetId = getOrCreateTokenId(
+    originationFeeAsset,
+    event.block.timestamp
+  );
   let registration = HooksTemplateRegistration.load(
     generateHooksTemplateRegistrationId(event.address, hooksTemplate)
   );
@@ -337,10 +335,8 @@ export function handleHooksTemplateFeesUpdated(
   );
 }
 function decodeAndCreateRoleProvider(
-  event: ethereum.Event,
   hooksAddress: Bytes,
   hooksInstanceId: string,
-  eventIndex: i32,
   encodedRoleProvider: BigInt
 ): RoleProvider {
   let nullProviderIndex = 2 ** 24 - 1;
@@ -363,20 +359,6 @@ function decodeAndCreateRoleProvider(
   let isPullProvider = pullProviderIndex !== nullProviderIndex;
   let isPushProvider = pushProviderIndex !== nullProviderIndex;
   let providerId = generateRoleProviderId(hooksAddress, providerAddress);
-  createRoleProviderAdded(generateRecordId(hooksInstanceId, eventIndex), {
-    blockNumber: event.block.number.toI32(),
-    blockTimestamp: event.block.timestamp.toI32(),
-    eventIndex: eventIndex as i32,
-    isPullProvider: isPullProvider,
-    isPushProvider: isPushProvider,
-    provider: providerId,
-    hooks: hooksInstanceId,
-    pullProviderIndex: pullProviderIndex,
-    pushProviderIndex: pushProviderIndex,
-    timeToLive: timeToLive,
-    transactionHash: event.transaction.hash,
-    blockLogIndex: event.logIndex.toI32(),
-  });
   return createRoleProvider(providerId, {
     isApproved: true,
     isPullProvider: isPullProvider,
@@ -561,7 +543,7 @@ export function handleMarketDeployedForMarketType(
   delinquencyGracePeriod: BigInt,
   marketType: string
 ): void {
-  let asset = createTokenIfNotExists(assetAddress);
+  let asset = createTokenIfNotExists(assetAddress, event.block.timestamp);
   if (asset != null) {
     let marketId = generateMarketId(market);
     let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
@@ -634,6 +616,7 @@ export function handleMarketDeployedForMarketType(
       protocolFeeBips: protocolFeeBips,
       sentinel: hooksFactory.sentinel,
       scaleFactor: BigInt.fromI32(10).pow(27),
+      totalAssets: IERC20.bind(assetAddress).balanceOf(market),
       maxTotalSupply: maxTotalSupply,
       lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
       lastInterestAccruedBlockNumber: event.block.number.toI32(),
@@ -656,14 +639,14 @@ export function handleMarketDeployedForMarketType(
       commitmentFeeBips: commitmentFeeBips,
       drawnAmount: drawnAmount,
       version: version,
+      usdTotalsComplete: true,
+      totalDebtUSD: BigDecimal.zero(),
       numCollateralContracts: 0,
     });
     createInitialMarketSnapshot(
       event,
       marketEntity,
-      hooksFactory.marketKind == "REVOLVING"
-        ? "EVENT_AND_CONTRACT_CALL"
-        : "EVENT_PROJECTION"
+      "EVENT_AND_CONTRACT_CALL"
     );
     recordMarketEvent(event, marketEntity, "MARKET_DEPLOYED");
     let context = createFactoryChildContext(hooksFactory);
@@ -674,14 +657,7 @@ export function handleMarketDeployedForMarketType(
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
 
-    // Update protocol and borrower stats
-    let ps = getOrCreateProtocolStats();
-    ps.numMarkets = ps.numMarkets + 1;
-    ps.save();
-
-    let bs = getOrCreateBorrowerStats(hooks.borrower);
-    bs.numMarkets = bs.numMarkets + 1;
-    bs.save();
+    recordMarketCreated(hooks.borrower, event.block.timestamp);
   }
 }
 export function handleMarketDeployed(event: MarketDeployedEvent): void {

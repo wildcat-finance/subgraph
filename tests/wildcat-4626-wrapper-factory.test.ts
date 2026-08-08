@@ -70,6 +70,7 @@ function seedToken(address: Address, name: string, symbol: string): void {
   token.decimals = 18;
   token.isMock = false;
   token.isUsdStablecoin = false;
+  token.lastPriceFeedSearchDay = -1;
   token.save();
 }
 
@@ -95,6 +96,7 @@ function seedMarket(): void {
   market.asset = generateTokenId(ASSET_ADDRESS);
   market.withdrawalBatchDuration = 3600;
   market.isClosed = false;
+  market.totalAssets = BigInt.zero();
   market.maxTotalSupply = BigInt.fromI32(1_000_000);
   market.pendingProtocolFees = BigInt.zero();
   market.normalizedUnclaimedWithdrawals = BigInt.zero();
@@ -129,6 +131,7 @@ function seedMarket(): void {
   market.totalDepositedUSD = BigDecimal.zero();
   market.totalWithdrawalsRequestedUSD = BigDecimal.zero();
   market.totalWithdrawalsExecutedUSD = BigDecimal.zero();
+  market.usdTotalsComplete = true;
   market.totalDebtUSD = BigDecimal.zero();
   market.eventIndex = 0;
   market.delinquencyStatusChangedIndex = 0;
