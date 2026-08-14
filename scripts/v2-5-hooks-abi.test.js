@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-const loadSepoliaAbi = (contractName) =>
+const loadSepoliaAbi = contractName =>
   JSON.parse(
     fs.readFileSync(
       path.join(
@@ -17,7 +17,7 @@ const loadSepoliaAbi = (contractName) =>
     )
   );
 
-const loadAbi = (contractName) =>
+const loadAbi = contractName =>
   JSON.parse(
     fs.readFileSync(
       path.join(__dirname, "..", "abis", `${contractName}.json`),
@@ -25,7 +25,7 @@ const loadAbi = (contractName) =>
     )
   );
 
-const loadV25Abi = (contractName) =>
+const loadV25Abi = contractName =>
   JSON.parse(
     fs.readFileSync(
       path.join(__dirname, "..", "abis", "v2.5", `${contractName}.json`),
@@ -33,12 +33,12 @@ const loadV25Abi = (contractName) =>
     )
   );
 
-const eventSignature = (entry) =>
+const eventSignature = entry =>
   `${entry.name}(${entry.inputs
     .map(({ indexed, type }) => `${indexed ? "indexed " : ""}${type}`)
     .join(",")})`;
 
-const eventSignatures = (contractName) =>
+const eventSignatures = contractName =>
   loadV25Abi(contractName)
     .filter(({ type }) => type === "event")
     .map(eventSignature)
@@ -61,7 +61,7 @@ const loadHookedMarketAbi = (variant, contractName) =>
 
 const outputComponentNames = (abi, functionName) => {
   const fn = abi.find(
-    (entry) => entry.type === "function" && entry.name === functionName
+    entry => entry.type === "function" && entry.name === functionName
   );
   assert.ok(fn, `${functionName} is missing`);
   assert.equal(fn.outputs.length, 1);
@@ -70,7 +70,7 @@ const outputComponentNames = (abi, functionName) => {
 
 const getFunction = (abi, functionName) => {
   const fn = abi.find(
-    (entry) => entry.type === "function" && entry.name === functionName
+    entry => entry.type === "function" && entry.name === functionName
   );
   assert.ok(fn, `${functionName} is missing`);
   return fn;
@@ -82,7 +82,7 @@ const expectedComponents = {
     "transferRequiresAccess",
     "depositRequiresAccess",
     "minimumDeposit",
-    "transfersDisabled",
+    "transfersDisabled"
   ],
   FixedTermHooks: [
     "isHooked",
@@ -93,8 +93,8 @@ const expectedComponents = {
     "fixedTermEndTime",
     "transfersDisabled",
     "allowClosureBeforeTerm",
-    "allowTermReduction",
-  ],
+    "allowTermReduction"
+  ]
 };
 
 for (const [contractName, components] of Object.entries(expectedComponents)) {
@@ -113,34 +113,37 @@ for (const [contractName, components] of Object.entries(expectedComponents)) {
     const abi = loadHookedMarketAbi(["force-buyback"], contractName);
     assert.deepEqual(outputComponentNames(abi, "getHookedMarket"), [
       ...components,
-      "allowForceBuyBacks",
+      "allowForceBuyBacks"
     ]);
   });
 }
 
 test("HooksFactory market parameters match the frozen v2.5 tuple", () => {
-  assert.deepEqual(outputComponentNames(loadAbi("HooksFactory"), "getMarketParameters"), [
-    "asset",
-    "decimals",
-    "packedNameWord0",
-    "packedNameWord1",
-    "packedSymbolWord0",
-    "packedSymbolWord1",
-    "borrower",
-    "feeRecipient",
-    "sentinel",
-    "wrapperFactory",
-    "maxTotalSupply",
-    "protocolFeeBips",
-    "annualInterestBips",
-    "delinquencyFeeBips",
-    "withdrawalBatchDuration",
-    "reserveRatioBips",
-    "delinquencyGracePeriod",
-    "archController",
-    "sphereXEngine",
-    "hooks",
-  ]);
+  assert.deepEqual(
+    outputComponentNames(loadAbi("HooksFactory"), "getMarketParameters"),
+    [
+      "asset",
+      "decimals",
+      "packedNameWord0",
+      "packedNameWord1",
+      "packedSymbolWord0",
+      "packedSymbolWord1",
+      "borrower",
+      "feeRecipient",
+      "sentinel",
+      "wrapperFactory",
+      "maxTotalSupply",
+      "protocolFeeBips",
+      "annualInterestBips",
+      "delinquencyFeeBips",
+      "withdrawalBatchDuration",
+      "reserveRatioBips",
+      "delinquencyGracePeriod",
+      "archController",
+      "sphereXEngine",
+      "hooks"
+    ]
+  );
 });
 
 test("WildcatMarket withdrawal and version declarations match v2.5", () => {
@@ -149,26 +152,29 @@ test("WildcatMarket withdrawal and version declarations match v2.5", () => {
   const version = getFunction(abi, "version");
 
   assert.deepEqual(queueWithdrawal.outputs, [
-    { internalType: "uint32", name: "expiry", type: "uint32" },
+    { internalType: "uint32", name: "expiry", type: "uint32" }
   ]);
   assert.equal(version.stateMutability, "pure");
 });
 
 test("v2.5 factory events retain the indexed data-model boundary", () => {
-  assert.deepEqual(eventSignatures("HooksFactory"), [
-    "ChangedSpherexEngineAddress(address,address)",
-    "ChangedSpherexOperator(address,address)",
-    "HooksInstanceAdministratorTransferred(indexed address,indexed address,indexed address)",
-    "HooksInstanceDeployed(indexed address,indexed address,indexed address,address,string,string)",
-    "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
-    "HooksTemplateAdded(indexed address,indexed address,string,address,address,uint80,uint16)",
-    "HooksTemplateDisabled(indexed address,indexed address)",
-    "HooksTemplateFeesUpdated(indexed address,indexed address,address,address,address,address,uint80,uint80,uint16,uint16)",
-    "MarketDeployed(indexed address,indexed address,indexed address,address,address,address,string,string,address,uint256,uint256)",
-    "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
-    "MarketHooksData(indexed address,bytes)",
-    "RevolvingMarketDeployed(indexed address,uint256)",
-  ].sort());
+  assert.deepEqual(
+    eventSignatures("HooksFactory"),
+    [
+      "ChangedSpherexEngineAddress(address,address)",
+      "ChangedSpherexOperator(address,address)",
+      "HooksInstanceAdministratorTransferred(indexed address,indexed address,indexed address)",
+      "HooksInstanceDeployed(indexed address,indexed address,indexed address,address,string,string)",
+      "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
+      "HooksTemplateAdded(indexed address,indexed address,string,address,address,uint80,uint16)",
+      "HooksTemplateDisabled(indexed address,indexed address)",
+      "HooksTemplateFeesUpdated(indexed address,indexed address,address,address,address,address,uint80,uint80,uint16,uint16)",
+      "MarketDeployed(indexed address,indexed address,indexed address,address,address,address,string,string,address,uint256,uint256)",
+      "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
+      "MarketHooksData(indexed address,bytes)",
+      "RevolvingMarketDeployed(indexed address,uint256)"
+    ].sort()
+  );
 });
 
 test("v2.5 market events retain borrower and drawn-principal history", () => {
@@ -179,26 +185,56 @@ test("v2.5 market events retain borrower and drawn-principal history", () => {
     "BorrowerTransferRequested(indexed address,indexed address,indexed address,address,address,address)",
     "BorrowerTransferred(indexed address,indexed address,address,indexed address)",
     "DrawnAmountUpdated(uint256,uint256)",
-    "WrapperRegistered(indexed address)",
+    "WrapperRegistered(indexed address)"
   ]) {
     assert.ok(signatures.includes(signature), `${signature} is missing`);
   }
 });
 
 test("v2.5 identity and provider ABIs retain their transfer histories", () => {
-  assert.deepEqual(eventSignatures("WildcatBorrowerIdentityRegistry"), [
-    "AccountFactoryAdded(indexed address,indexed address)",
-    "AccountFactoryRemoved(indexed address,indexed address)",
-    "BorrowerAccountPrincipalTransferCancelled(indexed address,indexed address,indexed address)",
-    "BorrowerAccountPrincipalTransferRequested(indexed address,indexed address,address,indexed address)",
-    "BorrowerAccountPrincipalTransferred(indexed address,indexed address,indexed address)",
-    "BorrowerAccountRegistered(indexed address,indexed address,indexed address)",
-  ].sort());
-  assert.deepEqual(eventSignatures("AccessListRoleProvider"), [
-    "AdministratorTransferCancelled(indexed address,indexed address)",
-    "AdministratorTransferRequested(indexed address,indexed address,indexed address)",
-    "AdministratorTransferred(indexed address,indexed address)",
-    "MemberAdded(indexed address,indexed address)",
-    "MemberRemoved(indexed address,indexed address)",
-  ].sort());
+  assert.deepEqual(
+    eventSignatures("WildcatBorrowerIdentityRegistry"),
+    [
+      "AccountFactoryAdded(indexed address,indexed address)",
+      "AccountFactoryRemoved(indexed address,indexed address)",
+      "BorrowerAccountPrincipalTransferCancelled(indexed address,indexed address,indexed address)",
+      "BorrowerAccountPrincipalTransferRequested(indexed address,indexed address,address,indexed address)",
+      "BorrowerAccountPrincipalTransferred(indexed address,indexed address,indexed address)",
+      "BorrowerAccountRegistered(indexed address,indexed address,indexed address)"
+    ].sort()
+  );
+  assert.deepEqual(
+    eventSignatures("AccessListRoleProvider"),
+    [
+      "AdministratorTransferCancelled(indexed address,indexed address)",
+      "AdministratorTransferRequested(indexed address,indexed address,indexed address)",
+      "AdministratorTransferred(indexed address,indexed address)",
+      "MemberAdded(indexed address,indexed address)",
+      "MemberRemoved(indexed address,indexed address)"
+    ].sort()
+  );
+  assert.deepEqual(
+    eventSignatures("MerkleRoleProvider"),
+    [
+      "AdministratorTransferCancelled(indexed address,indexed address)",
+      "AdministratorTransferRequested(indexed address,indexed address,indexed address)",
+      "AdministratorTransferred(indexed address,indexed address)",
+      "RootUpdated(indexed address,bytes32,bytes32)"
+    ].sort()
+  );
+  assert.deepEqual(eventSignatures("MerkleRoleProviderFactory"), [
+    "MerkleRoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,bytes32)"
+  ]);
+  assert.deepEqual(eventSignatures("ERC20RoleProviderFactory"), [
+    "ERC20RoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,uint256)"
+  ]);
+  assert.deepEqual(eventSignatures("ERC4626AssetsRoleProviderFactory"), [
+    "ERC4626AssetsRoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,uint256)"
+  ]);
+  assert.deepEqual(eventSignatures("ERC721RoleProviderFactory"), [
+    "ERC721RoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,bool)"
+  ]);
+  assert.deepEqual(eventSignatures("ERC1155RoleProviderFactory"), [
+    "ERC1155RoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,uint256,bool)"
+  ]);
 });

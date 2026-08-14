@@ -10,7 +10,7 @@ const {
   loadAbiFamilies,
   loadAllChainConfigs,
   loadChainConfig,
-  validateChainConfig,
+  validateChainConfig
 } = require("./chain-config");
 
 function clone(value) {
@@ -22,7 +22,7 @@ test("loads and validates every supported chain descriptor", () => {
     "mainnet",
     "plasma-mainnet",
     "plasma-testnet",
-    "sepolia",
+    "sepolia"
   ]);
   const { configs } = loadAllChainConfigs();
   assert.equal(configs.length, 4);
@@ -38,7 +38,7 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
   for (const config of configs.filter(({ network }) => network !== "sepolia")) {
     assert.equal(config.deploymentTargetsReady, false);
     assert.deepEqual(
-      config.factories.filter((factory) => factory.deploymentTarget),
+      config.factories.filter(factory => factory.deploymentTarget),
       []
     );
   }
@@ -52,13 +52,13 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
   );
   assert.deepEqual(
     sepolia.factories
-      .filter((factory) => factory.deploymentTarget)
+      .filter(factory => factory.deploymentTarget)
       .map(({ label, marketKind, abiFamily, address, startBlock }) => ({
         label,
         marketKind,
         abiFamily,
         address,
-        startBlock,
+        startBlock
       })),
     [
       {
@@ -66,34 +66,38 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
         marketKind: "STANDARD",
         abiFamily: "hooks-sepolia-current",
         address: "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C",
-        startBlock: 11363908,
+        startBlock: 11363908
       },
       {
         label: "revolving-v2.5",
         marketKind: "REVOLVING",
         abiFamily: "hooks-sepolia-current",
         address: "0x76Fe050d91940a72133e1819BF34c1042d8DBe73",
-        startBlock: 11363912,
-      },
+        startBlock: 11363912
+      }
     ]
   );
   assert.deepEqual(
     sepolia.wrapperFactories
-      .filter((factory) => factory.deploymentTarget)
-      .map(({ label, address, startBlock }) => ({ label, address, startBlock })),
+      .filter(factory => factory.deploymentTarget)
+      .map(({ label, address, startBlock }) => ({
+        label,
+        address,
+        startBlock
+      })),
     [
       {
         label: "wrapper-v2.5",
         address: "0x8a77449eaBB1522983cd700f002b5b191463378e",
-        startBlock: 11363904,
-      },
+        startBlock: 11363904
+      }
     ]
   );
   assert.deepEqual(sepolia.provenance, {
     kind: "protocol-live-checkpoint",
     source:
       "v2-protocol/deployments/sepolia/run-state-checkpoints/run-state-v2-5-card-23-live.json",
-    sha256: "c5acd8fefcc5d4b7de52e25e39770a7fd59b7e926ca892fe5cfcf739f1092ebe",
+    sha256: "c5acd8fefcc5d4b7de52e25e39770a7fd59b7e926ca892fe5cfcf739f1092ebe"
   });
 });
 
@@ -114,15 +118,20 @@ test("keeps legacy Plasma factories on the base hooked-market ABI", () => {
 
 test("derives current manifest aliases from the live Sepolia V2.5 targets", () => {
   const sepolia = loadChainConfig("sepolia");
-  const standard = sepolia.factories.find((factory) => factory.label === "standard-v2.5");
+  const standard = sepolia.factories.find(
+    factory => factory.label === "standard-v2.5"
+  );
   const revolving = sepolia.factories.find(
-    (factory) => factory.label === "revolving-v2.5"
+    factory => factory.label === "revolving-v2.5"
   );
   const wrapper = sepolia.wrapperFactories.find(
-    (factory) => factory.label === "wrapper-v2.5"
+    factory => factory.label === "wrapper-v2.5"
   );
   assert.equal(finalHooksFactoryName(sepolia, standard), "HooksFactory");
-  assert.equal(finalHooksFactoryName(sepolia, revolving), "HooksFactoryRevolving");
+  assert.equal(
+    finalHooksFactoryName(sepolia, revolving),
+    "HooksFactoryRevolving"
+  );
   assert.equal(
     finalWrapperFactoryName(sepolia, wrapper),
     "Wildcat4626WrapperFactory"
@@ -150,8 +159,31 @@ test("rejects duplicate addresses across configured source types", () => {
   const config = clone(loadChainConfig("mainnet", { abiFamilies }));
   config.wrapperFactories[0].address = config.factories[0].address;
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /duplicates address/
+  );
+});
+
+test("rejects unknown role-provider factory kinds", () => {
+  const abiFamilies = loadAbiFamilies();
+  const config = clone(loadChainConfig("mainnet", { abiFamilies }));
+  config.roleProviderFactories.push({
+    label: "unknown-role-provider",
+    manifestName: "UnknownRoleProviderFactory",
+    kind: "UNKNOWN",
+    generation: "v2.5",
+    address: "0x000000000000000000000000000000000000f008",
+    startBlock: 0,
+    indexed: true,
+    lifecycle: "active"
+  });
+  assert.throws(
+    () =>
+      validateChainConfig(config, abiFamilies, {
+        expectedNetwork: "mainnet"
+      }),
+    /must be one of ACCESS_LIST, MERKLE, ERC20, ERC4626_ASSETS, ERC721, ERC1155/
   );
 });
 
@@ -162,7 +194,7 @@ test("rejects duplicate and inconsistent hooks-template identities", () => {
   assert.throws(
     () =>
       validateChainConfig(duplicate, abiFamilies, {
-        expectedNetwork: "sepolia",
+        expectedNetwork: "sepolia"
       }),
     /duplicates address/
   );
@@ -172,7 +204,7 @@ test("rejects duplicate and inconsistent hooks-template identities", () => {
   assert.throws(
     () =>
       validateChainConfig(inconsistent, abiFamilies, {
-        expectedNetwork: "sepolia",
+        expectedNetwork: "sepolia"
       }),
     /must be OpenTermHooks for OpenTerm/
   );
@@ -183,7 +215,8 @@ test("rejects a deployment target before the chain target set is ready", () => {
   const config = clone(loadChainConfig("mainnet", { abiFamilies }));
   config.factories[0].deploymentTarget = true;
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /cannot declare deployment targets/
   );
 });
@@ -194,7 +227,8 @@ test("rejects a non-active deployment target", () => {
   config.factories[0].deploymentTarget = true;
   config.factories[0].lifecycle = "historical";
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /deployment target must have an active lifecycle/
   );
 });
@@ -204,7 +238,8 @@ test("rejects a wrapper deployment target before the chain target set is ready",
   const config = clone(loadChainConfig("mainnet", { abiFamilies }));
   config.wrapperFactories[0].deploymentTarget = true;
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /cannot declare deployment targets/
   );
 });
@@ -215,7 +250,8 @@ test("requires one standard and one revolving target when marked ready", () => {
   config.deploymentTargetsReady = true;
   config.factories[0].deploymentTarget = true;
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /exactly one REVOLVING deployment target/
   );
 });
@@ -223,20 +259,21 @@ test("requires one standard and one revolving target when marked ready", () => {
 test("requires a wrapper target on wrapper-enabled chains when marked ready", () => {
   const abiFamilies = loadAbiFamilies();
   const config = clone(loadChainConfig("sepolia", { abiFamilies }));
-  config.factories.forEach((factory) => {
+  config.factories.forEach(factory => {
     factory.deploymentTarget = false;
   });
-  config.wrapperFactories.forEach((factory) => {
+  config.wrapperFactories.forEach(factory => {
     factory.deploymentTarget = false;
   });
   config.factories.find(
-    (factory) => factory.label === "standard-v2.5"
+    factory => factory.label === "standard-v2.5"
   ).deploymentTarget = true;
   config.factories.find(
-    (factory) => factory.label === "revolving-v2.5"
+    factory => factory.label === "revolving-v2.5"
   ).deploymentTarget = true;
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
     /exactly one wrapper deployment target/
   );
 });
@@ -247,7 +284,8 @@ test("rejects compatibility aliases that select unindexed factories", () => {
   config.compatibility.canonicalFactoryByMarketKind.REVOLVING =
     "revolving-preview-2026-04-19";
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
     /must select an indexed factory/
   );
 });
@@ -257,7 +295,8 @@ test("rejects factory metadata that cannot be encoded in mapping context", () =>
   const config = clone(loadChainConfig("mainnet", { abiFamilies }));
   config.factories[0].generation = "v2|unexpected";
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "mainnet" }),
     /must not contain the factory-context separator/
   );
 });
@@ -277,7 +316,7 @@ test("keeps every analytics price source explicit in chain configuration", () =>
   const plasmaMainnet = loadChainConfig("plasma-mainnet");
   assert.equal(plasmaMainnet.pricing.mode, "USD_PEG");
   assert.deepEqual(plasmaMainnet.pricing.stablecoins, [
-    "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+    "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
   ]);
 
   const plasmaTestnet = loadChainConfig("plasma-testnet");
@@ -290,10 +329,10 @@ test("keeps every analytics price source explicit in chain configuration", () =>
 test("rejects mixed or incomplete pricing modes", () => {
   const abiFamilies = loadAbiFamilies();
   const config = clone(loadChainConfig("sepolia", { abiFamilies }));
-  config.pricing.feedRegistry =
-    "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf";
+  config.pricing.feedRegistry = "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf";
   assert.throws(
-    () => validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
+    () =>
+      validateChainConfig(config, abiFamilies, { expectedNetwork: "sepolia" }),
     /must not declare Chainlink configuration/
   );
 });
@@ -306,7 +345,7 @@ test("rejects zero-address pricing configuration", () => {
   assert.throws(
     () =>
       validateChainConfig(stablecoin, abiFamilies, {
-        expectedNetwork: "plasma-mainnet",
+        expectedNetwork: "plasma-mainnet"
       }),
     /must not be the zero address/
   );
@@ -317,7 +356,7 @@ test("rejects zero-address pricing configuration", () => {
   assert.throws(
     () =>
       validateChainConfig(directFeed, abiFamilies, {
-        expectedNetwork: "mainnet",
+        expectedNetwork: "mainnet"
       }),
     /must not be the zero address/
   );

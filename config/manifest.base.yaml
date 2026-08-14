@@ -221,7 +221,7 @@ dataSources:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - AccessListRoleProviderFactory
+        - RoleProviderFactory
         - RoleProviderInstance
         - RoleProviderMember
         - RoleProviderMembershipChange
@@ -232,6 +232,111 @@ dataSources:
         - event: AccessListRoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,address[])
           handler: handleAccessListRoleProviderDeployed
       file: ./src/access-list-role-provider-factory.ts
+  - kind: ethereum
+    name: MerkleRoleProviderFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: MerkleRoleProviderFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderFactory
+        - RoleProviderInstance
+      abis:
+        - name: MerkleRoleProviderFactory
+          file: ./abis/v2.5/MerkleRoleProviderFactory.json
+      eventHandlers:
+        - event: MerkleRoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,bytes32)
+          handler: handleMerkleRoleProviderDeployed
+      file: ./src/role-provider-factories.ts
+  - kind: ethereum
+    name: ERC20RoleProviderFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: ERC20RoleProviderFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderFactory
+        - RoleProviderInstance
+      abis:
+        - name: ERC20RoleProviderFactory
+          file: ./abis/v2.5/ERC20RoleProviderFactory.json
+      eventHandlers:
+        - event: ERC20RoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,uint256)
+          handler: handleERC20RoleProviderDeployed
+      file: ./src/role-provider-factories.ts
+  - kind: ethereum
+    name: ERC4626AssetsRoleProviderFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: ERC4626AssetsRoleProviderFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderFactory
+        - RoleProviderInstance
+      abis:
+        - name: ERC4626AssetsRoleProviderFactory
+          file: ./abis/v2.5/ERC4626AssetsRoleProviderFactory.json
+      eventHandlers:
+        - event: ERC4626AssetsRoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,uint256)
+          handler: handleERC4626AssetsRoleProviderDeployed
+      file: ./src/role-provider-factories.ts
+  - kind: ethereum
+    name: ERC721RoleProviderFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: ERC721RoleProviderFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderFactory
+        - RoleProviderInstance
+      abis:
+        - name: ERC721RoleProviderFactory
+          file: ./abis/v2.5/ERC721RoleProviderFactory.json
+      eventHandlers:
+        - event: ERC721RoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,bool)
+          handler: handleERC721RoleProviderDeployed
+      file: ./src/role-provider-factories.ts
+  - kind: ethereum
+    name: ERC1155RoleProviderFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: ERC1155RoleProviderFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderFactory
+        - RoleProviderInstance
+      abis:
+        - name: ERC1155RoleProviderFactory
+          file: ./abis/v2.5/ERC1155RoleProviderFactory.json
+      eventHandlers:
+        - event: ERC1155RoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,uint256,bool)
+          handler: handleERC1155RoleProviderDeployed
+      file: ./src/role-provider-factories.ts
   - kind: ethereum
     name: WildcatArchController
     network: mainnet
@@ -867,3 +972,29 @@ templates:
         - event: MemberRemoved(indexed address,indexed address)
           handler: handleMemberRemoved
       file: ./src/access-list-role-provider.ts
+  - kind: ethereum
+    name: MerkleRoleProvider
+    network: mainnet
+    source:
+      abi: MerkleRoleProvider
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderInstance
+        - RoleProviderAdministratorChange
+        - RoleProviderRootChange
+      abis:
+        - name: MerkleRoleProvider
+          file: ./abis/v2.5/MerkleRoleProvider.json
+      eventHandlers:
+        - event: AdministratorTransferCancelled(indexed address,indexed address)
+          handler: handleAdministratorTransferCancelled
+        - event: AdministratorTransferRequested(indexed address,indexed address,indexed address)
+          handler: handleAdministratorTransferRequested
+        - event: AdministratorTransferred(indexed address,indexed address)
+          handler: handleAdministratorTransferred
+        - event: RootUpdated(indexed address,bytes32,bytes32)
+          handler: handleRootUpdated
+      file: ./src/merkle-role-provider.ts
