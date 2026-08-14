@@ -114,10 +114,17 @@ dataSources:
         - HooksTemplateRegistration
         - HooksTemplateRegistrationEvent
         - HooksInstanceDeployed
+        - HooksInstanceRoleProviderSnapshot
+        - BorrowerIdentityRegistry
+        - BorrowerAccount
         - IndexerDiagnostic
         - LenderAccount
         - Market
         - MarketDeployed
+        - MarketDeploymentConfig
+        - MarketHooksData
+        - PendingMarketDeployment
+        - RevolvingMarketDeployment
         - MarketEvent
         - MarketEventCursor
         - MarketSnapshot
@@ -166,6 +173,65 @@ dataSources:
         - event: MarketDeployed(indexed address,indexed address,string,string,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256)
           handler: handleMarketDeployed
       file: ./src/hooks-factory.ts
+  - kind: ethereum
+    name: WildcatBorrowerIdentityRegistry
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: WildcatBorrowerIdentityRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Borrower
+        - BorrowerIdentityRegistry
+        - BorrowerAccountFactory
+        - BorrowerAccountFactoryChange
+        - BorrowerAccount
+        - BorrowerAccountPrincipalChange
+      abis:
+        - name: WildcatBorrowerIdentityRegistry
+          file: ./abis/v2.5/WildcatBorrowerIdentityRegistry.json
+      eventHandlers:
+        - event: AccountFactoryAdded(indexed address,indexed address)
+          handler: handleAccountFactoryAdded
+        - event: AccountFactoryRemoved(indexed address,indexed address)
+          handler: handleAccountFactoryRemoved
+        - event: BorrowerAccountPrincipalTransferCancelled(indexed address,indexed address,indexed address)
+          handler: handleBorrowerAccountPrincipalTransferCancelled
+        - event: BorrowerAccountPrincipalTransferRequested(indexed address,indexed address,address,indexed address)
+          handler: handleBorrowerAccountPrincipalTransferRequested
+        - event: BorrowerAccountPrincipalTransferred(indexed address,indexed address,indexed address)
+          handler: handleBorrowerAccountPrincipalTransferred
+        - event: BorrowerAccountRegistered(indexed address,indexed address,indexed address)
+          handler: handleBorrowerAccountRegistered
+      file: ./src/borrower-identity-registry.ts
+  - kind: ethereum
+    name: AccessListRoleProviderFactory
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: AccessListRoleProviderFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AccessListRoleProviderFactory
+        - RoleProviderInstance
+        - RoleProviderMember
+        - RoleProviderMembershipChange
+      abis:
+        - name: AccessListRoleProviderFactory
+          file: ./abis/v2.5/AccessListRoleProviderFactory.json
+      eventHandlers:
+        - event: AccessListRoleProviderDeployed(indexed address,indexed address,indexed address,bytes32,address[])
+          handler: handleAccessListRoleProviderDeployed
+      file: ./src/access-list-role-provider-factory.ts
   - kind: ethereum
     name: WildcatArchController
     network: mainnet
@@ -601,3 +667,203 @@ templates:
         - event: AnnualInterestBipsReductionExecuted(indexed address,uint16)
           handler: handleAnnualInterestBipsReductionExecuted
       file: ./src/hooks-instance.ts
+  - kind: ethereum
+    name: WildcatMarketV2_5
+    network: mainnet
+    source:
+      abi: WildcatMarketV2_5
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Borrower
+        - BorrowerStats
+        - BorrowerDailyStats
+        - Market
+        - MarketSnapshot
+        - MarketEvent
+        - MarketEventCursor
+        - BorrowerAccount
+        - MarketBorrowerChange
+        - MarketWrapperRegistration
+        - DrawnAmountUpdate
+        - AnnualInterestBipsUpdated
+        - ReserveRatioBipsUpdated
+        - ProtocolFeeBipsUpdated
+        - MaxTotalSupplyUpdated
+        - Borrow
+        - FeesCollected
+        - MarketClosed
+      abis:
+        - name: WildcatMarketV2_5
+          file: ./abis/v2.5/WildcatMarket.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+        - name: ChainlinkAggregator
+          file: ./abis/ChainlinkAggregator.json
+        - name: ChainlinkFeedRegistry
+          file: ./abis/ChainlinkFeedRegistry.json
+      eventHandlers:
+        - event: AnnualInterestAndReserveRatioBipsUpdated(indexed address,uint256,uint256,uint256,uint256)
+          handler: handleAnnualInterestAndReserveRatioBipsUpdated
+        - event: Approval(indexed address,indexed address,uint256)
+          handler: handleApproval
+        - event: Borrow(indexed address,uint256)
+          handler: handleBorrow
+        - event: BorrowerTransferCancelled(indexed address,indexed address,address,address)
+          handler: handleBorrowerTransferCancelled
+        - event: BorrowerTransferRequested(indexed address,indexed address,indexed address,address,address,address)
+          handler: handleBorrowerTransferRequested
+        - event: BorrowerTransferred(indexed address,indexed address,address,indexed address)
+          handler: handleBorrowerTransferred
+        - event: ChangedSpherexEngineAddress(address,address)
+          handler: handleChangedSpherexEngineAddress
+        - event: ChangedSpherexOperator(address,address)
+          handler: handleChangedSpherexOperator
+        - event: DebtRepaid(indexed address,uint256)
+          handler: handleDebtRepaid
+        - event: Deposit(indexed address,uint256,uint256)
+          handler: handleDeposit
+        - event: DrawnAmountUpdated(uint256,uint256)
+          handler: handleDrawnAmountUpdated
+        - event: FeesCollected(indexed address,indexed address,uint256)
+          handler: handleFeesCollected
+        - event: InterestAndFeesAccrued(uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleInterestAndFeesAccrued
+        - event: MarketClosed(indexed address,uint256)
+          handler: handleMarketClosed
+        - event: MaxTotalSupplyUpdated(indexed address,uint256,uint256)
+          handler: handleMaxTotalSupplyUpdated
+        - event: ProtocolFeeBipsUpdated(indexed address,uint256,uint256)
+          handler: handleProtocolFeeBipsUpdated
+        - event: SanctionedAccountAssetsQueuedForWithdrawal(indexed address,uint256,uint256,uint256)
+          handler: handleSanctionedAccountAssetsQueuedForWithdrawal
+        - event: SanctionedAccountWithdrawalSentToEscrow(indexed address,address,uint32,uint256)
+          handler: handleSanctionedAccountWithdrawalSentToEscrow
+        - event: StateUpdated(uint256,bool)
+          handler: handleStateUpdated
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: WithdrawalBatchClosed(indexed uint256)
+          handler: handleWithdrawalBatchClosed
+        - event: WithdrawalBatchCreated(indexed uint256)
+          handler: handleWithdrawalBatchCreated
+        - event: WithdrawalBatchExpired(indexed uint256,uint256,uint256,uint256)
+          handler: handleWithdrawalBatchExpired
+        - event: WithdrawalBatchPayment(indexed uint256,uint256,uint256)
+          handler: handleWithdrawalBatchPayment
+        - event: WithdrawalExecuted(indexed uint256,indexed address,uint256)
+          handler: handleWithdrawalExecuted
+        - event: WithdrawalQueued(indexed uint256,indexed address,uint256,uint256)
+          handler: handleWithdrawalQueued
+        - event: WrapperRegistered(indexed address)
+          handler: handleWrapperRegistered
+      file: ./src/wildcat-market-v2-5.ts
+  - kind: ethereum
+    name: CombinedHooksV2_5
+    network: mainnet
+    source:
+      abi: CombinedHooksV2_5
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - HooksInstance
+        - HookAdministratorChange
+        - RoleProviderInstance
+        - RoleProvider
+        - RoleProviderAdded
+        - RoleProviderUpdated
+        - RoleProviderRemoved
+        - LenderHooksAccess
+        - AccountAccessGranted
+        - AccountAccessRevoked
+        - AccountBlockedFromDeposits
+        - AccountUnblockedFromDeposits
+        - HooksNameUpdated
+        - MinimumDepositUpdated
+        - FixedTermUpdated
+        - PeriodicTermUpdated
+        - PeriodicTermClosed
+      abis:
+        - name: CombinedHooksV2_5
+          file: ./abis/v2.5/CombinedHooks.json
+      eventHandlers:
+        - event: AccountAccessGranted(indexed address,indexed address,indexed address,uint32)
+          handler: handleAccountAccessGranted
+        - event: AccountAccessRevoked(indexed address,indexed address,indexed address)
+          handler: handleAccountAccessRevoked
+        - event: AccountBlockedFromDeposits(indexed address,indexed address)
+          handler: handleAccountBlockedFromDeposits
+        - event: AccountMadeFirstDeposit(indexed address,indexed address)
+          handler: handleAccountMadeFirstDeposit
+        - event: AccountUnblockedFromDeposits(indexed address,indexed address)
+          handler: handleAccountUnblockedFromDeposits
+        - event: AdministratorTransferCancelled(indexed address,indexed address)
+          handler: handleAdministratorTransferCancelled
+        - event: AdministratorTransferRequested(indexed address,indexed address,indexed address)
+          handler: handleAdministratorTransferRequested
+        - event: AdministratorTransferred(indexed address,indexed address)
+          handler: handleAdministratorTransferred
+        - event: AnnualInterestBipsReductionProposed(indexed address,uint16,uint32,uint32,uint32)
+          handler: handleAnnualInterestBipsReductionProposed
+        - event: AnnualInterestBipsReductionProposalCancelled(indexed address)
+          handler: handleAnnualInterestBipsReductionProposalCancelled
+        - event: AnnualInterestBipsReductionExecuted(indexed address,uint16)
+          handler: handleAnnualInterestBipsReductionExecuted
+        - event: FixedTermUpdated(indexed address,indexed address,uint32,uint32)
+          handler: handleFixedTermUpdated
+        - event: MinimumDepositUpdated(indexed address,indexed address,uint128,uint128)
+          handler: handleMinimumDepositUpdated
+        - event: NameUpdated(indexed address,string,string)
+          handler: handleNameUpdated
+        - event: PeriodicTermClosed(indexed address)
+          handler: handlePeriodicTermClosed
+        - event: PeriodicTermUpdated(indexed address,indexed address,uint32,uint32,uint32)
+          handler: handlePeriodicTermUpdated
+        - event: RoleProviderAdded(indexed address,indexed address,uint32,uint24,uint24)
+          handler: handleRoleProviderAdded
+        - event: RoleProviderRemoved(indexed address,indexed address,uint32,uint24,uint24)
+          handler: handleRoleProviderRemoved
+        - event: RoleProviderUpdated(indexed address,indexed address,uint32,uint32,uint24,uint24,uint24,uint24)
+          handler: handleRoleProviderUpdated
+        - event: TemporaryExcessReserveRatioActivated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioActivated
+        - event: TemporaryExcessReserveRatioCanceled(indexed address)
+          handler: handleTemporaryExcessReserveRatioCanceled
+        - event: TemporaryExcessReserveRatioExpired(indexed address)
+          handler: handleTemporaryExcessReserveRatioExpired
+        - event: TemporaryExcessReserveRatioUpdated(indexed address,uint256,uint256,uint256)
+          handler: handleTemporaryExcessReserveRatioUpdated
+      file: ./src/hooks-instance-v2-5.ts
+  - kind: ethereum
+    name: AccessListRoleProvider
+    network: mainnet
+    source:
+      abi: AccessListRoleProvider
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderInstance
+        - RoleProviderMember
+        - RoleProviderAdministratorChange
+        - RoleProviderMembershipChange
+      abis:
+        - name: AccessListRoleProvider
+          file: ./abis/v2.5/AccessListRoleProvider.json
+      eventHandlers:
+        - event: AdministratorTransferCancelled(indexed address,indexed address)
+          handler: handleAdministratorTransferCancelled
+        - event: AdministratorTransferRequested(indexed address,indexed address,indexed address)
+          handler: handleAdministratorTransferRequested
+        - event: AdministratorTransferred(indexed address,indexed address)
+          handler: handleAdministratorTransferred
+        - event: MemberAdded(indexed address,indexed address)
+          handler: handleMemberAdded
+        - event: MemberRemoved(indexed address,indexed address)
+          handler: handleMemberRemoved
+      file: ./src/access-list-role-provider.ts

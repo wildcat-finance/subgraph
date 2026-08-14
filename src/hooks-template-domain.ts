@@ -31,7 +31,8 @@ function hooksKindForVersion(version: string): string {
 export function getOrCreateHooksTemplate(
   event: ethereum.Event,
   address: Address,
-  abiFamily: string
+  abiFamily: string,
+  knownVersion: string | null = null
 ): HooksTemplate {
   let id = generateHooksTemplateId(address);
   let template = HooksTemplate.load(id);
@@ -48,9 +49,20 @@ export function getOrCreateHooksTemplate(
     );
   }
   let configuredTemplate = getConfiguredHooksTemplate(address);
+  if (
+    template != null &&
+    template.kind != "Unknown" &&
+    knownVersion == null &&
+    configuredTemplate == null
+  ) {
+    return template;
+  }
   let version = "Unknown";
   let kind = "Unknown";
-  if (configuredTemplate != null) {
+  if (knownVersion != null) {
+    version = knownVersion as string;
+    kind = hooksKindForVersion(version);
+  } else if (configuredTemplate != null) {
     version = configuredTemplate.version;
     kind = configuredTemplate.kind;
   } else {

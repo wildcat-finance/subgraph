@@ -3,6 +3,8 @@
 Status: subgraph implementation complete; SDK and app source migrations
 complete; deployed endpoint cutover pending.
 
+That status describes the earlier v2.5 schema refactor. The v2.5.9 identity, authority, and event-history additions still require the SDK 3.2.x migration documented in `docs/V2_5_9_EVENT_MODEL.md`.
+
 The V2.5 endpoint is a clean schema deployment. It does not attempt to remain
 query-compatible with earlier V2 endpoints. Historical factories and markets
 remain indexed, but consumers must migrate the relationships below before they

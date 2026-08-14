@@ -84,9 +84,14 @@ function seedMarket(): void {
   market.originKind = "HOOKS";
   market.generation = "test";
   market.abiFamily = "test";
+  market.eventGeneration = "LEGACY";
   market.borrower = BORROWER_ADDRESS;
+  market.borrowerPrincipal = BORROWER_ADDRESS;
+  market.initialBorrower = BORROWER_ADDRESS;
+  market.initialBorrowerPrincipal = BORROWER_ADDRESS;
   market.sentinel = BORROWER_ADDRESS;
   market.feeRecipient = BORROWER_ADDRESS;
+  market.originationFeeAmount = BigInt.zero();
   market.name = "Mock Market";
   market.symbol = "mMOCK";
   market.decimals = 18;

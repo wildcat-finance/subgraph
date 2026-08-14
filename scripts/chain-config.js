@@ -15,6 +15,7 @@ const POSITIVE_DECIMAL_PATTERN = /^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 const MARKET_KINDS = ["STANDARD", "REVOLVING"];
 const LIFECYCLES = ["active", "historical", "retired"];
 const HOOKED_MARKET_ABIS = ["BASE", "FORCE_BUYBACK"];
+const EVENT_GENERATIONS = ["LEGACY", "V2_5"];
 const HOOKS_TEMPLATE_IDENTITIES = {
   OpenTerm: "OpenTermHooks",
   FixedTerm: "FixedTermHooks",
@@ -41,6 +42,8 @@ const TOP_LEVEL_KEYS = [
   "anchors",
   "hooksTemplates",
   "factories",
+  "borrowerIdentityRegistries",
+  "roleProviderFactories",
   "wrapperFactories",
   "collateralFactories",
   "features",
@@ -397,9 +400,19 @@ function validateAbiFamilies(abiFamilies, options = {}) {
   }
   for (const [name, family] of Object.entries(abiFamilies)) {
     const context = `abiFamilies.${name}`;
-    assertExactKeys(family, ["kind", "hookedMarketAbi", "abis"], context);
+    assertExactKeys(
+      family,
+      ["kind", "eventGeneration", "hookedMarketAbi", "abis"],
+      context
+    );
     if (family.kind !== "hooksFactory") {
       fail(`${context}.kind`, "must be hooksFactory");
+    }
+    if (!EVENT_GENERATIONS.includes(family.eventGeneration)) {
+      fail(
+        `${context}.eventGeneration`,
+        `must be one of ${EVENT_GENERATIONS.join(", ")}`
+      );
     }
     if (!HOOKED_MARKET_ABIS.includes(family.hookedMarketAbi)) {
       fail(
@@ -446,6 +459,36 @@ function finalHooksFactoryName(config, factory) {
   return factory.manifestName;
 }
 
+function finalHooksFactoryDataSourceName(config, factory, abiFamilies) {
+  const standardLabel =
+    config.compatibility.canonicalFactoryByMarketKind.STANDARD;
+  const canonicalStandard = config.factories.find(
+    (candidate) => candidate.label === standardLabel
+  );
+  let typeAnchor = canonicalStandard;
+  if (
+    typeAnchor &&
+    abiFamilies[typeAnchor.abiFamily].eventGeneration !== "LEGACY"
+  ) {
+    const legacyTypeAnchor = config.factories.find(
+      (candidate) =>
+        candidate.indexed &&
+        candidate.marketKind === "STANDARD" &&
+        abiFamilies[candidate.abiFamily].eventGeneration === "LEGACY"
+    );
+    if (legacyTypeAnchor) {
+      typeAnchor = legacyTypeAnchor;
+    }
+  }
+  if (typeAnchor && factory.label === typeAnchor.label) {
+    return "HooksFactory";
+  }
+  if (factory.label === standardLabel) {
+    return factory.manifestName;
+  }
+  return finalHooksFactoryName(config, factory);
+}
+
 function finalWrapperFactoryName(config, factory) {
   if (config.compatibility.primaryWrapperFactory === factory.label) {
     return "Wildcat4626WrapperFactory";
@@ -486,6 +529,18 @@ function validateChainConfig(config, abiFamilies, options = {}) {
 
   validateFactoryCollection(config.factories, `${context}.factories`, (factory, itemContext) =>
     validateHooksFactory(factory, itemContext, abiFamilies)
+  );
+  validateFactoryCollection(
+    config.borrowerIdentityRegistries,
+    `${context}.borrowerIdentityRegistries`,
+    (registry, itemContext) =>
+      validateCommonFactory(registry, itemContext, { deploymentTarget: false })
+  );
+  validateFactoryCollection(
+    config.roleProviderFactories,
+    `${context}.roleProviderFactories`,
+    (factory, itemContext) =>
+      validateCommonFactory(factory, itemContext, { deploymentTarget: false })
   );
   validateFactoryCollection(
     config.wrapperFactories,
@@ -647,6 +702,14 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     ["anchors.archController", config.anchors.archController.address],
     ["anchors.sanctionsSentinel", config.anchors.sanctionsSentinel.address],
     ...config.factories.map((factory) => [`factories.${factory.label}`, factory.address]),
+    ...config.borrowerIdentityRegistries.map((registry) => [
+      `borrowerIdentityRegistries.${registry.label}`,
+      registry.address,
+    ]),
+    ...config.roleProviderFactories.map((factory) => [
+      `roleProviderFactories.${factory.label}`,
+      factory.address,
+    ]),
     ...config.wrapperFactories.map((factory) => [
       `wrapperFactories.${factory.label}`,
       factory.address,
@@ -672,7 +735,15 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   const indexedSources = [
     ...config.factories
       .filter((factory) => factory.indexed)
-      .map((factory) => finalHooksFactoryName(config, factory)),
+      .map((factory) =>
+        finalHooksFactoryDataSourceName(config, factory, abiFamilies)
+      ),
+    ...config.borrowerIdentityRegistries
+      .filter((registry) => registry.indexed)
+      .map((registry) => registry.manifestName),
+    ...config.roleProviderFactories
+      .filter((factory) => factory.indexed)
+      .map((factory) => factory.manifestName),
     ...config.wrapperFactories
       .filter((factory) => factory.indexed)
       .map((factory) => finalWrapperFactoryName(config, factory)),
@@ -768,6 +839,7 @@ module.exports = {
   canonicalJson,
   configDigest,
   finalCollateralFactoryName,
+  finalHooksFactoryDataSourceName,
   finalHooksFactoryName,
   finalWrapperFactoryName,
   listNetworks,

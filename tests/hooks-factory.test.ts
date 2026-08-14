@@ -42,6 +42,7 @@ describe("hooks factory", () => {
     factory.marketKind = "STANDARD";
     factory.generation = "test";
     factory.abiFamily = "test";
+    factory.eventGeneration = "LEGACY";
     factory.hookedMarketAbi = "BASE";
     factory.configuredStartBlock = BigInt.zero();
     factory.indexed = true;

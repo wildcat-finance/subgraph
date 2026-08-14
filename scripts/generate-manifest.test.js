@@ -119,7 +119,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
   const standardFactory = sourceByName(manifest, "HooksFactory");
   assert.equal(
     contextData(standardFactory, standardFactory.source.address),
-    "STANDARD|v2.5|hooks-sepolia-current|BASE|11363908|true|true|ACTIVE|standard-v2.5|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+    "STANDARD|v2.5|hooks-sepolia-current|LEGACY|BASE|11363908|true|true|ACTIVE|standard-v2.5|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
   );
   assert.deepEqual(
     Object.keys(standardFactory.context).filter((key) =>
@@ -323,7 +323,119 @@ test("supports mixed hooked-market ABI adapters when core dynamic ABIs match", (
   );
   assert.match(
     contextData(source, modified.factories[0].address),
-    /\|hooks-sepolia-current\|BASE\|/
+    /\|hooks-sepolia-current\|LEGACY\|BASE\|/
+  );
+});
+
+test("selects the hard-cut mappings from the deployment ABI family", () => {
+  const abiFamilies = loadAbiFamilies();
+  const base = readYaml(MANIFEST_BASE_PATH);
+  const config = loadChainConfig("sepolia", { abiFamilies });
+  const modified = JSON.parse(JSON.stringify(config));
+  const standard = modified.factories.find(
+    (factory) => factory.label === "standard-v2.5"
+  );
+  const revolving = modified.factories.find(
+    (factory) => factory.label === "revolving-v2.5"
+  );
+  standard.abiFamily = "hooks-v2-5";
+  revolving.abiFamily = "hooks-v2-5";
+
+  const manifest = buildManifest(modified, abiFamilies, base);
+  const legacyTypeAnchor = sourceByName(manifest, "HooksFactory");
+  const standardSource = sourceByName(
+    manifest,
+    "HooksFactoryStandardV2_5"
+  );
+  const revolvingSource = sourceByName(manifest, "HooksFactoryRevolving");
+  assert.equal(legacyTypeAnchor.mapping.file, "./src/hooks-factory.ts");
+  assert.equal(
+    abiPath(legacyTypeAnchor.mapping, "HooksFactory"),
+    "./abis/HooksFactory.json"
+  );
+  assert.equal(standardSource.mapping.file, "./src/hooks-factory-v2-5.ts");
+  assert.equal(revolvingSource.mapping.file, "./src/hooks-factory-v2-5.ts");
+  assert.equal(
+    abiPath(standardSource.mapping, "HooksFactory"),
+    "./abis/v2.5/HooksFactory.json"
+  );
+  assert.match(
+    contextData(standardSource, standard.address),
+    /\|hooks-v2-5\|V2_5\|BASE\|/
+  );
+  assert.ok(
+    !standardSource.mapping.eventHandlers.some(
+      ({ event }) => event.startsWith("RevolvingMarketDeployed")
+    )
+  );
+  assert.ok(
+    revolvingSource.mapping.eventHandlers.some(
+      ({ event }) =>
+        event === "RevolvingMarketDeployed(indexed address,uint256)"
+    )
+  );
+  assertDeclaresEntities(standardSource.mapping, [
+    "BorrowerIdentityRegistry",
+    "BorrowerAccount",
+    "HooksInstanceRoleProviderSnapshot",
+    "MarketDeploymentConfig",
+    "MarketHooksData",
+    "PendingMarketDeployment",
+    "RevolvingMarketDeployment",
+  ]);
+  assertDeclaresEntities(
+    manifest.templates.find(
+      (template) => template.name === "WildcatMarketV2_5"
+    ).mapping,
+    ["MarketBorrowerChange", "MarketWrapperRegistration", "DrawnAmountUpdate"]
+  );
+  assertDeclaresEntities(
+    manifest.templates.find(
+      (template) => template.name === "CombinedHooksV2_5"
+    ).mapping,
+    ["HookAdministratorChange", "RoleProviderInstance"]
+  );
+  assertDeclaresEntities(
+    manifest.templates.find(
+      (template) => template.name === "AccessListRoleProvider"
+    ).mapping,
+    ["RoleProviderAdministratorChange"]
+  );
+});
+
+test("keeps a HooksFactory type anchor on a v2.5-only chain", () => {
+  const abiFamilies = loadAbiFamilies();
+  const base = readYaml(MANIFEST_BASE_PATH);
+  const config = loadChainConfig("sepolia", { abiFamilies });
+  const modified = JSON.parse(JSON.stringify(config));
+  for (const factory of modified.factories) {
+    factory.indexed =
+      factory.label === "standard-v2.5" ||
+      factory.label === "revolving-v2.5";
+  }
+  const standard = modified.factories.find(
+    (factory) => factory.label === "standard-v2.5"
+  );
+  const revolving = modified.factories.find(
+    (factory) => factory.label === "revolving-v2.5"
+  );
+  standard.abiFamily = "hooks-v2-5";
+  revolving.abiFamily = "hooks-v2-5";
+
+  const manifest = buildManifest(modified, abiFamilies, base);
+  const standardSource = sourceByName(manifest, "HooksFactory");
+  assert.equal(standardSource.mapping.file, "./src/hooks-factory-v2-5.ts");
+  assert.equal(
+    abiPath(standardSource.mapping, "HooksFactory"),
+    "./abis/v2.5/HooksFactory.json"
+  );
+  assert.equal(
+    abiPath(
+      manifest.templates.find((template) => template.name === "WildcatMarket")
+        .mapping,
+      "WildcatMarket"
+    ),
+    "./abis/WildcatMarket.json"
   );
 });
 

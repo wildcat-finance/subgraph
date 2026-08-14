@@ -1,5 +1,7 @@
 # V2.5 Subgraph Configuration and Builds
 
+The hard-cut v2.5 event-generation path and its remaining protocol dependency are documented in `docs/V2_5_9_EVENT_MODEL.md`.
+
 The V2.5 subgraph uses one schema and mapping codebase with an explicit
 descriptor for each chain. Generated manifests are outputs, not configuration
 sources.

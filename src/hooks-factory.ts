@@ -67,6 +67,7 @@ import { recordIndexerDiagnostic } from "./indexer-diagnostics";
 import { createInitialMarketSnapshot } from "./market-domain";
 import { recordMarketEvent } from "./market-event-domain";
 import { getOrCreateBorrower } from "./borrower-domain";
+import { getOrCreateRoleProviderInstance } from "./role-provider-domain";
 
 export function handleChangedSpherexEngineAddress(
   event: ChangedSpherexEngineAddressEvent
@@ -114,6 +115,11 @@ export function handleHooksInstanceDeployedForMarketType(
     marketKind: hooksFactory.marketKind,
     generation: hooksFactory.generation,
     abiFamily: hooksFactory.abiFamily,
+    eventGeneration: hooksFactory.eventGeneration,
+    administrator: borrower,
+    deployer: event.transaction.from,
+    version: hooksTemplate.version,
+    providerMetadataState: "AVAILABLE",
     deployedAtBlock: event.block.number,
     deployedAtTimestamp: event.block.timestamp,
     deployedAtTransaction: event.transaction.hash,
@@ -154,6 +160,10 @@ export function handleHooksInstanceDeployedForMarketType(
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
+      administrator: borrower,
+      deployer: event.transaction.from,
+      name: name,
+      version: hooksTemplate.version,
     }
   );
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
@@ -176,7 +186,10 @@ export function handleHooksInstanceDeployed(
   );
 }
 
-function createTokenIfNotExists(asset: Address, timestamp: BigInt): Token | null {
+export function createTokenIfNotExists(
+  asset: Address,
+  timestamp: BigInt
+): Token | null {
   if (isNullAddress(asset)) {
     return null;
   }
@@ -197,7 +210,10 @@ function createTokenIfNotExists(asset: Address, timestamp: BigInt): Token | null
   return token;
 }
 
-function getOrCreateTokenId(asset: Address, timestamp: BigInt): string | null {
+export function getOrCreateTokenId(
+  asset: Address,
+  timestamp: BigInt
+): string | null {
   let token = createTokenIfNotExists(asset, timestamp);
   if (token == null) {
     return null;
@@ -334,7 +350,7 @@ export function handleHooksTemplateFeesUpdated(
     "Legacy"
   );
 }
-function decodeAndCreateRoleProvider(
+export function decodeAndCreateRoleProvider(
   hooksAddress: Bytes,
   hooksInstanceId: string,
   encodedRoleProvider: BigInt
@@ -359,6 +375,7 @@ function decodeAndCreateRoleProvider(
   let isPullProvider = pullProviderIndex !== nullProviderIndex;
   let isPushProvider = pushProviderIndex !== nullProviderIndex;
   let providerId = generateRoleProviderId(hooksAddress, providerAddress);
+  let providerInstance = getOrCreateRoleProviderInstance(providerAddress);
   return createRoleProvider(providerId, {
     isApproved: true,
     isPullProvider: isPullProvider,
@@ -368,6 +385,7 @@ function decodeAndCreateRoleProvider(
     pushProviderIndex: pushProviderIndex,
     timeToLive: timeToLive,
     providerAddress: providerAddress,
+    providerInstance: providerInstance.id,
   });
 }
 
@@ -606,6 +624,9 @@ export function handleMarketDeployedForMarketType(
       symbol: symbol,
       asset: asset.id,
       borrower: hooks.borrower,
+      borrowerPrincipal: hooks.borrower,
+      initialBorrower: hooks.borrower,
+      initialBorrowerPrincipal: hooks.borrower,
       borrowerProfile: borrowerProfile.id,
       controller: null,
       annualInterestBips: annualInterestBips.toI32(),
@@ -613,6 +634,8 @@ export function handleMarketDeployedForMarketType(
       delinquencyGracePeriod: delinquencyGracePeriod.toI32(),
       delinquencyFeeBips: delinquencyFeeBips.toI32(),
       feeRecipient: feeRecipient,
+      originationFeeAsset: templateRegistration.originationFeeAsset,
+      originationFeeAmount: templateRegistration.originationFeeAmount,
       protocolFeeBips: protocolFeeBips,
       sentinel: hooksFactory.sentinel,
       scaleFactor: BigInt.fromI32(10).pow(27),
@@ -628,6 +651,7 @@ export function handleMarketDeployedForMarketType(
       originKind: "HOOKS",
       generation: hooksFactory.generation,
       abiFamily: hooksFactory.abiFamily,
+      eventGeneration: hooksFactory.eventGeneration,
       deployedEvent: marketDeployedId,
       createdAt: event.block.timestamp.toI32(),
       createdAtBlock: event.block.number,

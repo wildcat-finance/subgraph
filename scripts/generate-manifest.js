@@ -8,8 +8,10 @@ const {
   REPO_ROOT,
   configDigest,
   finalCollateralFactoryName,
+  finalHooksFactoryDataSourceName,
   finalHooksFactoryName,
   finalWrapperFactoryName,
+  loadAbiFamilies,
   loadAllChainConfigs,
   loadChainConfig,
 } = require("./chain-config");
@@ -59,19 +61,35 @@ function sharedAbiFamily(config, abiFamilies) {
       config.factories
         .filter((factory) => factory.indexed)
         .map((factory) => factory.abiFamily)
+        .filter(
+          (familyName) =>
+            abiFamilies[familyName].eventGeneration === "LEGACY"
+        )
     ),
   ];
   if (familyNames.length === 0) {
-    throw new Error(
-      `chainConfig.${config.network}: must contain at least one indexed hooks factory`
+    const fallbackLegacyFamily = Object.values(abiFamilies).find(
+      (family) => family.eventGeneration === "LEGACY"
     );
+    if (fallbackLegacyFamily) {
+      return fallbackLegacyFamily;
+    }
+    const firstIndexedFactory = config.factories.find(
+      (factory) => factory.indexed
+    );
+    if (!firstIndexedFactory) {
+      throw new Error(
+        `chainConfig.${config.network}: must contain at least one indexed hooks factory`
+      );
+    }
+    return abiFamilies[firstIndexedFactory.abiFamily];
   }
   const first = abiFamilies[familyNames[0]];
   const expected = JSON.stringify(first.abis);
   for (const familyName of familyNames.slice(1)) {
     if (JSON.stringify(abiFamilies[familyName].abis) !== expected) {
       throw new Error(
-        `chainConfig.${config.network}: indexed hooks factories may use different hooked-market adapters, but must share the core mapping ABIs used by dynamic templates; found ${familyNames.join(
+        `chainConfig.${config.network}: legacy indexed hooks factories may use different hooked-market adapters, but must share the core mapping ABIs used by legacy dynamic templates; found ${familyNames.join(
           ", "
         )}`
       );
@@ -154,6 +172,7 @@ function hooksFactoryContextValue(config, factory, abiFamilies) {
     factory.marketKind,
     factory.generation,
     factory.abiFamily,
+    abiFamilies[factory.abiFamily].eventGeneration,
     abiFamilies[factory.abiFamily].hookedMarketAbi,
     String(factory.startBlock),
     String(factory.indexed),
@@ -223,6 +242,16 @@ function buildManifest(config, abiFamilies, baseManifest) {
     "HooksFactory",
     "manifest base dataSources"
   );
+  const borrowerIdentityRegistryPrototype = namedEntry(
+    prototypes,
+    "WildcatBorrowerIdentityRegistry",
+    "manifest base dataSources"
+  );
+  const roleProviderFactoryPrototype = namedEntry(
+    prototypes,
+    "AccessListRoleProviderFactory",
+    "manifest base dataSources"
+  );
   const archControllerPrototype = namedEntry(
     prototypes,
     "WildcatArchController",
@@ -279,19 +308,108 @@ function buildManifest(config, abiFamilies, baseManifest) {
     ),
   ];
   for (const factory of orderedHooksFactories) {
+    const abiFamily = abiFamilies[factory.abiFamily];
     const dataSource = configureDataSource(
       hooksPrototype,
       config,
       factory,
-      finalHooksFactoryName(config, factory)
+      finalHooksFactoryDataSourceName(config, factory, abiFamilies)
     );
-    dataSource.mapping.file =
-      factory.marketKind === "REVOLVING"
-        ? "./src/hooks-factory-revolving.ts"
-        : "./src/hooks-factory.ts";
-    setAbiFiles(dataSource.mapping, abiFamilies[factory.abiFamily]);
+    if (abiFamily.eventGeneration === "V2_5") {
+      dataSource.mapping.file = "./src/hooks-factory-v2-5.ts";
+      dataSource.mapping.eventHandlers = [
+        {
+          event: "ChangedSpherexEngineAddress(address,address)",
+          handler: "handleChangedSpherexEngineAddress",
+        },
+        {
+          event: "ChangedSpherexOperator(address,address)",
+          handler: "handleChangedSpherexOperator",
+        },
+        {
+          event:
+            "HooksInstanceAdministratorTransferred(indexed address,indexed address,indexed address)",
+          handler: "handleHooksInstanceAdministratorTransferred",
+        },
+        {
+          event:
+            "HooksInstanceDeployed(indexed address,indexed address,indexed address,address,string,string)",
+          handler: "handleHooksInstanceDeployed",
+        },
+        {
+          event: "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
+          handler: "handleHooksInstanceRoleProviders",
+        },
+        {
+          event:
+            "HooksTemplateAdded(indexed address,indexed address,string,address,address,uint80,uint16)",
+          handler: "handleHooksTemplateAdded",
+        },
+        {
+          event: "HooksTemplateDisabled(indexed address,indexed address)",
+          handler: "handleHooksTemplateDisabled",
+        },
+        {
+          event:
+            "HooksTemplateFeesUpdated(indexed address,indexed address,address,address,address,address,uint80,uint80,uint16,uint16)",
+          handler: "handleHooksTemplateFeesUpdated",
+        },
+        {
+          event:
+            "MarketDeployed(indexed address,indexed address,indexed address,address,address,address,string,string,address,uint256,uint256)",
+          handler: "handleMarketDeployed",
+        },
+        {
+          event:
+            "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
+          handler: "handleMarketDeploymentConfig",
+        },
+        {
+          event: "MarketHooksData(indexed address,bytes)",
+          handler: "handleMarketHooksData",
+        },
+      ];
+      if (factory.marketKind === "REVOLVING") {
+        dataSource.mapping.eventHandlers.push({
+          event: "RevolvingMarketDeployed(indexed address,uint256)",
+          handler: "handleRevolvingMarketDeployed",
+        });
+      }
+    } else {
+      dataSource.mapping.file =
+        factory.marketKind === "REVOLVING"
+          ? "./src/hooks-factory-revolving.ts"
+          : "./src/hooks-factory.ts";
+    }
+    setAbiFiles(dataSource.mapping, abiFamily);
     addHooksFactoryContext(dataSource, config, [factory], abiFamilies);
     addHooksTemplateContext(dataSource, config.hooksTemplates);
+    dataSources.push(dataSource);
+  }
+
+  for (const registry of config.borrowerIdentityRegistries.filter(
+    (candidate) => candidate.indexed
+  )) {
+    const dataSource = configureDataSource(
+      borrowerIdentityRegistryPrototype,
+      config,
+      registry,
+      registry.manifestName
+    );
+    addOptionalModuleFactoryContext(dataSource, registry);
+    dataSources.push(dataSource);
+  }
+
+  for (const factory of config.roleProviderFactories.filter(
+    (candidate) => candidate.indexed
+  )) {
+    const dataSource = configureDataSource(
+      roleProviderFactoryPrototype,
+      config,
+      factory,
+      factory.manifestName
+    );
+    addOptionalModuleFactoryContext(dataSource, factory);
     dataSources.push(dataSource);
   }
 
@@ -450,6 +568,41 @@ function renderOutputs(network) {
   };
 }
 
+function buildV25CompileFixture() {
+  const abiFamilies = loadAbiFamilies();
+  const config = clone(loadChainConfig("sepolia", { abiFamilies }));
+  for (const marketKind of ["STANDARD", "REVOLVING"]) {
+    const label = config.compatibility.canonicalFactoryByMarketKind[marketKind];
+    const factory = config.factories.find(
+      (candidate) => candidate.label === label
+    );
+    factory.abiFamily = "hooks-v2-5";
+  }
+  config.borrowerIdentityRegistries.push({
+    label: "borrower-identity-registry-v2.5-fixture",
+    manifestName: "WildcatBorrowerIdentityRegistryV2_5Fixture",
+    generation: "v2.5",
+    address: "0x000000000000000000000000000000000000f001",
+    startBlock: 0,
+    indexed: true,
+    lifecycle: "active",
+  });
+  config.roleProviderFactories.push({
+    label: "access-list-role-provider-v2.5-fixture",
+    manifestName: "AccessListRoleProviderFactoryV2_5Fixture",
+    generation: "v2.5",
+    address: "0x000000000000000000000000000000000000f002",
+    startBlock: 0,
+    indexed: true,
+    lifecycle: "active",
+  });
+  return buildManifest(
+    config,
+    abiFamilies,
+    readYaml(MANIFEST_BASE_PATH)
+  );
+}
+
 function writeGeneratedFile(filePath, content, check) {
   const current = fs.existsSync(filePath)
     ? fs.readFileSync(filePath, "utf8")
@@ -515,6 +668,7 @@ module.exports = {
   buildLegacyNetworkConfig,
   buildLegacyNetworks,
   buildManifest,
+  buildV25CompileFixture,
   buildUncrashableConfig,
   generate,
   hooksTemplateContextKey,

@@ -76,6 +76,7 @@ export function getOrCreateHooksFactory(
     factory.marketKind = normalizeMarketKind(fallbackMarketType);
     factory.generation = "UNKNOWN";
     factory.abiFamily = "UNKNOWN";
+    factory.eventGeneration = "LEGACY";
     factory.hookedMarketAbi = "UNKNOWN";
     factory.configuredStartBlock = BigInt.zero();
     factory.indexed = false;
@@ -97,6 +98,7 @@ export function getOrCreateHooksFactory(
     factory.label = configured.label;
     factory.generation = configured.generation;
     factory.abiFamily = configured.abiFamily;
+    factory.eventGeneration = configured.eventGeneration;
     factory.hookedMarketAbi = configured.hookedMarketAbi;
     factory.configuredStartBlock = configured.startBlock;
     factory.indexed = configured.indexed;

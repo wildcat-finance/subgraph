@@ -25,6 +25,25 @@ const loadAbi = (contractName) =>
     )
   );
 
+const loadV25Abi = (contractName) =>
+  JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "..", "abis", "v2.5", `${contractName}.json`),
+      "utf8"
+    )
+  );
+
+const eventSignature = (entry) =>
+  `${entry.name}(${entry.inputs
+    .map(({ indexed, type }) => `${indexed ? "indexed " : ""}${type}`)
+    .join(",")})`;
+
+const eventSignatures = (contractName) =>
+  loadV25Abi(contractName)
+    .filter(({ type }) => type === "event")
+    .map(eventSignature)
+    .sort();
+
 const loadHookedMarketAbi = (variant, contractName) =>
   JSON.parse(
     fs.readFileSync(
@@ -79,13 +98,13 @@ const expectedComponents = {
 };
 
 for (const [contractName, components] of Object.entries(expectedComponents)) {
-  test(`${contractName} uses the V2.5 hooked-market tuple`, () => {
+  test(`${contractName} uses the v2.5 hooked-market tuple`, () => {
     const abi = loadSepoliaAbi(contractName);
     assert.deepEqual(outputComponentNames(abi, "getHookedMarket"), components);
     assert.deepEqual(outputComponentNames(abi, "getHookedMarkets"), components);
   });
 
-  test(`${contractName} base adapter matches the frozen V2.5 tuple`, () => {
+  test(`${contractName} base adapter matches the frozen v2.5 tuple`, () => {
     const abi = loadHookedMarketAbi(["base"], contractName);
     assert.deepEqual(outputComponentNames(abi, "getHookedMarket"), components);
   });
@@ -99,7 +118,7 @@ for (const [contractName, components] of Object.entries(expectedComponents)) {
   });
 }
 
-test("HooksFactory market parameters match the frozen V2.5 tuple", () => {
+test("HooksFactory market parameters match the frozen v2.5 tuple", () => {
   assert.deepEqual(outputComponentNames(loadAbi("HooksFactory"), "getMarketParameters"), [
     "asset",
     "decimals",
@@ -124,7 +143,7 @@ test("HooksFactory market parameters match the frozen V2.5 tuple", () => {
   ]);
 });
 
-test("WildcatMarket withdrawal and version declarations match V2.5", () => {
+test("WildcatMarket withdrawal and version declarations match v2.5", () => {
   const abi = loadAbi("WildcatMarket");
   const queueWithdrawal = getFunction(abi, "queueWithdrawal");
   const version = getFunction(abi, "version");
@@ -133,4 +152,53 @@ test("WildcatMarket withdrawal and version declarations match V2.5", () => {
     { internalType: "uint32", name: "expiry", type: "uint32" },
   ]);
   assert.equal(version.stateMutability, "pure");
+});
+
+test("v2.5 factory events retain the indexed data-model boundary", () => {
+  assert.deepEqual(eventSignatures("HooksFactory"), [
+    "ChangedSpherexEngineAddress(address,address)",
+    "ChangedSpherexOperator(address,address)",
+    "HooksInstanceAdministratorTransferred(indexed address,indexed address,indexed address)",
+    "HooksInstanceDeployed(indexed address,indexed address,indexed address,address,string,string)",
+    "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
+    "HooksTemplateAdded(indexed address,indexed address,string,address,address,uint80,uint16)",
+    "HooksTemplateDisabled(indexed address,indexed address)",
+    "HooksTemplateFeesUpdated(indexed address,indexed address,address,address,address,address,uint80,uint80,uint16,uint16)",
+    "MarketDeployed(indexed address,indexed address,indexed address,address,address,address,string,string,address,uint256,uint256)",
+    "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
+    "MarketHooksData(indexed address,bytes)",
+    "RevolvingMarketDeployed(indexed address,uint256)",
+  ].sort());
+});
+
+test("v2.5 market events retain borrower and drawn-principal history", () => {
+  const signatures = eventSignatures("WildcatMarket");
+  for (const signature of [
+    "Borrow(indexed address,uint256)",
+    "BorrowerTransferCancelled(indexed address,indexed address,address,address)",
+    "BorrowerTransferRequested(indexed address,indexed address,indexed address,address,address,address)",
+    "BorrowerTransferred(indexed address,indexed address,address,indexed address)",
+    "DrawnAmountUpdated(uint256,uint256)",
+    "WrapperRegistered(indexed address)",
+  ]) {
+    assert.ok(signatures.includes(signature), `${signature} is missing`);
+  }
+});
+
+test("v2.5 identity and provider ABIs retain their transfer histories", () => {
+  assert.deepEqual(eventSignatures("WildcatBorrowerIdentityRegistry"), [
+    "AccountFactoryAdded(indexed address,indexed address)",
+    "AccountFactoryRemoved(indexed address,indexed address)",
+    "BorrowerAccountPrincipalTransferCancelled(indexed address,indexed address,indexed address)",
+    "BorrowerAccountPrincipalTransferRequested(indexed address,indexed address,address,indexed address)",
+    "BorrowerAccountPrincipalTransferred(indexed address,indexed address,indexed address)",
+    "BorrowerAccountRegistered(indexed address,indexed address,indexed address)",
+  ].sort());
+  assert.deepEqual(eventSignatures("AccessListRoleProvider"), [
+    "AdministratorTransferCancelled(indexed address,indexed address)",
+    "AdministratorTransferRequested(indexed address,indexed address,indexed address)",
+    "AdministratorTransferred(indexed address,indexed address)",
+    "MemberAdded(indexed address,indexed address)",
+    "MemberRemoved(indexed address,indexed address)",
+  ].sort());
 });
