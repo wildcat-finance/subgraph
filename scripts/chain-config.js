@@ -16,10 +16,18 @@ const MARKET_KINDS = ["STANDARD", "REVOLVING"];
 const LIFECYCLES = ["active", "historical", "retired"];
 const HOOKED_MARKET_ABIS = ["BASE", "FORCE_BUYBACK"];
 const EVENT_GENERATIONS = ["LEGACY", "V2_5"];
+const ROLE_PROVIDER_KINDS = [
+  "ACCESS_LIST",
+  "MERKLE",
+  "ERC20",
+  "ERC4626_ASSETS",
+  "ERC721",
+  "ERC1155"
+];
 const HOOKS_TEMPLATE_IDENTITIES = {
   OpenTerm: "OpenTermHooks",
   FixedTerm: "FixedTermHooks",
-  PeriodicTerm: "PeriodicTermHooks",
+  PeriodicTerm: "PeriodicTermHooks"
 };
 const PRICING_MODES = ["CHAINLINK", "USD_PEG", "SYNTHETIC_TESTNET", "NONE"];
 const REQUIRED_HOOKS_ABIS = [
@@ -29,7 +37,7 @@ const REQUIRED_HOOKS_ABIS = [
   "CombinedHooks",
   "IERC20",
   "ChainlinkFeedRegistry",
-  "ChainlinkAggregator",
+  "ChainlinkAggregator"
 ];
 
 const TOP_LEVEL_KEYS = [
@@ -49,7 +57,7 @@ const TOP_LEVEL_KEYS = [
   "features",
   "pricing",
   "compatibility",
-  "provenance",
+  "provenance"
 ];
 
 function readJson(filePath) {
@@ -68,11 +76,11 @@ function assertObject(value, context) {
 
 function assertExactKeys(value, allowedKeys, context) {
   assertObject(value, context);
-  const unknown = Object.keys(value).filter((key) => !allowedKeys.includes(key));
+  const unknown = Object.keys(value).filter(key => !allowedKeys.includes(key));
   if (unknown.length > 0) {
     fail(context, `contains unknown field(s): ${unknown.join(", ")}`);
   }
-  const missing = allowedKeys.filter((key) => !(key in value));
+  const missing = allowedKeys.filter(key => !(key in value));
   if (missing.length > 0) {
     fail(context, `is missing field(s): ${missing.join(", ")}`);
   }
@@ -162,7 +170,7 @@ function validatePricing(pricing, context) {
       "bridgeFeeds",
       "stablecoins",
       "directFeeds",
-      "syntheticPrices",
+      "syntheticPrices"
     ],
     context
   );
@@ -200,7 +208,10 @@ function validatePricing(pricing, context) {
       fail(`${entryContext}.token`, `duplicates token ${entry.token}`);
     }
     if (stablecoins.has(normalized)) {
-      fail(`${entryContext}.token`, "cannot also be configured as a stablecoin");
+      fail(
+        `${entryContext}.token`,
+        "cannot also be configured as a stablecoin"
+      );
     }
     directFeedTokens.add(normalized);
   });
@@ -236,16 +247,31 @@ function validatePricing(pricing, context) {
       ["usd", "eth", "btc"],
       `${context}.denominations`
     );
-    assertNonZeroAddress(pricing.denominations.usd, `${context}.denominations.usd`);
-    assertNonZeroAddress(pricing.denominations.eth, `${context}.denominations.eth`);
-    assertNonZeroAddress(pricing.denominations.btc, `${context}.denominations.btc`);
+    assertNonZeroAddress(
+      pricing.denominations.usd,
+      `${context}.denominations.usd`
+    );
+    assertNonZeroAddress(
+      pricing.denominations.eth,
+      `${context}.denominations.eth`
+    );
+    assertNonZeroAddress(
+      pricing.denominations.btc,
+      `${context}.denominations.btc`
+    );
     assertExactKeys(
       pricing.bridgeFeeds,
       ["ethUsd", "btcUsd"],
       `${context}.bridgeFeeds`
     );
-    assertNonZeroAddress(pricing.bridgeFeeds.ethUsd, `${context}.bridgeFeeds.ethUsd`);
-    assertNonZeroAddress(pricing.bridgeFeeds.btcUsd, `${context}.bridgeFeeds.btcUsd`);
+    assertNonZeroAddress(
+      pricing.bridgeFeeds.ethUsd,
+      `${context}.bridgeFeeds.ethUsd`
+    );
+    assertNonZeroAddress(
+      pricing.bridgeFeeds.btcUsd,
+      `${context}.bridgeFeeds.btcUsd`
+    );
     if (pricing.syntheticPrices.length !== 0) {
       fail(`${context}.syntheticPrices`, "must be empty for CHAINLINK");
     }
@@ -278,14 +304,21 @@ function validatePricing(pricing, context) {
     pricing.mode === "SYNTHETIC_TESTNET" &&
     pricing.syntheticPrices.length === 0
   ) {
-    fail(`${context}.syntheticPrices`, "must not be empty for SYNTHETIC_TESTNET");
+    fail(
+      `${context}.syntheticPrices`,
+      "must not be empty for SYNTHETIC_TESTNET"
+    );
   }
   if (pricing.mode === "NONE" && pricing.syntheticPrices.length !== 0) {
     fail(`${context}.syntheticPrices`, "must be empty for NONE");
   }
 }
 
-function validateCommonFactory(factory, context, { deploymentTarget }) {
+function validateCommonFactory(
+  factory,
+  context,
+  { deploymentTarget, additionalKeys = [] }
+) {
   const keys = [
     "label",
     "manifestName",
@@ -294,12 +327,16 @@ function validateCommonFactory(factory, context, { deploymentTarget }) {
     "startBlock",
     "indexed",
     "lifecycle",
+    ...additionalKeys
   ];
   if (deploymentTarget) keys.splice(6, 0, "deploymentTarget");
   assertExactKeys(factory, keys, context);
 
   if (typeof factory.label !== "string" || !LABEL_PATTERN.test(factory.label)) {
-    fail(`${context}.label`, "must use lowercase letters, digits, dots, underscores, or hyphens");
+    fail(
+      `${context}.label`,
+      "must use lowercase letters, digits, dots, underscores, or hyphens"
+    );
   }
   if (
     typeof factory.manifestName !== "string" ||
@@ -336,7 +373,7 @@ function validateHooksFactory(factory, context, abiFamilies) {
     "startBlock",
     "indexed",
     "deploymentTarget",
-    "lifecycle",
+    "lifecycle"
   ];
   assertExactKeys(factory, expectedKeys, context);
   validateCommonFactory(
@@ -348,7 +385,7 @@ function validateHooksFactory(factory, context, abiFamilies) {
       startBlock: factory.startBlock,
       indexed: factory.indexed,
       deploymentTarget: factory.deploymentTarget,
-      lifecycle: factory.lifecycle,
+      lifecycle: factory.lifecycle
     },
     context,
     { deploymentTarget: true }
@@ -359,10 +396,16 @@ function validateHooksFactory(factory, context, abiFamilies) {
   assertContextSafeString(factory.abiFamily, `${context}.abiFamily`);
   const abiFamily = abiFamilies[factory.abiFamily];
   if (!abiFamily) {
-    fail(`${context}.abiFamily`, `references unknown family ${factory.abiFamily}`);
+    fail(
+      `${context}.abiFamily`,
+      `references unknown family ${factory.abiFamily}`
+    );
   }
   if (abiFamily.kind !== "hooksFactory") {
-    fail(`${context}.abiFamily`, `${factory.abiFamily} is not a hooksFactory family`);
+    fail(
+      `${context}.abiFamily`,
+      `${factory.abiFamily} is not a hooksFactory family`
+    );
   }
 }
 
@@ -421,9 +464,11 @@ function validateAbiFamilies(abiFamilies, options = {}) {
       );
     }
     assertObject(family.abis, `${context}.abis`);
-    const missing = REQUIRED_HOOKS_ABIS.filter((abiName) => !(abiName in family.abis));
+    const missing = REQUIRED_HOOKS_ABIS.filter(
+      abiName => !(abiName in family.abis)
+    );
     const unknown = Object.keys(family.abis).filter(
-      (abiName) => !REQUIRED_HOOKS_ABIS.includes(abiName)
+      abiName => !REQUIRED_HOOKS_ABIS.includes(abiName)
     );
     if (missing.length > 0) {
       fail(`${context}.abis`, `is missing ABI(s): ${missing.join(", ")}`);
@@ -433,7 +478,10 @@ function validateAbiFamilies(abiFamilies, options = {}) {
     }
     for (const [abiName, relativePath] of Object.entries(family.abis)) {
       if (typeof relativePath !== "string" || !relativePath.startsWith("./")) {
-        fail(`${context}.abis.${abiName}`, "must be a repository-relative ./ path");
+        fail(
+          `${context}.abis.${abiName}`,
+          "must be a repository-relative ./ path"
+        );
       }
       const resolved = path.resolve(repoRoot, relativePath);
       if (!resolved.startsWith(`${repoRoot}${path.sep}`)) {
@@ -454,7 +502,9 @@ function validateAbiFamilies(abiFamilies, options = {}) {
 function finalHooksFactoryName(config, factory) {
   const aliases = config.compatibility.canonicalFactoryByMarketKind;
   if (aliases[factory.marketKind] === factory.label) {
-    return factory.marketKind === "STANDARD" ? "HooksFactory" : "HooksFactoryRevolving";
+    return factory.marketKind === "STANDARD"
+      ? "HooksFactory"
+      : "HooksFactoryRevolving";
   }
   return factory.manifestName;
 }
@@ -463,7 +513,7 @@ function finalHooksFactoryDataSourceName(config, factory, abiFamilies) {
   const standardLabel =
     config.compatibility.canonicalFactoryByMarketKind.STANDARD;
   const canonicalStandard = config.factories.find(
-    (candidate) => candidate.label === standardLabel
+    candidate => candidate.label === standardLabel
   );
   let typeAnchor = canonicalStandard;
   if (
@@ -471,7 +521,7 @@ function finalHooksFactoryDataSourceName(config, factory, abiFamilies) {
     abiFamilies[typeAnchor.abiFamily].eventGeneration !== "LEGACY"
   ) {
     const legacyTypeAnchor = config.factories.find(
-      (candidate) =>
+      candidate =>
         candidate.indexed &&
         candidate.marketKind === "STANDARD" &&
         abiFamilies[candidate.abiFamily].eventGeneration === "LEGACY"
@@ -506,11 +556,17 @@ function finalCollateralFactoryName(config, factory) {
 function validateChainConfig(config, abiFamilies, options = {}) {
   const expectedNetwork = options.expectedNetwork;
   assertExactKeys(config, TOP_LEVEL_KEYS, expectedNetwork || "chainConfig");
-  const context = `chainConfig.${config.network || expectedNetwork || "unknown"}`;
+  const context = `chainConfig.${config.network ||
+    expectedNetwork ||
+    "unknown"}`;
 
   if (config.configVersion !== 2) fail(`${context}.configVersion`, "must be 2");
-  if (config.schemaRelease !== "2.5") fail(`${context}.schemaRelease`, "must be 2.5");
-  if (typeof config.network !== "string" || !LABEL_PATTERN.test(config.network)) {
+  if (config.schemaRelease !== "2.5")
+    fail(`${context}.schemaRelease`, "must be 2.5");
+  if (
+    typeof config.network !== "string" ||
+    !LABEL_PATTERN.test(config.network)
+  ) {
     fail(`${context}.network`, "must be a lowercase network identifier");
   }
   if (expectedNetwork && config.network !== expectedNetwork) {
@@ -520,15 +576,31 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     fail(`${context}.chainId`, "must be a positive safe integer");
   }
   assertNonEmptyString(config.graphNetwork, `${context}.graphNetwork`);
-  assertBoolean(config.deploymentTargetsReady, `${context}.deploymentTargetsReady`);
+  assertBoolean(
+    config.deploymentTargetsReady,
+    `${context}.deploymentTargetsReady`
+  );
 
-  assertExactKeys(config.anchors, ["archController", "sanctionsSentinel"], `${context}.anchors`);
-  validateAnchor(config.anchors.archController, `${context}.anchors.archController`);
-  validateAnchor(config.anchors.sanctionsSentinel, `${context}.anchors.sanctionsSentinel`);
+  assertExactKeys(
+    config.anchors,
+    ["archController", "sanctionsSentinel"],
+    `${context}.anchors`
+  );
+  validateAnchor(
+    config.anchors.archController,
+    `${context}.anchors.archController`
+  );
+  validateAnchor(
+    config.anchors.sanctionsSentinel,
+    `${context}.anchors.sanctionsSentinel`
+  );
   validateHooksTemplates(config.hooksTemplates, `${context}.hooksTemplates`);
 
-  validateFactoryCollection(config.factories, `${context}.factories`, (factory, itemContext) =>
-    validateHooksFactory(factory, itemContext, abiFamilies)
+  validateFactoryCollection(
+    config.factories,
+    `${context}.factories`,
+    (factory, itemContext) =>
+      validateHooksFactory(factory, itemContext, abiFamilies)
   );
   validateFactoryCollection(
     config.borrowerIdentityRegistries,
@@ -539,29 +611,57 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   validateFactoryCollection(
     config.roleProviderFactories,
     `${context}.roleProviderFactories`,
-    (factory, itemContext) =>
-      validateCommonFactory(factory, itemContext, { deploymentTarget: false })
+    (factory, itemContext) => {
+      validateCommonFactory(factory, itemContext, {
+        deploymentTarget: false,
+        additionalKeys: ["kind"]
+      });
+      if (!ROLE_PROVIDER_KINDS.includes(factory.kind)) {
+        fail(
+          `${itemContext}.kind`,
+          `must be one of ${ROLE_PROVIDER_KINDS.join(", ")}`
+        );
+      }
+    }
   );
   validateFactoryCollection(
     config.wrapperFactories,
     `${context}.wrapperFactories`,
-    (factory, itemContext) => validateCommonFactory(factory, itemContext, { deploymentTarget: true })
+    (factory, itemContext) =>
+      validateCommonFactory(factory, itemContext, { deploymentTarget: true })
   );
   validateFactoryCollection(
     config.collateralFactories,
     `${context}.collateralFactories`,
-    (factory, itemContext) => validateCommonFactory(factory, itemContext, { deploymentTarget: false })
+    (factory, itemContext) =>
+      validateCommonFactory(factory, itemContext, { deploymentTarget: false })
   );
 
-  assertExactKeys(config.features, ["analytics", "collateral", "wrappers"], `${context}.features`);
+  assertExactKeys(
+    config.features,
+    ["analytics", "collateral", "wrappers"],
+    `${context}.features`
+  );
   Object.entries(config.features).forEach(([name, enabled]) =>
     assertBoolean(enabled, `${context}.features.${name}`)
   );
-  if (config.features.wrappers !== config.wrapperFactories.some((factory) => factory.indexed)) {
-    fail(`${context}.features.wrappers`, "must match the presence of indexed wrapper factories");
+  if (
+    config.features.wrappers !==
+    config.wrapperFactories.some(factory => factory.indexed)
+  ) {
+    fail(
+      `${context}.features.wrappers`,
+      "must match the presence of indexed wrapper factories"
+    );
   }
-  if (config.features.collateral !== config.collateralFactories.some((factory) => factory.indexed)) {
-    fail(`${context}.features.collateral`, "must match the presence of indexed collateral factories");
+  if (
+    config.features.collateral !==
+    config.collateralFactories.some(factory => factory.indexed)
+  ) {
+    fail(
+      `${context}.features.collateral`,
+      "must match the presence of indexed collateral factories"
+    );
   }
 
   validatePricing(config.pricing, `${context}.pricing`);
@@ -571,7 +671,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     [
       "canonicalFactoryByMarketKind",
       "primaryWrapperFactory",
-      "primaryCollateralFactory",
+      "primaryCollateralFactory"
     ],
     `${context}.compatibility`
   );
@@ -583,22 +683,36 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     config.compatibility.canonicalFactoryByMarketKind
   )) {
     if (!MARKET_KINDS.includes(marketKind)) {
-      fail(`${context}.compatibility.canonicalFactoryByMarketKind`, `unknown kind ${marketKind}`);
+      fail(
+        `${context}.compatibility.canonicalFactoryByMarketKind`,
+        `unknown kind ${marketKind}`
+      );
     }
-    const factory = config.factories.find((candidate) => candidate.label === label);
+    const factory = config.factories.find(
+      candidate => candidate.label === label
+    );
     if (!factory) {
-      fail(`${context}.compatibility.canonicalFactoryByMarketKind.${marketKind}`, `unknown label ${label}`);
+      fail(
+        `${context}.compatibility.canonicalFactoryByMarketKind.${marketKind}`,
+        `unknown label ${label}`
+      );
     }
     if (factory.marketKind !== marketKind) {
-      fail(`${context}.compatibility.canonicalFactoryByMarketKind.${marketKind}`, "market kind mismatch");
+      fail(
+        `${context}.compatibility.canonicalFactoryByMarketKind.${marketKind}`,
+        "market kind mismatch"
+      );
     }
     if (!factory.indexed) {
-      fail(`${context}.compatibility.canonicalFactoryByMarketKind.${marketKind}`, "must select an indexed factory");
+      fail(
+        `${context}.compatibility.canonicalFactoryByMarketKind.${marketKind}`,
+        "must select an indexed factory"
+      );
     }
   }
   for (const marketKind of MARKET_KINDS) {
     const hasIndexedFactory = config.factories.some(
-      (factory) => factory.indexed && factory.marketKind === marketKind
+      factory => factory.indexed && factory.marketKind === marketKind
     );
     if (
       hasIndexedFactory &&
@@ -612,7 +726,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   }
   if (
     !config.factories.some(
-      (factory) => factory.indexed && factory.marketKind === "STANDARD"
+      factory => factory.indexed && factory.marketKind === "STANDARD"
     )
   ) {
     fail(`${context}.factories`, "must include an indexed STANDARD factory");
@@ -620,13 +734,24 @@ function validateChainConfig(config, abiFamilies, options = {}) {
 
   const primaryWrapper = config.compatibility.primaryWrapperFactory;
   if (primaryWrapper !== null) {
-    assertNonEmptyString(primaryWrapper, `${context}.compatibility.primaryWrapperFactory`);
-    const factory = config.wrapperFactories.find((candidate) => candidate.label === primaryWrapper);
+    assertNonEmptyString(
+      primaryWrapper,
+      `${context}.compatibility.primaryWrapperFactory`
+    );
+    const factory = config.wrapperFactories.find(
+      candidate => candidate.label === primaryWrapper
+    );
     if (!factory || !factory.indexed) {
-      fail(`${context}.compatibility.primaryWrapperFactory`, "must select an indexed wrapper factory");
+      fail(
+        `${context}.compatibility.primaryWrapperFactory`,
+        "must select an indexed wrapper factory"
+      );
     }
   } else if (config.features.wrappers) {
-    fail(`${context}.compatibility.primaryWrapperFactory`, "is required when wrappers are enabled");
+    fail(
+      `${context}.compatibility.primaryWrapperFactory`,
+      "is required when wrappers are enabled"
+    );
   }
 
   const primaryCollateral = config.compatibility.primaryCollateralFactory;
@@ -636,7 +761,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
       `${context}.compatibility.primaryCollateralFactory`
     );
     const factory = config.collateralFactories.find(
-      (candidate) => candidate.label === primaryCollateral
+      candidate => candidate.label === primaryCollateral
     );
     if (!factory || !factory.indexed) {
       fail(
@@ -651,18 +776,23 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     );
   }
 
-  const targets = config.factories.filter((factory) => factory.deploymentTarget);
+  const targets = config.factories.filter(factory => factory.deploymentTarget);
   for (const marketKind of MARKET_KINDS) {
-    const kindTargets = targets.filter((factory) => factory.marketKind === marketKind);
+    const kindTargets = targets.filter(
+      factory => factory.marketKind === marketKind
+    );
     if (kindTargets.length > 1) {
       fail(context, `contains multiple ${marketKind} deployment targets`);
     }
     if (config.deploymentTargetsReady && kindTargets.length !== 1) {
-      fail(context, `must contain exactly one ${marketKind} deployment target when ready`);
+      fail(
+        context,
+        `must contain exactly one ${marketKind} deployment target when ready`
+      );
     }
   }
   const wrapperTargets = config.wrapperFactories.filter(
-    (factory) => factory.deploymentTarget
+    factory => factory.deploymentTarget
   );
   if (wrapperTargets.length > 1) {
     fail(context, "contains multiple wrapper deployment targets");
@@ -672,20 +802,29 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     config.features.wrappers &&
     wrapperTargets.length !== 1
   ) {
-    fail(context, "must contain exactly one wrapper deployment target when ready");
+    fail(
+      context,
+      "must contain exactly one wrapper deployment target when ready"
+    );
   }
   if (!config.features.wrappers && wrapperTargets.length > 0) {
-    fail(context, "cannot declare a wrapper deployment target when wrappers are disabled");
+    fail(
+      context,
+      "cannot declare a wrapper deployment target when wrappers are disabled"
+    );
   }
   if (
     !config.deploymentTargetsReady &&
     targets.length + wrapperTargets.length > 0
   ) {
-    fail(context, "cannot declare deployment targets before deploymentTargetsReady is true");
+    fail(
+      context,
+      "cannot declare deployment targets before deploymentTargetsReady is true"
+    );
   }
   if (config.deploymentTargetsReady) {
     const configuredKinds = new Set(
-      config.hooksTemplates.map((template) => template.kind)
+      config.hooksTemplates.map(template => template.kind)
     );
     for (const kind of Object.keys(HOOKS_TEMPLATE_IDENTITIES)) {
       if (!configuredKinds.has(kind)) {
@@ -701,67 +840,85 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   const addressEntries = [
     ["anchors.archController", config.anchors.archController.address],
     ["anchors.sanctionsSentinel", config.anchors.sanctionsSentinel.address],
-    ...config.factories.map((factory) => [`factories.${factory.label}`, factory.address]),
-    ...config.borrowerIdentityRegistries.map((registry) => [
+    ...config.factories.map(factory => [
+      `factories.${factory.label}`,
+      factory.address
+    ]),
+    ...config.borrowerIdentityRegistries.map(registry => [
       `borrowerIdentityRegistries.${registry.label}`,
-      registry.address,
+      registry.address
     ]),
-    ...config.roleProviderFactories.map((factory) => [
+    ...config.roleProviderFactories.map(factory => [
       `roleProviderFactories.${factory.label}`,
-      factory.address,
+      factory.address
     ]),
-    ...config.wrapperFactories.map((factory) => [
+    ...config.wrapperFactories.map(factory => [
       `wrapperFactories.${factory.label}`,
-      factory.address,
+      factory.address
     ]),
-    ...config.collateralFactories.map((factory) => [
+    ...config.collateralFactories.map(factory => [
       `collateralFactories.${factory.label}`,
-      factory.address,
+      factory.address
     ]),
     ...config.hooksTemplates.map((template, index) => [
       `hooksTemplates[${index}]`,
-      template.address,
-    ]),
+      template.address
+    ])
   ];
   for (const [name, address] of addressEntries) {
     const key = address.toLowerCase();
     if (allAddresses.has(key)) {
-      fail(context, `${name} duplicates address used by ${allAddresses.get(key)}`);
+      fail(
+        context,
+        `${name} duplicates address used by ${allAddresses.get(key)}`
+      );
     }
     allAddresses.set(key, name);
   }
 
-  const sourceNames = new Set(["WildcatArchController", "WildcatSanctionsSentinel"]);
+  const sourceNames = new Set([
+    "WildcatArchController",
+    "WildcatSanctionsSentinel"
+  ]);
   const indexedSources = [
     ...config.factories
-      .filter((factory) => factory.indexed)
-      .map((factory) =>
+      .filter(factory => factory.indexed)
+      .map(factory =>
         finalHooksFactoryDataSourceName(config, factory, abiFamilies)
       ),
     ...config.borrowerIdentityRegistries
-      .filter((registry) => registry.indexed)
-      .map((registry) => registry.manifestName),
+      .filter(registry => registry.indexed)
+      .map(registry => registry.manifestName),
     ...config.roleProviderFactories
-      .filter((factory) => factory.indexed)
-      .map((factory) => factory.manifestName),
+      .filter(factory => factory.indexed)
+      .map(factory => factory.manifestName),
     ...config.wrapperFactories
-      .filter((factory) => factory.indexed)
-      .map((factory) => finalWrapperFactoryName(config, factory)),
+      .filter(factory => factory.indexed)
+      .map(factory => finalWrapperFactoryName(config, factory)),
     ...config.collateralFactories
-      .filter((factory) => factory.indexed)
-      .map((factory) => finalCollateralFactoryName(config, factory)),
+      .filter(factory => factory.indexed)
+      .map(factory => finalCollateralFactoryName(config, factory))
   ];
   for (const name of indexedSources) {
     if (sourceNames.has(name)) {
-      fail(context, `generated manifest data-source name is duplicated: ${name}`);
+      fail(
+        context,
+        `generated manifest data-source name is duplicated: ${name}`
+      );
     }
     sourceNames.add(name);
   }
 
   assertObject(config.provenance, `${context}.provenance`);
   assertNonEmptyString(config.provenance.kind, `${context}.provenance.kind`);
-  assertNonEmptyString(config.provenance.source, `${context}.provenance.source`);
-  if (typeof config.provenance.sha256 !== "string" || !HASH_PATTERN.test(config.provenance.sha256)) {
+  assertNonEmptyString(
+    config.provenance.source,
+    `${context}.provenance.source`
+  );
+  if (
+    typeof config.provenance.sha256 !== "string" ||
+    !HASH_PATTERN.test(config.provenance.sha256)
+  ) {
     fail(`${context}.provenance.sha256`, "must be a lowercase SHA-256 digest");
   }
 
@@ -775,8 +932,8 @@ function loadAbiFamilies() {
 function listNetworks() {
   return fs
     .readdirSync(CHAINS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-    .map((entry) => entry.name.slice(0, -5))
+    .filter(entry => entry.isFile() && entry.name.endsWith(".json"))
+    .map(entry => entry.name.slice(0, -5))
     .sort();
 }
 
@@ -790,13 +947,13 @@ function loadChainConfig(network, options = {}) {
   }
   const abiFamilies = options.abiFamilies || loadAbiFamilies();
   return validateChainConfig(readJson(filePath), abiFamilies, {
-    expectedNetwork: network,
+    expectedNetwork: network
   });
 }
 
 function loadAllChainConfigs() {
   const abiFamilies = loadAbiFamilies();
-  const configs = listNetworks().map((network) =>
+  const configs = listNetworks().map(network =>
     loadChainConfig(network, { abiFamilies })
   );
   const chainIds = new Set();
@@ -816,19 +973,22 @@ function loadAllChainConfigs() {
 
 function canonicalJson(value) {
   if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalJson(entry)).join(",")}]`;
+    return `[${value.map(entry => canonicalJson(entry)).join(",")}]`;
   }
   if (value !== null && typeof value === "object") {
     return `{${Object.keys(value)
       .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
       .join(",")}}`;
   }
   return JSON.stringify(value);
 }
 
 function configDigest(config) {
-  return crypto.createHash("sha256").update(canonicalJson(config)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(canonicalJson(config))
+    .digest("hex");
 }
 
 module.exports = {
@@ -847,5 +1007,5 @@ module.exports = {
   loadAllChainConfigs,
   loadChainConfig,
   validateAbiFamilies,
-  validateChainConfig,
+  validateChainConfig
 };

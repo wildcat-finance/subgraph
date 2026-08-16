@@ -8,14 +8,15 @@ const {
   UNCRASHABLE_BASE_PATH,
   buildLegacyNetworks,
   buildManifest,
+  buildV25CompileFixture,
   buildUncrashableConfig,
   hooksTemplateContextKey,
-  renderOutputs,
+  renderOutputs
 } = require("./generate-manifest");
 const {
   loadAbiFamilies,
   loadAllChainConfigs,
-  loadChainConfig,
+  loadChainConfig
 } = require("./chain-config");
 
 function readYaml(filePath) {
@@ -23,11 +24,11 @@ function readYaml(filePath) {
 }
 
 function sourceByName(manifest, name) {
-  return manifest.dataSources.find((source) => source.name === name);
+  return manifest.dataSources.find(source => source.name === name);
 }
 
 function abiPath(mapping, name) {
-  return mapping.abis.find((abi) => abi.name === name)?.file;
+  return mapping.abis.find(abi => abi.name === name)?.file;
 }
 
 function hooksFactoryContextKey(address) {
@@ -59,12 +60,12 @@ test("renders every configured network deterministically without placeholders", 
     }
     assert.ok(
       first.manifest.dataSources.every(
-        (source) => source.network === config.graphNetwork
+        source => source.network === config.graphNetwork
       )
     );
     assert.ok(
       first.manifest.templates.every(
-        (template) => template.network === config.graphNetwork
+        template => template.network === config.graphNetwork
       )
     );
   }
@@ -73,7 +74,7 @@ test("renders every configured network deterministically without placeholders", 
 test("renders Sepolia historical factories, canonical aliases, mappings, and ABI family", () => {
   const { manifest } = renderOutputs("sepolia");
   assert.deepEqual(
-    manifest.dataSources.map((source) => source.name),
+    manifest.dataSources.map(source => source.name),
     [
       "WildcatMarketCollateralFactory",
       "Wildcat4626WrapperFactoryV1",
@@ -84,7 +85,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
       "HooksFactoryRevolvingPreview20260424",
       "HooksFactoryRevolving",
       "WildcatArchController",
-      "WildcatSanctionsSentinel",
+      "WildcatSanctionsSentinel"
     ]
   );
   assert.equal(
@@ -122,7 +123,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     "STANDARD|v2.5|hooks-sepolia-current|LEGACY|BASE|11363908|true|true|ACTIVE|standard-v2.5|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
   );
   assert.deepEqual(
-    Object.keys(standardFactory.context).filter((key) =>
+    Object.keys(standardFactory.context).filter(key =>
       key.startsWith("hooksFactory_")
     ),
     [hooksFactoryContextKey(standardFactory.source.address)]
@@ -134,7 +135,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     "OpenTermHooks|OpenTerm"
   );
   assert.equal(
-    Object.keys(standardFactory.context).filter((key) =>
+    Object.keys(standardFactory.context).filter(key =>
       key.startsWith("hooksTemplate_")
     ).length,
     10
@@ -149,19 +150,16 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
   );
   assert.equal(
-    Object.keys(sourceByName(manifest, "WildcatArchController").context).filter(
-      (key) => key.startsWith("hooksFactory_")
-    ).length,
+    Object.keys(
+      sourceByName(manifest, "WildcatArchController").context
+    ).filter(key => key.startsWith("hooksFactory_")).length,
     9
   );
   assert.equal(
     sourceByName(manifest, "HooksFactoryRevolving_20260419_233246"),
     undefined
   );
-  const wrapperFactory = sourceByName(
-    manifest,
-    "Wildcat4626WrapperFactory"
-  );
+  const wrapperFactory = sourceByName(manifest, "Wildcat4626WrapperFactory");
   assert.equal(
     wrapperFactory.source.address,
     "0x8a77449eaBB1522983cd700f002b5b191463378e"
@@ -196,34 +194,31 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     collateralFactory.context.moduleFactoryLabel.data,
     "collateral-v1"
   );
-  assert.equal(
-    collateralFactory.context.moduleFactoryGeneration.data,
-    "v1"
-  );
+  assert.equal(collateralFactory.context.moduleFactoryGeneration.data, "v1");
 
   assertDeclaresEntities(standardFactory.mapping, [
     "Borrower",
     "MarketEvent",
     "MarketEventCursor",
-    "MarketSnapshot",
+    "MarketSnapshot"
   ]);
   assertDeclaresEntities(
     sourceByName(manifest, "WildcatArchController").mapping,
     ["Borrower", "IndexerDeployment", "MarketEvent", "MarketEventCursor"]
   );
   assertDeclaresEntities(
-    manifest.templates.find((template) => template.name === "WildcatMarket")
+    manifest.templates.find(template => template.name === "WildcatMarket")
       .mapping,
     [
       "LenderAccountSnapshot",
       "MarketEvent",
       "MarketEventCursor",
       "MarketSnapshot",
-      "TokenDailyPrice",
+      "TokenDailyPrice"
     ]
   );
   assertDeclaresEntities(
-    manifest.templates.find((template) => template.name === "CombinedHooks")
+    manifest.templates.find(template => template.name === "CombinedHooks")
       .mapping,
     ["HooksNameUpdated", "MarketEvent", "MarketEventCursor", "MarketSnapshot"]
   );
@@ -234,14 +229,14 @@ test("feature flags remove unsupported Plasma sources without changing the core 
   const plasma = renderOutputs("plasma-mainnet").manifest;
 
   assert.deepEqual(
-    plasma.dataSources.map((source) => source.name),
+    plasma.dataSources.map(source => source.name),
     ["HooksFactory", "WildcatArchController", "WildcatSanctionsSentinel"]
   );
   assert.deepEqual(
-    plasma.templates.map((template) => template.name),
+    plasma.templates.map(template => template.name),
     mainnet.templates
-      .map((template) => template.name)
-      .filter((name) => name !== "SimpleMarketCollateralMultiParty")
+      .map(template => template.name)
+      .filter(name => name !== "SimpleMarketCollateralMultiParty")
   );
   assert.deepEqual(plasma.schema, mainnet.schema);
 });
@@ -253,7 +248,7 @@ test("legacy networks projection retains all inventory entries but aliases only 
 
   assert.equal(sepolia.hooksFactories.length, 9);
   assert.equal(
-    sepolia.hooksFactories.filter((factory) => factory.indexed).length,
+    sepolia.hooksFactories.filter(factory => factory.indexed).length,
     5
   );
   assert.equal(
@@ -270,13 +265,14 @@ test("legacy networks projection retains all inventory entries but aliases only 
   );
   assert.equal(
     sepolia.hooksFactories.find(
-      (factory) => factory.address === sepolia.contracts.HooksFactory.address
+      factory => factory.address === sepolia.contracts.HooksFactory.address
     ).name,
     "HooksFactory"
   );
   assert.equal(
     sepolia.hooksFactories.find(
-      (factory) => factory.address === sepolia.contracts.HooksFactoryRevolving.address
+      factory =>
+        factory.address === sepolia.contracts.HooksFactoryRevolving.address
     ).name,
     "HooksFactoryRevolving"
   );
@@ -288,17 +284,19 @@ test("deployment-target changes do not alter current compatibility aliases", () 
   const config = loadChainConfig("sepolia", { abiFamilies });
   const modified = JSON.parse(JSON.stringify(config));
   modified.factories.find(
-    (factory) => factory.label === "standard-v2.5"
+    factory => factory.label === "standard-v2.5"
   ).deploymentTarget = false;
-  modified.factories.find((factory) => factory.label === "standard-v2").deploymentTarget = true;
+  modified.factories.find(
+    factory => factory.label === "standard-v2"
+  ).deploymentTarget = true;
 
   const manifest = buildManifest(modified, abiFamilies, base);
   assert.equal(
     sourceByName(manifest, "HooksFactory").source.address,
-    config.factories.find((factory) => factory.label === "standard-v2.5").address
+    config.factories.find(factory => factory.label === "standard-v2.5").address
   );
   const standardTarget = modified.factories.find(
-    (factory) => factory.label === "standard-v2"
+    factory => factory.label === "standard-v2"
   );
   assert.match(
     contextData(
@@ -317,10 +315,7 @@ test("supports mixed hooked-market ABI adapters when core dynamic ABIs match", (
   modified.factories[0].abiFamily = "hooks-sepolia-current";
 
   const manifest = buildManifest(modified, abiFamilies, base);
-  const source = sourceByName(
-    manifest,
-    modified.factories[0].manifestName
-  );
+  const source = sourceByName(manifest, modified.factories[0].manifestName);
   assert.match(
     contextData(source, modified.factories[0].address),
     /\|hooks-sepolia-current\|LEGACY\|BASE\|/
@@ -333,20 +328,17 @@ test("selects the hard-cut mappings from the deployment ABI family", () => {
   const config = loadChainConfig("sepolia", { abiFamilies });
   const modified = JSON.parse(JSON.stringify(config));
   const standard = modified.factories.find(
-    (factory) => factory.label === "standard-v2.5"
+    factory => factory.label === "standard-v2.5"
   );
   const revolving = modified.factories.find(
-    (factory) => factory.label === "revolving-v2.5"
+    factory => factory.label === "revolving-v2.5"
   );
   standard.abiFamily = "hooks-v2-5";
   revolving.abiFamily = "hooks-v2-5";
 
   const manifest = buildManifest(modified, abiFamilies, base);
   const legacyTypeAnchor = sourceByName(manifest, "HooksFactory");
-  const standardSource = sourceByName(
-    manifest,
-    "HooksFactoryStandardV2_5"
-  );
+  const standardSource = sourceByName(manifest, "HooksFactoryStandardV2_5");
   const revolvingSource = sourceByName(manifest, "HooksFactoryRevolving");
   assert.equal(legacyTypeAnchor.mapping.file, "./src/hooks-factory.ts");
   assert.equal(
@@ -364,8 +356,8 @@ test("selects the hard-cut mappings from the deployment ABI family", () => {
     /\|hooks-v2-5\|V2_5\|BASE\|/
   );
   assert.ok(
-    !standardSource.mapping.eventHandlers.some(
-      ({ event }) => event.startsWith("RevolvingMarketDeployed")
+    !standardSource.mapping.eventHandlers.some(({ event }) =>
+      event.startsWith("RevolvingMarketDeployed")
     )
   );
   assert.ok(
@@ -381,26 +373,69 @@ test("selects the hard-cut mappings from the deployment ABI family", () => {
     "MarketDeploymentConfig",
     "MarketHooksData",
     "PendingMarketDeployment",
-    "RevolvingMarketDeployment",
+    "RevolvingMarketDeployment"
   ]);
   assertDeclaresEntities(
-    manifest.templates.find(
-      (template) => template.name === "WildcatMarketV2_5"
-    ).mapping,
+    manifest.templates.find(template => template.name === "WildcatMarketV2_5")
+      .mapping,
     ["MarketBorrowerChange", "MarketWrapperRegistration", "DrawnAmountUpdate"]
   );
   assertDeclaresEntities(
-    manifest.templates.find(
-      (template) => template.name === "CombinedHooksV2_5"
-    ).mapping,
+    manifest.templates.find(template => template.name === "CombinedHooksV2_5")
+      .mapping,
     ["HookAdministratorChange", "RoleProviderInstance"]
   );
   assertDeclaresEntities(
     manifest.templates.find(
-      (template) => template.name === "AccessListRoleProvider"
+      template => template.name === "AccessListRoleProvider"
     ).mapping,
     ["RoleProviderAdministratorChange"]
   );
+});
+
+test("compiles every known v2.5 role-provider factory and mutable provider", () => {
+  const manifest = buildV25CompileFixture();
+  const expectedFactories = [
+    [
+      "AccessListRoleProviderFactoryV2_5Fixture",
+      "./src/access-list-role-provider-factory.ts"
+    ],
+    [
+      "MerkleRoleProviderFactoryV2_5Fixture",
+      "./src/role-provider-factories.ts"
+    ],
+    ["ERC20RoleProviderFactoryV2_5Fixture", "./src/role-provider-factories.ts"],
+    [
+      "ERC4626AssetsRoleProviderFactoryV2_5Fixture",
+      "./src/role-provider-factories.ts"
+    ],
+    [
+      "ERC721RoleProviderFactoryV2_5Fixture",
+      "./src/role-provider-factories.ts"
+    ],
+    [
+      "ERC1155RoleProviderFactoryV2_5Fixture",
+      "./src/role-provider-factories.ts"
+    ]
+  ];
+  for (const [name, mappingFile] of expectedFactories) {
+    const source = sourceByName(manifest, name);
+    assert.ok(source, `${name} is missing`);
+    assert.equal(source.mapping.file, mappingFile);
+    assertDeclaresEntities(source.mapping, [
+      "RoleProviderFactory",
+      "RoleProviderInstance"
+    ]);
+  }
+
+  const merkleTemplate = manifest.templates.find(
+    template => template.name === "MerkleRoleProvider"
+  );
+  assert.ok(merkleTemplate);
+  assertDeclaresEntities(merkleTemplate.mapping, [
+    "RoleProviderAdministratorChange",
+    "RoleProviderRootChange"
+  ]);
 });
 
 test("keeps a HooksFactory type anchor on a v2.5-only chain", () => {
@@ -410,14 +445,13 @@ test("keeps a HooksFactory type anchor on a v2.5-only chain", () => {
   const modified = JSON.parse(JSON.stringify(config));
   for (const factory of modified.factories) {
     factory.indexed =
-      factory.label === "standard-v2.5" ||
-      factory.label === "revolving-v2.5";
+      factory.label === "standard-v2.5" || factory.label === "revolving-v2.5";
   }
   const standard = modified.factories.find(
-    (factory) => factory.label === "standard-v2.5"
+    factory => factory.label === "standard-v2.5"
   );
   const revolving = modified.factories.find(
-    (factory) => factory.label === "revolving-v2.5"
+    factory => factory.label === "revolving-v2.5"
   );
   standard.abiFamily = "hooks-v2-5";
   revolving.abiFamily = "hooks-v2-5";
@@ -431,7 +465,7 @@ test("keeps a HooksFactory type anchor on a v2.5-only chain", () => {
   );
   assert.equal(
     abiPath(
-      manifest.templates.find((template) => template.name === "WildcatMarket")
+      manifest.templates.find(template => template.name === "WildcatMarket")
         .mapping,
       "WildcatMarket"
     ),
@@ -446,6 +480,6 @@ test("renders the uncrashable network selection structurally", () => {
     readYaml(UNCRASHABLE_BASE_PATH)
   );
   assert.deepEqual(generated.networkConfig.entityIdPrefixes[0].networks, [
-    "plasma-testnet",
+    "plasma-testnet"
   ]);
 });

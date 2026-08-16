@@ -2087,3 +2087,30 @@ templates:
         - event: MemberRemoved(indexed address,indexed address)
           handler: handleMemberRemoved
       file: ./src/access-list-role-provider.ts
+  - kind: ethereum
+    name: MerkleRoleProvider
+    network: sepolia
+    source:
+      abi: MerkleRoleProvider
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderInstance
+        - RoleProviderAdministratorChange
+        - RoleProviderRootChange
+      abis:
+        - name: MerkleRoleProvider
+          file: ./abis/v2.5/MerkleRoleProvider.json
+      eventHandlers:
+        - event: AdministratorTransferCancelled(indexed address,indexed address)
+          handler: handleAdministratorTransferCancelled
+        - event: AdministratorTransferRequested(indexed address,indexed address,indexed
+            address)
+          handler: handleAdministratorTransferRequested
+        - event: AdministratorTransferred(indexed address,indexed address)
+          handler: handleAdministratorTransferred
+        - event: RootUpdated(indexed address,bytes32,bytes32)
+          handler: handleRootUpdated
+      file: ./src/merkle-role-provider.ts

@@ -13,7 +13,7 @@ const {
   finalWrapperFactoryName,
   loadAbiFamilies,
   loadAllChainConfigs,
-  loadChainConfig,
+  loadChainConfig
 } = require("./chain-config");
 
 const MANIFEST_BASE_PATH = path.join(REPO_ROOT, "config", "manifest.base.yaml");
@@ -38,7 +38,7 @@ function readYaml(filePath) {
 }
 
 function namedEntry(entries, name, context) {
-  const matches = entries.filter((entry) => entry.name === name);
+  const matches = entries.filter(entry => entry.name === name);
   if (matches.length !== 1) {
     throw new Error(
       `${context} must contain exactly one ${name} prototype; found ${matches.length}`
@@ -59,23 +59,22 @@ function sharedAbiFamily(config, abiFamilies) {
   const familyNames = [
     ...new Set(
       config.factories
-        .filter((factory) => factory.indexed)
-        .map((factory) => factory.abiFamily)
+        .filter(factory => factory.indexed)
+        .map(factory => factory.abiFamily)
         .filter(
-          (familyName) =>
-            abiFamilies[familyName].eventGeneration === "LEGACY"
+          familyName => abiFamilies[familyName].eventGeneration === "LEGACY"
         )
-    ),
+    )
   ];
   if (familyNames.length === 0) {
     const fallbackLegacyFamily = Object.values(abiFamilies).find(
-      (family) => family.eventGeneration === "LEGACY"
+      family => family.eventGeneration === "LEGACY"
     );
     if (fallbackLegacyFamily) {
       return fallbackLegacyFamily;
     }
     const firstIndexedFactory = config.factories.find(
-      (factory) => factory.indexed
+      factory => factory.indexed
     );
     if (!firstIndexedFactory) {
       throw new Error(
@@ -89,7 +88,9 @@ function sharedAbiFamily(config, abiFamilies) {
   for (const familyName of familyNames.slice(1)) {
     if (JSON.stringify(abiFamilies[familyName].abis) !== expected) {
       throw new Error(
-        `chainConfig.${config.network}: legacy indexed hooks factories may use different hooked-market adapters, but must share the core mapping ABIs used by legacy dynamic templates; found ${familyNames.join(
+        `chainConfig.${
+          config.network
+        }: legacy indexed hooks factories may use different hooked-market adapters, but must share the core mapping ABIs used by legacy dynamic templates; found ${familyNames.join(
           ", "
         )}`
       );
@@ -115,7 +116,7 @@ function stringContext(data) {
 function mergeContext(dataSource, entries) {
   dataSource.context = {
     ...(dataSource.context || {}),
-    ...entries,
+    ...entries
   };
 }
 
@@ -127,12 +128,18 @@ function addDeploymentContext(dataSource, config) {
     deploymentChainId: stringContext(String(config.chainId)),
     deploymentSchemaRelease: stringContext(config.schemaRelease),
     deploymentConfigDigest: stringContext(configDigest(config)),
-    deploymentArchController: stringContext(config.anchors.archController.address),
+    deploymentArchController: stringContext(
+      config.anchors.archController.address
+    ),
     deploymentSanctionsSentinel: stringContext(
       config.anchors.sanctionsSentinel.address
     ),
-    deploymentAnalyticsEnabled: stringContext(String(config.features.analytics)),
-    deploymentCollateralEnabled: stringContext(String(config.features.collateral)),
+    deploymentAnalyticsEnabled: stringContext(
+      String(config.features.analytics)
+    ),
+    deploymentCollateralEnabled: stringContext(
+      String(config.features.collateral)
+    ),
     deploymentWrappersEnabled: stringContext(String(config.features.wrappers)),
     pricingMode: stringContext(pricing.mode),
     pricingFeedRegistry: stringContext(pricing.feedRegistry || ""),
@@ -142,13 +149,12 @@ function addDeploymentContext(dataSource, config) {
     pricingEthUsdFeed: stringContext(pricing.bridgeFeeds?.ethUsd || ""),
     pricingBtcUsdFeed: stringContext(pricing.bridgeFeeds?.btcUsd || ""),
     pricingStablecoins: stringContext(
-      pricing.stablecoins.map((address) => address.toLowerCase()).join(",")
+      pricing.stablecoins.map(address => address.toLowerCase()).join(",")
     ),
     pricingDirectFeeds: stringContext(
       pricing.directFeeds
         .map(
-          ({ token, feed }) =>
-            `${token.toLowerCase()}=${feed.toLowerCase()}`
+          ({ token, feed }) => `${token.toLowerCase()}=${feed.toLowerCase()}`
         )
         .join(",")
     ),
@@ -159,7 +165,7 @@ function addDeploymentContext(dataSource, config) {
             `${symbol}=${priceUSD}=${String(usdPeg)}`
         )
         .join(",")
-    ),
+    )
   });
 }
 
@@ -179,7 +185,7 @@ function hooksFactoryContextValue(config, factory, abiFamilies) {
     String(factory.deploymentTarget),
     factory.lifecycle.toUpperCase(),
     factory.label,
-    config.anchors.archController.address,
+    config.anchors.archController.address
   ].join("|");
 }
 
@@ -187,9 +193,9 @@ function addHooksFactoryContext(dataSource, config, factories, abiFamilies) {
   mergeContext(
     dataSource,
     Object.fromEntries(
-      factories.map((factory) => [
+      factories.map(factory => [
         hooksFactoryContextKey(factory.address),
-        stringContext(hooksFactoryContextValue(config, factory, abiFamilies)),
+        stringContext(hooksFactoryContextValue(config, factory, abiFamilies))
       ])
     )
   );
@@ -203,9 +209,9 @@ function addHooksTemplateContext(dataSource, templates) {
   mergeContext(
     dataSource,
     Object.fromEntries(
-      templates.map((template) => [
+      templates.map(template => [
         hooksTemplateContextKey(template.address),
-        stringContext(`${template.version}|${template.kind}`),
+        stringContext(`${template.version}|${template.kind}`)
       ])
     )
   );
@@ -220,7 +226,7 @@ function addOptionalModuleFactoryContext(dataSource, factory) {
     moduleFactoryDeploymentTarget: stringContext(
       String(factory.deploymentTarget || false)
     ),
-    moduleFactoryLifecycle: stringContext(factory.lifecycle.toUpperCase()),
+    moduleFactoryLifecycle: stringContext(factory.lifecycle.toUpperCase())
   });
 }
 
@@ -247,10 +253,19 @@ function buildManifest(config, abiFamilies, baseManifest) {
     "WildcatBorrowerIdentityRegistry",
     "manifest base dataSources"
   );
-  const roleProviderFactoryPrototype = namedEntry(
-    prototypes,
-    "AccessListRoleProviderFactory",
-    "manifest base dataSources"
+  const roleProviderFactoryPrototypeNames = {
+    ACCESS_LIST: "AccessListRoleProviderFactory",
+    MERKLE: "MerkleRoleProviderFactory",
+    ERC20: "ERC20RoleProviderFactory",
+    ERC4626_ASSETS: "ERC4626AssetsRoleProviderFactory",
+    ERC721: "ERC721RoleProviderFactory",
+    ERC1155: "ERC1155RoleProviderFactory"
+  };
+  const roleProviderFactoryPrototypes = Object.fromEntries(
+    Object.entries(roleProviderFactoryPrototypeNames).map(([kind, name]) => [
+      kind,
+      namedEntry(prototypes, name, "manifest base dataSources")
+    ])
   );
   const archControllerPrototype = namedEntry(
     prototypes,
@@ -266,7 +281,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
 
   const dataSources = [];
   for (const factory of config.collateralFactories.filter(
-    (candidate) => candidate.indexed
+    candidate => candidate.indexed
   )) {
     const dataSource = configureDataSource(
       collateralPrototype,
@@ -280,7 +295,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
   }
 
   for (const factory of config.wrapperFactories.filter(
-    (candidate) => candidate.indexed
+    candidate => candidate.indexed
   )) {
     const dataSource = configureDataSource(
       wrapperPrototype,
@@ -294,18 +309,18 @@ function buildManifest(config, abiFamilies, baseManifest) {
   }
 
   const indexedHooksFactories = config.factories.filter(
-    (candidate) => candidate.indexed
+    candidate => candidate.indexed
   );
   const primaryStandardLabel =
     config.compatibility.canonicalFactoryByMarketKind.STANDARD;
   const primaryStandardFactory = indexedHooksFactories.find(
-    (factory) => factory.label === primaryStandardLabel
+    factory => factory.label === primaryStandardLabel
   );
   const orderedHooksFactories = [
     primaryStandardFactory,
     ...indexedHooksFactories.filter(
-      (factory) => factory !== primaryStandardFactory
-    ),
+      factory => factory !== primaryStandardFactory
+    )
   ];
   for (const factory of orderedHooksFactories) {
     const abiFamily = abiFamilies[factory.abiFamily];
@@ -320,59 +335,60 @@ function buildManifest(config, abiFamilies, baseManifest) {
       dataSource.mapping.eventHandlers = [
         {
           event: "ChangedSpherexEngineAddress(address,address)",
-          handler: "handleChangedSpherexEngineAddress",
+          handler: "handleChangedSpherexEngineAddress"
         },
         {
           event: "ChangedSpherexOperator(address,address)",
-          handler: "handleChangedSpherexOperator",
+          handler: "handleChangedSpherexOperator"
         },
         {
           event:
             "HooksInstanceAdministratorTransferred(indexed address,indexed address,indexed address)",
-          handler: "handleHooksInstanceAdministratorTransferred",
+          handler: "handleHooksInstanceAdministratorTransferred"
         },
         {
           event:
             "HooksInstanceDeployed(indexed address,indexed address,indexed address,address,string,string)",
-          handler: "handleHooksInstanceDeployed",
+          handler: "handleHooksInstanceDeployed"
         },
         {
-          event: "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
-          handler: "handleHooksInstanceRoleProviders",
+          event:
+            "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
+          handler: "handleHooksInstanceRoleProviders"
         },
         {
           event:
             "HooksTemplateAdded(indexed address,indexed address,string,address,address,uint80,uint16)",
-          handler: "handleHooksTemplateAdded",
+          handler: "handleHooksTemplateAdded"
         },
         {
           event: "HooksTemplateDisabled(indexed address,indexed address)",
-          handler: "handleHooksTemplateDisabled",
+          handler: "handleHooksTemplateDisabled"
         },
         {
           event:
             "HooksTemplateFeesUpdated(indexed address,indexed address,address,address,address,address,uint80,uint80,uint16,uint16)",
-          handler: "handleHooksTemplateFeesUpdated",
+          handler: "handleHooksTemplateFeesUpdated"
         },
         {
           event:
             "MarketDeployed(indexed address,indexed address,indexed address,address,address,address,string,string,address,uint256,uint256)",
-          handler: "handleMarketDeployed",
+          handler: "handleMarketDeployed"
         },
         {
           event:
             "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
-          handler: "handleMarketDeploymentConfig",
+          handler: "handleMarketDeploymentConfig"
         },
         {
           event: "MarketHooksData(indexed address,bytes)",
-          handler: "handleMarketHooksData",
-        },
+          handler: "handleMarketHooksData"
+        }
       ];
       if (factory.marketKind === "REVOLVING") {
         dataSource.mapping.eventHandlers.push({
           event: "RevolvingMarketDeployed(indexed address,uint256)",
-          handler: "handleRevolvingMarketDeployed",
+          handler: "handleRevolvingMarketDeployed"
         });
       }
     } else {
@@ -388,7 +404,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
   }
 
   for (const registry of config.borrowerIdentityRegistries.filter(
-    (candidate) => candidate.indexed
+    candidate => candidate.indexed
   )) {
     const dataSource = configureDataSource(
       borrowerIdentityRegistryPrototype,
@@ -401,8 +417,15 @@ function buildManifest(config, abiFamilies, baseManifest) {
   }
 
   for (const factory of config.roleProviderFactories.filter(
-    (candidate) => candidate.indexed
+    candidate => candidate.indexed
   )) {
+    const roleProviderFactoryPrototype =
+      roleProviderFactoryPrototypes[factory.kind];
+    if (!roleProviderFactoryPrototype) {
+      throw new Error(
+        `chainConfig.${config.network}.roleProviderFactories.${factory.label}: unsupported kind ${factory.kind}`
+      );
+    }
     const dataSource = configureDataSource(
       roleProviderFactoryPrototype,
       config,
@@ -420,12 +443,7 @@ function buildManifest(config, abiFamilies, baseManifest) {
     "WildcatArchController"
   );
   setAbiFiles(archController.mapping, defaultAbiFamily);
-  addHooksFactoryContext(
-    archController,
-    config,
-    config.factories,
-    abiFamilies
-  );
+  addHooksFactoryContext(archController, config, config.factories, abiFamilies);
   dataSources.push(archController);
 
   const sanctionsSentinel = configureDataSource(
@@ -440,11 +458,11 @@ function buildManifest(config, abiFamilies, baseManifest) {
   manifest.dataSources = dataSources;
   manifest.templates = baseManifest.templates
     .filter(
-      (template) =>
+      template =>
         config.features.collateral ||
         template.name !== "SimpleMarketCollateralMultiParty"
     )
-    .map((template) => {
+    .map(template => {
       const configured = clone(template);
       configured.network = config.graphNetwork;
       setAbiFiles(configured.mapping, defaultAbiFamily);
@@ -468,14 +486,14 @@ function buildUncrashableConfig(config, baseConfig) {
 function addressAndStartBlock(deployment) {
   return {
     address: deployment.address,
-    startBlock: deployment.startBlock,
+    startBlock: deployment.startBlock
   };
 }
 
 function canonicalFactory(config, marketKind) {
   const label = config.compatibility.canonicalFactoryByMarketKind[marketKind];
   if (!label) return null;
-  return config.factories.find((factory) => factory.label === label);
+  return config.factories.find(factory => factory.label === label);
 }
 
 function buildLegacyNetworkConfig(config) {
@@ -483,7 +501,7 @@ function buildLegacyNetworkConfig(config) {
     WildcatArchController: addressAndStartBlock(config.anchors.archController),
     WildcatSanctionsSentinel: addressAndStartBlock(
       config.anchors.sanctionsSentinel
-    ),
+    )
   };
 
   const standardFactory = canonicalFactory(config, "STANDARD");
@@ -495,11 +513,10 @@ function buildLegacyNetworkConfig(config) {
     contracts.HooksFactoryRevolving = addressAndStartBlock(revolvingFactory);
   }
 
-  const primaryCollateralLabel =
-    config.compatibility.primaryCollateralFactory;
+  const primaryCollateralLabel = config.compatibility.primaryCollateralFactory;
   if (primaryCollateralLabel) {
     const primaryCollateral = config.collateralFactories.find(
-      (factory) => factory.label === primaryCollateralLabel
+      factory => factory.label === primaryCollateralLabel
     );
     contracts.CollateralFactory = addressAndStartBlock(primaryCollateral);
   }
@@ -507,7 +524,7 @@ function buildLegacyNetworkConfig(config) {
   const primaryWrapperLabel = config.compatibility.primaryWrapperFactory;
   if (primaryWrapperLabel) {
     const primaryWrapper = config.wrapperFactories.find(
-      (factory) => factory.label === primaryWrapperLabel
+      factory => factory.label === primaryWrapperLabel
     );
     contracts.Wildcat4626WrapperFactory = addressAndStartBlock(primaryWrapper);
   }
@@ -515,38 +532,45 @@ function buildLegacyNetworkConfig(config) {
   return {
     name: config.graphNetwork,
     contracts,
-    hooksFactories: config.factories.map((factory) => ({
+    hooksFactories: config.factories.map(factory => ({
       name: finalHooksFactoryName(config, factory),
       marketType: factory.marketKind === "REVOLVING" ? "revolving" : "legacy",
       address: factory.address,
       startBlock: factory.startBlock,
-      indexed: factory.indexed,
+      indexed: factory.indexed
     })),
-    wrapperFactories: config.wrapperFactories.map((factory) => ({
+    wrapperFactories: config.wrapperFactories.map(factory => ({
       name: finalWrapperFactoryName(config, factory),
       address: factory.address,
       startBlock: factory.startBlock,
-      indexed: factory.indexed,
-    })),
+      indexed: factory.indexed
+    }))
   };
 }
 
 function buildLegacyNetworks(configs) {
   return Object.fromEntries(
-    configs.map((config) => [config.network, buildLegacyNetworkConfig(config)])
+    configs.map(config => [config.network, buildLegacyNetworkConfig(config)])
   );
 }
 
 function renderYaml(value, config) {
-  return `${GENERATED_YAML_HEADER}# Network: ${config.network}\n# Config digest: ${configDigest(
-    config
-  )}\n${YAML.stringify(value, { indent: 2, lineWidth: 0 })}`;
+  return `${GENERATED_YAML_HEADER}# Network: ${
+    config.network
+  }\n# Config digest: ${configDigest(config)}\n${YAML.stringify(value, {
+    indent: 2,
+    lineWidth: 0
+  })}`;
 }
 
 function renderOutputs(network) {
   const { abiFamilies, configs } = loadAllChainConfigs();
   const config = loadChainConfig(network, { abiFamilies });
-  const manifest = buildManifest(config, abiFamilies, readYaml(MANIFEST_BASE_PATH));
+  const manifest = buildManifest(
+    config,
+    abiFamilies,
+    readYaml(MANIFEST_BASE_PATH)
+  );
   const uncrashable = buildUncrashableConfig(
     config,
     readYaml(UNCRASHABLE_BASE_PATH)
@@ -560,11 +584,8 @@ function renderOutputs(network) {
     files: new Map([
       [MANIFEST_OUTPUT_PATH, renderYaml(manifest, config)],
       [UNCRASHABLE_OUTPUT_PATH, renderYaml(uncrashable, config)],
-      [
-        NETWORKS_OUTPUT_PATH,
-        `${JSON.stringify(legacyNetworks, null, 2)}\n`,
-      ],
-    ]),
+      [NETWORKS_OUTPUT_PATH, `${JSON.stringify(legacyNetworks, null, 2)}\n`]
+    ])
   };
 }
 
@@ -574,7 +595,7 @@ function buildV25CompileFixture() {
   for (const marketKind of ["STANDARD", "REVOLVING"]) {
     const label = config.compatibility.canonicalFactoryByMarketKind[marketKind];
     const factory = config.factories.find(
-      (candidate) => candidate.label === label
+      candidate => candidate.label === label
     );
     factory.abiFamily = "hooks-v2-5";
   }
@@ -585,22 +606,71 @@ function buildV25CompileFixture() {
     address: "0x000000000000000000000000000000000000f001",
     startBlock: 0,
     indexed: true,
-    lifecycle: "active",
+    lifecycle: "active"
   });
   config.roleProviderFactories.push({
     label: "access-list-role-provider-v2.5-fixture",
     manifestName: "AccessListRoleProviderFactoryV2_5Fixture",
+    kind: "ACCESS_LIST",
     generation: "v2.5",
     address: "0x000000000000000000000000000000000000f002",
     startBlock: 0,
     indexed: true,
-    lifecycle: "active",
+    lifecycle: "active"
   });
-  return buildManifest(
-    config,
-    abiFamilies,
-    readYaml(MANIFEST_BASE_PATH)
+  config.roleProviderFactories.push(
+    {
+      label: "merkle-role-provider-v2.5-fixture",
+      manifestName: "MerkleRoleProviderFactoryV2_5Fixture",
+      kind: "MERKLE",
+      generation: "v2.5",
+      address: "0x000000000000000000000000000000000000f003",
+      startBlock: 0,
+      indexed: true,
+      lifecycle: "active"
+    },
+    {
+      label: "erc20-role-provider-v2.5-fixture",
+      manifestName: "ERC20RoleProviderFactoryV2_5Fixture",
+      kind: "ERC20",
+      generation: "v2.5",
+      address: "0x000000000000000000000000000000000000f004",
+      startBlock: 0,
+      indexed: true,
+      lifecycle: "active"
+    },
+    {
+      label: "erc4626-assets-role-provider-v2.5-fixture",
+      manifestName: "ERC4626AssetsRoleProviderFactoryV2_5Fixture",
+      kind: "ERC4626_ASSETS",
+      generation: "v2.5",
+      address: "0x000000000000000000000000000000000000f005",
+      startBlock: 0,
+      indexed: true,
+      lifecycle: "active"
+    },
+    {
+      label: "erc721-role-provider-v2.5-fixture",
+      manifestName: "ERC721RoleProviderFactoryV2_5Fixture",
+      kind: "ERC721",
+      generation: "v2.5",
+      address: "0x000000000000000000000000000000000000f006",
+      startBlock: 0,
+      indexed: true,
+      lifecycle: "active"
+    },
+    {
+      label: "erc1155-role-provider-v2.5-fixture",
+      manifestName: "ERC1155RoleProviderFactoryV2_5Fixture",
+      kind: "ERC1155",
+      generation: "v2.5",
+      address: "0x000000000000000000000000000000000000f007",
+      startBlock: 0,
+      indexed: true,
+      lifecycle: "active"
+    }
   );
+  return buildManifest(config, abiFamilies, readYaml(MANIFEST_BASE_PATH));
 }
 
 function writeGeneratedFile(filePath, content, check) {
@@ -610,7 +680,10 @@ function writeGeneratedFile(filePath, content, check) {
   if (current === content) return false;
   if (check) {
     throw new Error(
-      `${path.relative(REPO_ROOT, filePath)} is stale; run yarn netconfig <network>`
+      `${path.relative(
+        REPO_ROOT,
+        filePath
+      )} is stale; run yarn netconfig <network>`
     );
   }
   fs.writeFileSync(filePath, content);
@@ -631,7 +704,7 @@ function generate(network, options = {}) {
 
 function parseArgs(argv) {
   const check = argv.includes("--check");
-  const positional = argv.filter((argument) => argument !== "--check");
+  const positional = argv.filter(argument => argument !== "--check");
   if (positional.length !== 1) {
     throw new Error(
       "Usage: node scripts/generate-manifest.js <network> [--check]"
@@ -672,5 +745,5 @@ module.exports = {
   buildUncrashableConfig,
   generate,
   hooksTemplateContextKey,
-  renderOutputs,
+  renderOutputs
 };

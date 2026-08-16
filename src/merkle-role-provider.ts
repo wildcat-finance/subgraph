@@ -2,18 +2,16 @@ import {
   AdministratorTransferCancelled,
   AdministratorTransferRequested,
   AdministratorTransferred,
-  MemberAdded,
-  MemberRemoved
-} from "../generated/templates/AccessListRoleProvider/AccessListRoleProvider";
-import {
-  getOrCreateRoleProviderInstance,
-  setRoleProviderMember
-} from "./role-provider-domain";
+  RootUpdated
+} from "../generated/templates/MerkleRoleProvider/MerkleRoleProvider";
+import { RoleProviderRootChange } from "../generated/schema";
 import {
   recordAdministratorTransferCancelled,
   recordAdministratorTransferRequested,
   recordAdministratorTransferred
 } from "./managed-role-provider-domain";
+import { getOrCreateRoleProviderInstance } from "./role-provider-domain";
+import { generateEventId } from "./utils";
 
 export function handleAdministratorTransferRequested(
   event: AdministratorTransferRequested
@@ -46,24 +44,19 @@ export function handleAdministratorTransferred(
   );
 }
 
-export function handleMemberAdded(event: MemberAdded): void {
+export function handleRootUpdated(event: RootUpdated): void {
   let provider = getOrCreateRoleProviderInstance(event.address);
-  setRoleProviderMember(
-    event,
-    provider,
-    event.params.account,
-    event.params.administrator,
-    true
-  );
-}
+  provider.root = event.params.newRoot;
+  provider.save();
 
-export function handleMemberRemoved(event: MemberRemoved): void {
-  let provider = getOrCreateRoleProviderInstance(event.address);
-  setRoleProviderMember(
-    event,
-    provider,
-    event.params.account,
-    event.params.administrator,
-    false
-  );
+  let change = new RoleProviderRootChange(generateEventId(event));
+  change.provider = provider.id;
+  change.administrator = event.params.administrator;
+  change.previousRoot = event.params.previousRoot;
+  change.newRoot = event.params.newRoot;
+  change.blockNumber = event.block.number;
+  change.blockTimestamp = event.block.timestamp;
+  change.transactionHash = event.transaction.hash;
+  change.blockLogIndex = event.logIndex;
+  change.save();
 }

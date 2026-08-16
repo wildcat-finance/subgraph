@@ -59,6 +59,11 @@ enum AdministratorChangeKind {
 
 enum RoleProviderKind {
   ACCESS_LIST
+  MERKLE
+  ERC20
+  ERC4626_ASSETS
+  ERC721
+  ERC1155
   UNKNOWN
 }
 
@@ -311,7 +316,8 @@ type BorrowerAccountFactory @entity {
   address: Bytes!
   isApproved: Boolean!
   accounts: [BorrowerAccount!]! @derivedFrom(field: "accountFactory")
-  changes: [BorrowerAccountFactoryChange!]! @derivedFrom(field: "accountFactory")
+  changes: [BorrowerAccountFactoryChange!]!
+    @derivedFrom(field: "accountFactory")
 }
 
 type BorrowerAccountFactoryChange @entity(immutable: true) {
@@ -725,8 +731,15 @@ type RoleProviderInstance @entity {
   administrator: Bytes
   pendingAdministrator: Bytes
   deployer: Bytes
-  deploymentFactory: AccessListRoleProviderFactory
+  deploymentFactory: RoleProviderFactory
   salt: Bytes
+  root: Bytes
+  token: Bytes
+  vault: Bytes
+  minBalance: BigInt
+  minAssets: BigInt
+  tokenId: BigInt
+  skipInterfaceCheck: Boolean
   deployedAtBlock: BigInt
   deployedAtTimestamp: BigInt
   deployedAtTransaction: Bytes
@@ -737,11 +750,19 @@ type RoleProviderInstance @entity {
     @derivedFrom(field: "provider")
   membershipChanges: [RoleProviderMembershipChange!]!
     @derivedFrom(field: "provider")
+  rootChanges: [RoleProviderRootChange!]! @derivedFrom(field: "provider")
 }
 
-type AccessListRoleProviderFactory @entity {
+type RoleProviderFactory @entity {
   id: ID! # factory address
   address: Bytes!
+  kind: RoleProviderKind!
+  label: String!
+  generation: String!
+  configuredStartBlock: BigInt!
+  indexed: Boolean!
+  lifecycle: FactoryLifecycle!
+  configured: Boolean!
   eventIndex: Int!
   providers: [RoleProviderInstance!]! @derivedFrom(field: "deploymentFactory")
 }
@@ -781,6 +802,18 @@ type RoleProviderAdministratorChange @entity(immutable: true) {
   previousPendingAdministrator: Bytes
   pendingAdministrator: Bytes
   cancelledPendingAdministrator: Bytes
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+type RoleProviderRootChange @entity(immutable: true) {
+  id: ID! # transaction hash and log index
+  provider: RoleProviderInstance!
+  administrator: Bytes!
+  previousRoot: Bytes!
+  newRoot: Bytes!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -1147,8 +1180,7 @@ type HooksTemplateRegistration @entity {
   originationFeeAmount: BigInt!
   deployedInstances: [HooksInstanceDeployed!]!
     @derivedFrom(field: "templateRegistration")
-  hooksInstances: [HooksInstance!]!
-    @derivedFrom(field: "templateRegistration")
+  hooksInstances: [HooksInstance!]! @derivedFrom(field: "templateRegistration")
   isEnabled: Boolean!
   createdAtBlock: BigInt!
   createdAtTimestamp: BigInt!
@@ -1524,8 +1556,7 @@ type Wildcat4626WrapperFactory @entity {
   configured: Boolean!
   eventIndex: Int!
   wrappers: [Wildcat4626Wrapper!]! @derivedFrom(field: "factory")
-  deployedEvents: [Wildcat4626WrapperDeployed!]!
-    @derivedFrom(field: "factory")
+  deployedEvents: [Wildcat4626WrapperDeployed!]! @derivedFrom(field: "factory")
 }
 
 type Wildcat4626Wrapper @entity {
@@ -1748,7 +1779,8 @@ type Market @entity {
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
   borrowerChanges: [MarketBorrowerChange!]! @derivedFrom(field: "market")
   drawnAmountUpdates: [DrawnAmountUpdate!]! @derivedFrom(field: "market")
-  wrapperRegistrations: [MarketWrapperRegistration!]! @derivedFrom(field: "market")
+  wrapperRegistrations: [MarketWrapperRegistration!]!
+    @derivedFrom(field: "market")
 
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
   periodicTermUpdatedRecords: [PeriodicTermUpdated!]!
@@ -1828,7 +1860,6 @@ type MarketSnapshot @entity {
 
 type ProtocolStats @entity {
   id: ID! # "PROTOCOL_STATS"
-
   # Cumulative USD all-time
   totalDepositedUSD: BigDecimal!
   totalBorrowedUSD: BigDecimal!
@@ -2497,8 +2528,10 @@ type SimpleCollateralContract @entity {
   createdAtTimestamp: BigInt!
   createdAtTransaction: Bytes!
   createdAtLogIndex: BigInt!
-  creation: SimpleCollateralContractCreated @derivedFrom(field: "collateralContract")
-  snapshot: SimpleCollateralContractSnapshot @derivedFrom(field: "collateralContract")
+  creation: SimpleCollateralContractCreated
+    @derivedFrom(field: "collateralContract")
+  snapshot: SimpleCollateralContractSnapshot
+    @derivedFrom(field: "collateralContract")
 
   depositors: [SimpleCollateralContractDepositor!]!
     @derivedFrom(field: "collateralContract")
