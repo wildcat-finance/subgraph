@@ -837,6 +837,25 @@
   },
   {
     "type": "function",
+    "name": "queueWithdrawalScaled",
+    "inputs": [
+      {
+        "name": "scaledAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "expiry",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "registerWrapper",
     "inputs": [
       {

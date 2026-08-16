@@ -147,14 +147,32 @@ test("HooksFactory market parameters match the frozen v2.5 tuple", () => {
 });
 
 test("WildcatMarket withdrawal and version declarations match v2.5", () => {
-  const abi = loadAbi("WildcatMarket");
+  const abi = loadV25Abi("WildcatMarket");
   const queueWithdrawal = getFunction(abi, "queueWithdrawal");
+  const queueWithdrawalScaled = getFunction(abi, "queueWithdrawalScaled");
   const version = getFunction(abi, "version");
 
   assert.deepEqual(queueWithdrawal.outputs, [
     { internalType: "uint32", name: "expiry", type: "uint32" }
   ]);
+  assert.deepEqual(queueWithdrawalScaled.inputs, [
+    {
+      internalType: "uint256",
+      name: "scaledAmount",
+      type: "uint256"
+    }
+  ]);
+  assert.deepEqual(queueWithdrawalScaled.outputs, [
+    { internalType: "uint32", name: "expiry", type: "uint32" }
+  ]);
   assert.equal(version.stateMutability, "pure");
+  assert.equal(
+    loadAbi("WildcatMarket").some(
+      entry =>
+        entry.type === "function" && entry.name === "queueWithdrawalScaled"
+    ),
+    false
+  );
 });
 
 test("v2.5 factory events retain the indexed data-model boundary", () => {
