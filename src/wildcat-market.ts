@@ -127,6 +127,14 @@ import {
   saveWithdrawalBatch,
 } from "./withdrawal-domain";
 import { recordMarketEvent } from "./market-event-domain";
+import {
+  getPrincipalBasisAfterWithdrawal,
+  getTransferredPrincipalBasis,
+} from "./principal-basis";
+import {
+  getWrapperOutboundPrincipalBasis,
+  observeWrappedMarketTransfer,
+} from "./wrapper-principal-basis";
 
 function getTotalAssets(market: Market, marketAddress: Address): BigInt {
   let assetAddress = market.asset.slice(market.asset.indexOf("0x"));
@@ -532,6 +540,7 @@ export function handleDeposit(event: DepositEvent): void {
   let prevLenderBalance = lender.scaledBalance;
   let interestEarned = processLenderInterestAccrued(event, lender, market);
   lender.totalDeposited = lender.totalDeposited.plus(event.params.assetAmount);
+  lender.principalBasis = lender.principalBasis.plus(event.params.assetAmount);
   lender.scaledBalance = lender.scaledBalance.plus(event.params.scaledAmount);
   lender.lastScaleFactor = market.scaleFactor;
   saveLenderAccountAndSnapshot(event, lender);
@@ -1148,6 +1157,7 @@ export function handleTransfer(event: TransferEvent): void {
       ? rayDivDown(value, market.scaleFactor)
       : rayDiv(value, market.scaleFactor);
     let toId = from.id;
+    let principalBasisAmount = BigInt.zero();
 
     if (fromAddress.equals(toAddress)) {
       // A self-transfer has one participating lender. Process and persist it
@@ -1189,10 +1199,29 @@ export function handleTransfer(event: TransferEvent): void {
 
       let prevFromBalance = from.scaledBalance;
       let prevToBalance = to.scaledBalance;
+      principalBasisAmount = getTransferredPrincipalBasis(
+        from.principalBasis,
+        scaledAmount,
+        prevFromBalance
+      );
+      let wrapperBasisOverride = getWrapperOutboundPrincipalBasis(
+        fromAddress,
+        event,
+        scaledAmount,
+        from
+      );
+      if (wrapperBasisOverride.applies) {
+        principalBasisAmount = wrapperBasisOverride.amount;
+      }
       let fromInterest = processLenderInterestAccrued(event, from, market);
       let toInterest = processLenderInterestAccrued(event, to, market);
       from.scaledBalance = satSub(from.scaledBalance, scaledAmount);
+      from.principalBasis = satSub(
+        from.principalBasis,
+        principalBasisAmount
+      );
       to.scaledBalance = to.scaledBalance.plus(scaledAmount);
+      to.principalBasis = to.principalBasis.plus(principalBasisAmount);
       saveLenderAccountAndSnapshot(event, from);
       saveLenderAccountAndSnapshot(event, to);
 
@@ -1234,17 +1263,29 @@ export function handleTransfer(event: TransferEvent): void {
       protocolDaily.save();
     }
 
-    createTransfer(generateEventId(event), {
+    let transferId = generateEventId(event);
+    createTransfer(transferId, {
       market: market.id,
       from: from.id,
       to: toId,
       scaledAmount: scaledAmount,
+      principalBasisAmount: principalBasisAmount,
       amount: value,
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
     });
+    if (!fromAddress.equals(toAddress)) {
+      observeWrappedMarketTransfer(
+        event,
+        fromAddress,
+        toAddress,
+        scaledAmount,
+        principalBasisAmount,
+        transferId
+      );
+    }
   }
 }
 
@@ -1608,6 +1649,13 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     }
   );
   let status = statusCreation.entity;
+  let principalBasisBefore = lender.principalBasis;
+  let remainingScaledBalance = satSub(lender.scaledBalance, scaledAmount);
+  let principalBasisAfter = getPrincipalBasisAfterWithdrawal(
+    principalBasisBefore,
+    remainingScaledBalance,
+    market.scaleFactor
+  );
   processWithdrawalBatchInterestAccrued(event, batch, market);
   createWithdrawalRequest(generateMarketEventId(market), {
     requestIndex: status.requestsCount,
@@ -1616,6 +1664,8 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
     account: status.account,
     scaledAmount,
     normalizedAmount,
+    principalBasisBefore,
+    principalBasisAfter,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
@@ -1639,7 +1689,8 @@ export function handleWithdrawalQueued(event: WithdrawalQueuedEvent): void {
 
   let prevLenderBalance = lender.scaledBalance;
   let interestEarned = processLenderInterestAccrued(event, lender, market);
-  lender.scaledBalance = satSub(lender.scaledBalance, scaledAmount);
+  lender.scaledBalance = remainingScaledBalance;
+  lender.principalBasis = principalBasisAfter;
   market.scaledPendingWithdrawals = market.scaledPendingWithdrawals.plus(
     scaledAmount
   );

@@ -159,6 +159,7 @@ export function getOrCreateLenderAccount(
   }
   let result = getOrInitializeLenderAccount(lenderAccountId, {
     address: lenderAddress,
+    principalBasis: BigInt.zero(),
     lastScaleFactor: market.scaleFactor,
     lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
     lastUpdatedBlockNumber: market.lastInterestAccruedBlockNumber,

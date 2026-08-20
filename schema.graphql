@@ -162,6 +162,7 @@ enum IndexerDiagnosticKind {
   UNKNOWN_COLLATERAL_MARKET
   MISSING_COLLATERAL_CONTRACT
   COLLATERAL_COOLDOWN_UNAVAILABLE
+  WRAPPER_EVENT_CORRELATION_FAILED
   SANCTIONS_ESCROW_ADDRESS_UNAVAILABLE
   MISSING_OPTIONAL_MODULE_CONFIG
 }
@@ -1390,6 +1391,8 @@ type LenderAccount @entity {
   address: Bytes!
   market: Market!
   scaledBalance: BigInt!
+  "Nominal underlying principal still attached to the active market-token balance."
+  principalBasis: BigInt!
   role: LenderStatus!
   totalDeposited: BigInt!
   lastScaleFactor: BigInt!
@@ -1417,6 +1420,7 @@ type LenderAccountSnapshot @entity {
   account: LenderAccount!
   source: SnapshotSource!
   scaledBalance: BigInt!
+  principalBasis: BigInt!
   role: LenderStatus!
   totalDeposited: BigInt!
   lastScaleFactor: BigInt!
@@ -1567,11 +1571,115 @@ type Wildcat4626Wrapper @entity {
   marketAddress: Bytes!
   marketToken: Token!
   token: Token!
+  "Wrapper shares currently outstanding. Shares mirror scaled market tokens."
+  totalShares: BigInt!
+  "Nominal underlying principal attributed to the outstanding wrapper shares."
+  principalBasis: BigInt!
+  accounts: [Wildcat4626WrapperAccount!]! @derivedFrom(field: "wrapper")
+  deposits: [Wildcat4626WrapperDeposit!]! @derivedFrom(field: "wrapper")
+  withdrawals: [Wildcat4626WrapperWithdrawal!]! @derivedFrom(field: "wrapper")
+  transfers: [Wildcat4626WrapperTransfer!]! @derivedFrom(field: "wrapper")
+  tokenSweeps: [Wildcat4626WrapperTokensSwept!]! @derivedFrom(field: "wrapper")
   deployedEvent: Wildcat4626WrapperDeployed @derivedFrom(field: "wrapper")
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
   blockLogIndex: Int!
+}
+
+"A lender's non-rebasing share position in one Wildcat ERC-4626 wrapper."
+type Wildcat4626WrapperAccount @entity {
+  id: ID! # WRAPPER-LENDER-<wrapper>-<address>
+  wrapper: Wildcat4626Wrapper!
+  address: Bytes!
+  shares: BigInt!
+  "Nominal underlying principal still attached to these wrapper shares."
+  principalBasis: BigInt!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+  updatedAtTransaction: Bytes!
+  updatedAtLogIndex: BigInt!
+  deposits: [Wildcat4626WrapperDeposit!]! @derivedFrom(field: "account")
+  withdrawals: [Wildcat4626WrapperWithdrawal!]! @derivedFrom(field: "account")
+  transfersFrom: [Wildcat4626WrapperTransfer!]! @derivedFrom(field: "from")
+  transfersTo: [Wildcat4626WrapperTransfer!]! @derivedFrom(field: "to")
+}
+
+type Wildcat4626WrapperDeposit @entity(immutable: true) {
+  id: ID!
+  wrapper: Wildcat4626Wrapper!
+  account: Wildcat4626WrapperAccount!
+  caller: Bytes!
+  assets: BigInt!
+  shares: BigInt!
+  principalBasisAmount: BigInt!
+  marketTransfer: Transfer
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+type Wildcat4626WrapperWithdrawal @entity(immutable: true) {
+  id: ID!
+  wrapper: Wildcat4626Wrapper!
+  account: Wildcat4626WrapperAccount!
+  caller: Bytes!
+  receiver: Bytes!
+  assets: BigInt!
+  shares: BigInt!
+  principalBasisAmount: BigInt!
+  marketTransfer: Transfer
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+"A wrapper-share mint, burn, or holder-to-holder transfer."
+type Wildcat4626WrapperTransfer @entity(immutable: true) {
+  id: ID!
+  wrapper: Wildcat4626Wrapper!
+  fromAddress: Bytes!
+  toAddress: Bytes!
+  from: Wildcat4626WrapperAccount
+  to: Wildcat4626WrapperAccount
+  shares: BigInt!
+  principalBasisAmount: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+type Wildcat4626WrapperTokensSwept @entity(immutable: true) {
+  id: ID!
+  wrapper: Wildcat4626Wrapper!
+  token: Bytes!
+  receiver: Bytes!
+  amount: BigInt!
+  principalBasisAmount: BigInt!
+  marketTransfer: Transfer
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+"Internal transaction-local bridge between market-token and wrapper events."
+type Wildcat4626WrapperTransactionCursor @entity {
+  id: ID! # <wrapper>-<transaction hash>
+  wrapper: Wildcat4626Wrapper!
+  transactionHash: Bytes!
+  inboundMarketTransfer: Transfer
+  inboundScaledAmount: BigInt!
+  inboundPrincipalBasis: BigInt!
+  outboundMarketTransfer: Transfer
+  outboundScaledAmount: BigInt!
+  outboundPrincipalBasis: BigInt!
+  pendingBurnAccount: Wildcat4626WrapperAccount
+  pendingBurnShares: BigInt!
+  pendingBurnPrincipalBasis: BigInt!
 }
 
 type Wildcat4626WrapperDeployed @entity(immutable: true) {
@@ -2337,6 +2445,7 @@ type Transfer @entity(immutable: true) {
   to: LenderAccount! # address
   amount: BigInt! # uint256
   scaledAmount: BigInt! # uint256
+  principalBasisAmount: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
@@ -2407,6 +2516,8 @@ type WithdrawalRequest @entity(immutable: true) {
   market: Market!
   scaledAmount: BigInt! # uint256
   normalizedAmount: BigInt! # uint256
+  principalBasisBefore: BigInt!
+  principalBasisAfter: BigInt!
   blockNumber: Int!
   blockTimestamp: Int!
   transactionHash: Bytes!
