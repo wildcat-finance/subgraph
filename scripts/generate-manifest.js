@@ -457,11 +457,15 @@ function buildManifest(config, abiFamilies, baseManifest) {
 
   manifest.dataSources = dataSources;
   manifest.templates = baseManifest.templates
-    .filter(
-      template =>
-        config.features.collateral ||
-        template.name !== "SimpleMarketCollateralMultiParty"
-    )
+    .filter(template => {
+      if (template.name === "SimpleMarketCollateralMultiParty") {
+        return config.features.collateral;
+      }
+      if (template.name === "Wildcat4626Wrapper") {
+        return config.features.wrappers;
+      }
+      return true;
+    })
     .map(template => {
       const configured = clone(template);
       configured.network = config.graphNetwork;

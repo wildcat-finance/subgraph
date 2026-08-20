@@ -474,6 +474,38 @@ templates:
           handler: handleLiquidatedSharesReset
       file: ./src/simple-collateral.ts
   - kind: ethereum
+    name: Wildcat4626Wrapper
+    network: mainnet
+    source:
+      abi: Wildcat4626Wrapper
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperAccount
+        - Wildcat4626WrapperDeposit
+        - Wildcat4626WrapperWithdrawal
+        - Wildcat4626WrapperTransfer
+        - Wildcat4626WrapperTokensSwept
+        - Wildcat4626WrapperTransactionCursor
+        - Transfer
+        - IndexerDiagnostic
+      abis:
+        - name: Wildcat4626Wrapper
+          file: ./abis/Wildcat4626Wrapper.json
+      eventHandlers:
+        - event: Deposit(indexed address,indexed address,uint256,uint256)
+          handler: handleDeposit
+        - event: TokensSwept(indexed address,indexed address,uint256)
+          handler: handleTokensSwept
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: Withdraw(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleWithdraw
+      file: ./src/wildcat-4626-wrapper.ts
+  - kind: ethereum
     name: WildcatMarketControllerFactory
     network: mainnet
     source:
@@ -624,6 +656,8 @@ templates:
         - MarketDailyStats
         - ProtocolFeeBipsUpdated
         - ForceBuyBack
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperTransactionCursor
       abis:
         - name: WildcatMarket
           file: ./abis/WildcatMarket.json
@@ -800,6 +834,8 @@ templates:
         - Borrow
         - FeesCollected
         - MarketClosed
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperTransactionCursor
       abis:
         - name: WildcatMarketV2_5
           file: ./abis/v2.5/WildcatMarket.json

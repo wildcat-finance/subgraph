@@ -185,6 +185,19 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     legacyWrapperFactory.context.moduleFactoryDeploymentTarget.data,
     "false"
   );
+  const wrapperTemplate = manifest.templates.find(
+    template => template.name === "Wildcat4626Wrapper"
+  );
+  assert.equal(wrapperTemplate.mapping.file, "./src/wildcat-4626-wrapper.ts");
+  assert.deepEqual(
+    wrapperTemplate.mapping.eventHandlers.map(handler => handler.handler),
+    ["handleDeposit", "handleTokensSwept", "handleTransfer", "handleWithdraw"]
+  );
+  assertDeclaresEntities(wrapperTemplate.mapping, [
+    "Wildcat4626WrapperAccount",
+    "Wildcat4626WrapperTransactionCursor",
+    "Transfer"
+  ]);
 
   const collateralFactory = sourceByName(
     manifest,
@@ -236,7 +249,11 @@ test("feature flags remove unsupported Plasma sources without changing the core 
     plasma.templates.map(template => template.name),
     mainnet.templates
       .map(template => template.name)
-      .filter(name => name !== "SimpleMarketCollateralMultiParty")
+      .filter(
+        name =>
+          name !== "SimpleMarketCollateralMultiParty" &&
+          name !== "Wildcat4626Wrapper"
+      )
   );
   assert.deepEqual(plasma.schema, mainnet.schema);
 });

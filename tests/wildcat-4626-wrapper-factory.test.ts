@@ -253,6 +253,8 @@ describe("Wildcat4626WrapperFactory", () => {
       "token",
       generateTokenId(WRAPPER_ADDRESS)
     );
+    assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "totalShares", "0");
+    assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "principalBasis", "0");
 
     assert.entityCount("Wildcat4626WrapperDeployed", 1);
     assert.fieldEquals("Wildcat4626WrapperDeployed", eventId, "factory", factoryId);
