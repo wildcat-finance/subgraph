@@ -3,7 +3,10 @@
 Status: accepted refactor input; source migration implemented on the coordinated
 subgraph, SDK, and app feature branches. Live endpoint parity remains pending.
 
-That status describes the earlier schema refactor. The v2.5.9 identity and event-model delta is still being roughed through the subgraph and SDK; see `docs/V2_5_9_EVENT_MODEL.md`.
+That status now includes the v2.5.9 identity and event-model delta on the
+coordinated subgraph and SDK branches. The final Sepolia deployment targets are
+configured; hosted endpoint parity remains pending. See
+`docs/V2_5_9_EVENT_MODEL.md`.
 
 The implemented old-to-new query mappings and consumer cutover obligations are
 recorded in `docs/V2_5_SCHEMA_MIGRATION.md`.

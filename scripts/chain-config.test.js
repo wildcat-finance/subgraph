@@ -45,7 +45,7 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
 
   const sepolia = configs.find(({ network }) => network === "sepolia");
   assert.equal(sepolia.deploymentTargetsReady, true);
-  assert.equal(sepolia.hooksTemplates.length, 10);
+  assert.equal(sepolia.hooksTemplates.length, 13);
   assert.deepEqual(
     [...new Set(sepolia.hooksTemplates.map(({ kind }) => kind))].sort(),
     ["FixedTerm", "OpenTerm", "PeriodicTerm"]
@@ -64,16 +64,16 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
       {
         label: "standard-v2.5",
         marketKind: "STANDARD",
-        abiFamily: "hooks-sepolia-current",
-        address: "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C",
-        startBlock: 11363908
+        abiFamily: "hooks-v2-5",
+        address: "0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18",
+        startBlock: 11559133
       },
       {
         label: "revolving-v2.5",
         marketKind: "REVOLVING",
-        abiFamily: "hooks-sepolia-current",
-        address: "0x76Fe050d91940a72133e1819BF34c1042d8DBe73",
-        startBlock: 11363912
+        abiFamily: "hooks-v2-5",
+        address: "0x190B42942fe9492df9CeA441dA5c43309840E93A",
+        startBlock: 11559137
       }
     ]
   );
@@ -88,16 +88,39 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
     [
       {
         label: "wrapper-v2.5",
-        address: "0x8a77449eaBB1522983cd700f002b5b191463378e",
-        startBlock: 11363904
+        address: "0x6B1DD93453584346C530A1646e98aB306fD6D37C",
+        startBlock: 11559124
       }
     ]
   );
+  assert.deepEqual(sepolia.borrowerIdentityRegistries, [
+    {
+      label: "borrower-identity-registry-v2.5",
+      manifestName: "WildcatBorrowerIdentityRegistryV2_5",
+      generation: "v2.5",
+      address: "0xc2cF90781595203D1e75c28246b306C95d4b8b21",
+      startBlock: 11559126,
+      indexed: true,
+      lifecycle: "active"
+    }
+  ]);
+  assert.deepEqual(sepolia.roleProviderFactories, [
+    {
+      label: "access-list-role-provider-factory-v2.5",
+      manifestName: "AccessListRoleProviderFactoryV2_5",
+      kind: "ACCESS_LIST",
+      generation: "v2.5",
+      address: "0x92995EA2ba572E4Cb8bB41E30f813BeB77FD4974",
+      startBlock: 11559128,
+      indexed: true,
+      lifecycle: "active"
+    }
+  ]);
   assert.deepEqual(sepolia.provenance, {
-    kind: "protocol-live-checkpoint",
+    kind: "protocol-live-evidence-packet",
     source:
-      "v2-protocol/deployments/sepolia/run-state-checkpoints/run-state-v2-5-card-23-live.json",
-    sha256: "c5acd8fefcc5d4b7de52e25e39770a7fd59b7e926ca892fe5cfcf739f1092ebe"
+      "v2-protocol/v2-5-sepolia-live-20260824T194947Z.tar.gz",
+    sha256: "8d8464612987074b151b8cb66451298962431ee24b2dd5b19757057318eb34ad"
   });
 });
 

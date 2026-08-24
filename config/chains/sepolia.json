@@ -65,6 +65,21 @@
       "address": "0x52D1B53fc667ef5cbf1A792494266946cDa86fa7",
       "kind": "PeriodicTerm",
       "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0x1840E97Fba22DbA0996f4b8D02fc8bB74473dD95",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0x7Cf683E0802257180EDf4C21A12C5070acd166d2",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0xB63929E732156C46857C0d9b08e483f8845Ed1BE",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
     }
   ],
   "factories": [
@@ -153,13 +168,37 @@
       "lifecycle": "retired"
     },
     {
+      "label": "standard-v2.5-preview-20260727",
+      "manifestName": "HooksFactoryStandardV2_5Preview20260727",
+      "marketKind": "STANDARD",
+      "generation": "v2.5-preview-20260727",
+      "abiFamily": "hooks-sepolia-current",
+      "address": "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C",
+      "startBlock": 11363908,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-v2.5-preview-20260727",
+      "manifestName": "HooksFactoryRevolvingV2_5Preview20260727",
+      "marketKind": "REVOLVING",
+      "generation": "v2.5-preview-20260727",
+      "abiFamily": "hooks-sepolia-current",
+      "address": "0x76Fe050d91940a72133e1819BF34c1042d8DBe73",
+      "startBlock": 11363912,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
       "label": "standard-v2.5",
       "manifestName": "HooksFactoryStandardV2_5",
       "marketKind": "STANDARD",
       "generation": "v2.5",
-      "abiFamily": "hooks-sepolia-current",
-      "address": "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C",
-      "startBlock": 11363908,
+      "abiFamily": "hooks-v2-5",
+      "address": "0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18",
+      "startBlock": 11559133,
       "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
@@ -169,16 +208,37 @@
       "manifestName": "HooksFactoryRevolvingV2_5",
       "marketKind": "REVOLVING",
       "generation": "v2.5",
-      "abiFamily": "hooks-sepolia-current",
-      "address": "0x76Fe050d91940a72133e1819BF34c1042d8DBe73",
-      "startBlock": 11363912,
+      "abiFamily": "hooks-v2-5",
+      "address": "0x190B42942fe9492df9CeA441dA5c43309840E93A",
+      "startBlock": 11559137,
       "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
     }
   ],
-  "borrowerIdentityRegistries": [],
-  "roleProviderFactories": [],
+  "borrowerIdentityRegistries": [
+    {
+      "label": "borrower-identity-registry-v2.5",
+      "manifestName": "WildcatBorrowerIdentityRegistryV2_5",
+      "generation": "v2.5",
+      "address": "0xc2cF90781595203D1e75c28246b306C95d4b8b21",
+      "startBlock": 11559126,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
+  "roleProviderFactories": [
+    {
+      "label": "access-list-role-provider-factory-v2.5",
+      "manifestName": "AccessListRoleProviderFactoryV2_5",
+      "kind": "ACCESS_LIST",
+      "generation": "v2.5",
+      "address": "0x92995EA2ba572E4Cb8bB41E30f813BeB77FD4974",
+      "startBlock": 11559128,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
   "wrapperFactories": [
     {
       "label": "wrapper-v1",
@@ -191,11 +251,21 @@
       "lifecycle": "active"
     },
     {
+      "label": "wrapper-v2.5-preview-20260727",
+      "manifestName": "Wildcat4626WrapperFactoryV2_5Preview20260727",
+      "generation": "v2.5-preview-20260727",
+      "address": "0x8a77449eaBB1522983cd700f002b5b191463378e",
+      "startBlock": 11363904,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
       "label": "wrapper-v2.5",
       "manifestName": "Wildcat4626WrapperFactoryV2_5",
       "generation": "v2.5",
-      "address": "0x8a77449eaBB1522983cd700f002b5b191463378e",
-      "startBlock": 11363904,
+      "address": "0x6B1DD93453584346C530A1646e98aB306fD6D37C",
+      "startBlock": 11559124,
       "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
@@ -266,8 +336,8 @@
     "primaryCollateralFactory": "collateral-v1"
   },
   "provenance": {
-    "kind": "protocol-live-checkpoint",
-    "source": "v2-protocol/deployments/sepolia/run-state-checkpoints/run-state-v2-5-card-23-live.json",
-    "sha256": "c5acd8fefcc5d4b7de52e25e39770a7fd59b7e926ca892fe5cfcf739f1092ebe"
+    "kind": "protocol-live-evidence-packet",
+    "source": "v2-protocol/v2-5-sepolia-live-20260824T194947Z.tar.gz",
+    "sha256": "8d8464612987074b151b8cb66451298962431ee24b2dd5b19757057318eb34ad"
   }
 }
