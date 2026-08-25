@@ -30,6 +30,8 @@
       "lifecycle": "active"
     }
   ],
+  "borrowerIdentityRegistries": [],
+  "roleProviderFactories": [],
   "wrapperFactories": [
     {
       "label": "wrapper-v1",

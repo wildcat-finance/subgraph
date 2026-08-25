@@ -3,9 +3,13 @@
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const YAML = require("yaml");
 
 const { REPO_ROOT, listNetworks } = require("./chain-config");
-const { generate } = require("./generate-manifest");
+const {
+  buildV25CompileFixture,
+  generate,
+} = require("./generate-manifest");
 
 const GRAPH_BIN = path.join(
   REPO_ROOT,
@@ -62,6 +66,17 @@ function run() {
         path.join("build", network),
       ]);
     }
+    console.log("\nValidating the undeployed v2.5 event-generation fixture");
+    fs.writeFileSync(
+      path.join(REPO_ROOT, "subgraph.yaml"),
+      YAML.stringify(buildV25CompileFixture(), { indent: 2, lineWidth: 0 })
+    );
+    runGraph(["codegen", "-u"]);
+    runGraph([
+      "build",
+      "--output-dir",
+      path.join("build", "v2.5-fixture"),
+    ]);
   } catch (error) {
     buildError = error;
     throw error;

@@ -45,7 +45,10 @@ function stampMarketSnapshot(
 }
 
 function refreshRevolvingState(market: Market): void {
-  if (market.marketKind != "REVOLVING") {
+  if (
+    market.marketKind != "REVOLVING" ||
+    market.eventGeneration == "V2_5"
+  ) {
     return;
   }
 
@@ -91,7 +94,8 @@ function saveMarketAndSnapshotInternal(
   stampMarketSnapshot(
     event,
     snapshot,
-    includesContractCall || market.marketKind == "REVOLVING"
+    includesContractCall ||
+      (market.marketKind == "REVOLVING" && market.eventGeneration != "V2_5")
       ? "EVENT_AND_CONTRACT_CALL"
       : "EVENT_PROJECTION"
   );

@@ -42,11 +42,42 @@ export function bipMul(a: BigInt, b: BigInt): BigInt {
 
 export function calculateLiquidityRequired(market: Market): BigInt {
   let scaledWithdrawals = market.scaledPendingWithdrawals;
-  let scaledRequiredReserves = bipMul(
-    market.scaledTotalSupply.minus(scaledWithdrawals),
-    BigInt.fromI32(market.reserveRatioBips)
-  ).plus(scaledWithdrawals);
-  return rayMul(scaledRequiredReserves, market.scaleFactor)
+  let reserveRatioBips = BigInt.fromI32(market.reserveRatioBips);
+  let normalizedSupplyRequired: BigInt;
+
+  // legacy markets apply the reserve ratio before normalization. v2.5 applies
+  // it to normalized outstanding supply to match MarketState.liquidityRequired.
+  if (market.eventGeneration == "V2_5") {
+    if (market.reserveRatioBips == 0) {
+      normalizedSupplyRequired = rayMul(scaledWithdrawals, market.scaleFactor);
+    } else if (market.reserveRatioBips == 10_000) {
+      normalizedSupplyRequired = rayMul(
+        market.scaledTotalSupply,
+        market.scaleFactor
+      );
+    } else {
+      let normalizedWithdrawals = rayMul(scaledWithdrawals, market.scaleFactor);
+      let normalizedOutstandingSupply = rayMul(
+        market.scaledTotalSupply,
+        market.scaleFactor
+      ).minus(normalizedWithdrawals);
+      normalizedSupplyRequired = bipMul(
+        normalizedOutstandingSupply,
+        reserveRatioBips
+      ).plus(normalizedWithdrawals);
+    }
+  } else {
+    let scaledRequiredReserves = bipMul(
+      market.scaledTotalSupply.minus(scaledWithdrawals),
+      reserveRatioBips
+    ).plus(scaledWithdrawals);
+    normalizedSupplyRequired = rayMul(
+      scaledRequiredReserves,
+      market.scaleFactor
+    );
+  }
+
+  return normalizedSupplyRequired
     .plus(market.pendingProtocolFees)
     .plus(market.normalizedUnclaimedWithdrawals);
 }
@@ -159,6 +190,7 @@ export function getOrCreateLenderAccount(
   }
   let result = getOrInitializeLenderAccount(lenderAccountId, {
     address: lenderAddress,
+    principalBasis: BigInt.zero(),
     lastScaleFactor: market.scaleFactor,
     lastUpdatedTimestamp: market.lastInterestAccruedTimestamp,
     lastUpdatedBlockNumber: market.lastInterestAccruedBlockNumber,

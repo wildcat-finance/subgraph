@@ -84,6 +84,7 @@ function seedHooksFactory(address: Address, marketType: string): void {
   hooksFactory.marketKind = marketType == "Revolving" ? "REVOLVING" : "STANDARD";
   hooksFactory.generation = "test";
   hooksFactory.abiFamily = "test";
+  hooksFactory.eventGeneration = "LEGACY";
   hooksFactory.hookedMarketAbi = "BASE";
   hooksFactory.configuredStartBlock = BigInt.zero();
   hooksFactory.indexed = true;
@@ -137,7 +138,12 @@ function seedHooksInstance(factoryAddress: Address): void {
   hooksInstance.marketKind = "STANDARD";
   hooksInstance.generation = "test";
   hooksInstance.abiFamily = "test";
+  hooksInstance.eventGeneration = "LEGACY";
   hooksInstance.borrower = factoryAddress;
+  hooksInstance.administrator = factoryAddress;
+  hooksInstance.deployer = factoryAddress;
+  hooksInstance.version = "OpenTermHooks";
+  hooksInstance.providerMetadataState = "UNKNOWN";
   hooksInstance.hooksTemplate = HOOKS_TEMPLATE_ADDRESS.toHexString();
   hooksInstance.templateRegistration = getTemplateRegistrationId(factoryAddress);
   hooksInstance.hooksFactory = factoryAddress.toHexString();
@@ -160,9 +166,14 @@ function seedMarket(address: Address, marketKind: string): void {
   market.originKind = "HOOKS";
   market.generation = "test";
   market.abiFamily = "test";
+  market.eventGeneration = "LEGACY";
   market.borrower = LEGACY_FACTORY_ADDRESS;
+  market.borrowerPrincipal = LEGACY_FACTORY_ADDRESS;
+  market.initialBorrower = LEGACY_FACTORY_ADDRESS;
+  market.initialBorrowerPrincipal = LEGACY_FACTORY_ADDRESS;
   market.sentinel = LEGACY_FACTORY_ADDRESS;
   market.feeRecipient = LEGACY_FACTORY_ADDRESS;
+  market.originationFeeAmount = BigInt.zero();
   market.name = "Mock Market";
   market.symbol = "mMOCK";
   market.decimals = 18;

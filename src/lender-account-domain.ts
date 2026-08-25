@@ -6,6 +6,7 @@ function copyLenderAccountState(
   snapshot: LenderAccountSnapshot
 ): void {
   snapshot.scaledBalance = account.scaledBalance;
+  snapshot.principalBasis = account.principalBasis;
   snapshot.role = account.role;
   snapshot.totalDeposited = account.totalDeposited;
   snapshot.lastScaleFactor = account.lastScaleFactor;

@@ -14,6 +14,7 @@ export const CONTEXT_FACTORY_ADDRESS = "factoryAddress";
 export const CONTEXT_FACTORY_MARKET_KIND = "factoryMarketKind";
 export const CONTEXT_FACTORY_GENERATION = "factoryGeneration";
 export const CONTEXT_FACTORY_ABI_FAMILY = "factoryAbiFamily";
+export const CONTEXT_FACTORY_EVENT_GENERATION = "factoryEventGeneration";
 export const CONTEXT_HOOKED_MARKET_ABI = "hookedMarketAbi";
 export const CONTEXT_TEMPLATE_REGISTRATION = "templateRegistration";
 export const CONTEXT_HOOKS_TEMPLATE = "hooksTemplate";
@@ -23,6 +24,7 @@ export class ConfiguredHooksFactory {
   marketKind: string;
   generation: string;
   abiFamily: string;
+  eventGeneration: string;
   hookedMarketAbi: string;
   startBlock: BigInt;
   indexed: boolean;
@@ -35,6 +37,7 @@ export class ConfiguredHooksFactory {
     marketKind: string,
     generation: string,
     abiFamily: string,
+    eventGeneration: string,
     hookedMarketAbi: string,
     startBlock: BigInt,
     indexed: boolean,
@@ -46,6 +49,7 @@ export class ConfiguredHooksFactory {
     this.marketKind = marketKind;
     this.generation = generation;
     this.abiFamily = abiFamily;
+    this.eventGeneration = eventGeneration;
     this.hookedMarketAbi = hookedMarketAbi;
     this.startBlock = startBlock;
     this.indexed = indexed;
@@ -84,7 +88,7 @@ export function getConfiguredHooksFactory(
   }
 
   let parts = context.getString(key).split("|");
-  if (parts.length != 10) {
+  if (parts.length != 11) {
     return null;
   }
 
@@ -93,12 +97,13 @@ export function getConfiguredHooksFactory(
     parts[1],
     parts[2],
     parts[3],
-    BigInt.fromString(parts[4]),
-    parts[5] == "true",
+    parts[4],
+    BigInt.fromString(parts[5]),
     parts[6] == "true",
-    parts[7],
+    parts[7] == "true",
     parts[8],
-    Address.fromString(parts[9])
+    parts[9],
+    Address.fromString(parts[10])
   );
 }
 
@@ -127,6 +132,7 @@ export function createFactoryChildContext(
   context.setString(CONTEXT_FACTORY_MARKET_KIND, factory.marketKind);
   context.setString(CONTEXT_FACTORY_GENERATION, factory.generation);
   context.setString(CONTEXT_FACTORY_ABI_FAMILY, factory.abiFamily);
+  context.setString(CONTEXT_FACTORY_EVENT_GENERATION, factory.eventGeneration);
   context.setString(CONTEXT_HOOKED_MARKET_ABI, factory.hookedMarketAbi);
   return context;
 }

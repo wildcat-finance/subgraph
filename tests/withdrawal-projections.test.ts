@@ -90,12 +90,22 @@ function seedMarket(event: ethereum.Event): Market {
     originKind: "HOOKS",
     generation: "test",
     abiFamily: "test",
+    eventGeneration: "LEGACY",
     controller: null,
     hooksFactory: null,
     hooks: null,
     borrower: Address.zero(),
+    borrowerAccount: null,
+    borrowerPrincipal: Address.zero(),
+    borrowerProfile: null,
+    initialBorrower: Address.zero(),
+    initialBorrowerPrincipal: Address.zero(),
+    borrowerIdentityRegistry: null,
+    borrowerIdentityRegistryAddress: null,
     sentinel: Address.zero(),
     feeRecipient: Address.zero(),
+    originationFeeAsset: null,
+    originationFeeAmount: BigInt.zero(),
     name: "market",
     symbol: "mUSDC",
     decimals: 6,
@@ -146,6 +156,13 @@ describe("withdrawal projections", () => {
     positionEvent(deposit, 2);
     handleDeposit(deposit);
 
+    assert.fieldEquals(
+      "LenderAccount",
+      generateLenderAccountId(MARKET, LENDER),
+      "principalBasis",
+      "100"
+    );
+
     let expiry = BigInt.fromI32(3600);
     let batchCreated = createWithdrawalBatchCreatedEvent(expiry);
     positionEvent(batchCreated, 3);
@@ -159,6 +176,31 @@ describe("withdrawal projections", () => {
     );
     positionEvent(queued, 4);
     handleWithdrawalQueued(queued);
+
+    assert.fieldEquals(
+      "LenderAccount",
+      generateLenderAccountId(MARKET, LENDER),
+      "principalBasis",
+      "60"
+    );
+    assert.fieldEquals(
+      "LenderAccountSnapshot",
+      generateLenderAccountId(MARKET, LENDER),
+      "principalBasis",
+      "60"
+    );
+    assert.fieldEquals(
+      "WithdrawalRequest",
+      "RECORD-" + generateMarketId(MARKET) + "-1",
+      "principalBasisBefore",
+      "100"
+    );
+    assert.fieldEquals(
+      "WithdrawalRequest",
+      "RECORD-" + generateMarketId(MARKET) + "-1",
+      "principalBasisAfter",
+      "60"
+    );
 
     let marketAfterQueue = Market.load(generateMarketId(MARKET));
     if (marketAfterQueue != null) {
@@ -306,6 +348,64 @@ describe("withdrawal projections", () => {
       "expiry",
       expiry.toString()
     );
+  });
+
+  test("queues accrued interest before reducing principal basis", () => {
+    clearStore();
+
+    let creationEvent = changetype<ethereum.Event>(newMockEvent());
+    positionEvent(creationEvent, 0);
+    let market = seedMarket(creationEvent);
+
+    let authorization = createAuthorizationStatusUpdatedEvent(LENDER, 3);
+    positionEvent(authorization, 1);
+    handleAuthorizationStatusUpdated(authorization);
+
+    let deposit = createDepositEvent(
+      LENDER,
+      BigInt.fromI32(100),
+      BigInt.fromI32(100)
+    );
+    positionEvent(deposit, 2);
+    handleDeposit(deposit);
+
+    market = Market.load(generateMarketId(MARKET)) as Market;
+    market.scaleFactor = INTEREST_SCALE_FACTOR;
+    market.save();
+
+    let expiry = BigInt.fromI32(3600);
+    let batchCreated = createWithdrawalBatchCreatedEvent(expiry);
+    positionEvent(batchCreated, 3);
+    handleWithdrawalBatchCreated(batchCreated);
+
+    // Nine scaled tokens leave a normalized active balance of 100 after
+    // rounding, so this request consumes accrued interest only.
+    let interestOnly = createWithdrawalQueuedEvent(
+      expiry,
+      LENDER,
+      BigInt.fromI32(9),
+      BigInt.fromI32(10)
+    );
+    positionEvent(interestOnly, 4);
+    handleWithdrawalQueued(interestOnly);
+
+    let accountId = generateLenderAccountId(MARKET, LENDER);
+    assert.fieldEquals("LenderAccount", accountId, "scaledBalance", "91");
+    assert.fieldEquals("LenderAccount", accountId, "principalBasis", "100");
+
+    // The next scaled token takes the active position below its basis, so only
+    // that shortfall is treated as returned principal.
+    let principal = createWithdrawalQueuedEvent(
+      expiry,
+      LENDER,
+      BigInt.fromI32(1),
+      BigInt.fromI32(1)
+    );
+    positionEvent(principal, 5);
+    handleWithdrawalQueued(principal);
+
+    assert.fieldEquals("LenderAccount", accountId, "scaledBalance", "90");
+    assert.fieldEquals("LenderAccount", accountId, "principalBasis", "99");
   });
 
   test("counts an expired deficit closed later in the same block as paid late", () => {

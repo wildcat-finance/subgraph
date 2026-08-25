@@ -10,6 +10,7 @@ import {
   Wildcat4626WrapperDeployed,
   Wildcat4626WrapperFactory,
 } from "../generated/schema";
+import { Wildcat4626Wrapper as Wildcat4626WrapperTemplate } from "../generated/templates";
 import {
   createToken,
   generateTokenId,
@@ -17,6 +18,7 @@ import {
 import {
   CONTEXT_DEPLOYMENT_ARCH_CONTROLLER,
   contextString,
+  createDeploymentChildContext,
   ensureIndexerDeployment,
 } from "./deployment-context";
 import { recordIndexerDiagnostic } from "./indexer-diagnostics";
@@ -134,8 +136,11 @@ export function handleWrapperDeployed(event: WrapperDeployedEvent): void {
   let wrapperId = wrapperAddress.toHexString();
 
   let wrapper = Wildcat4626Wrapper.load(wrapperId);
+  let wasCreated = wrapper == null;
   if (wrapper == null) {
     wrapper = new Wildcat4626Wrapper(wrapperId);
+    wrapper.totalShares = BigInt.zero();
+    wrapper.principalBasis = BigInt.zero();
   }
   wrapper.address = wrapperAddress;
   wrapper.factory = factory.id;
@@ -173,4 +178,11 @@ export function handleWrapperDeployed(event: WrapperDeployedEvent): void {
 
   factory.eventIndex = factory.eventIndex + 1;
   factory.save();
+
+  if (wasCreated) {
+    Wildcat4626WrapperTemplate.createWithContext(
+      wrapperAddress,
+      createDeploymentChildContext()
+    );
+  }
 }

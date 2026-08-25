@@ -1,4 +1,4 @@
-import { ethereum, log } from "@graphprotocol/graph-ts";
+import { BigInt, Bytes, ethereum, log } from "@graphprotocol/graph-ts";
 import {
   Market,
   MarketEvent,
@@ -19,7 +19,26 @@ export function recordMarketEventForMarketId(
   marketId: string,
   kind: string
 ): MarketEvent {
-  let id = generateEventId(event);
+  return recordMarketEventAt(
+    marketId,
+    kind,
+    generateEventId(event),
+    event.block.number,
+    event.block.timestamp,
+    event.transaction.hash,
+    event.logIndex
+  );
+}
+
+export function recordMarketEventAt(
+  marketId: string,
+  kind: string,
+  id: string,
+  blockNumber: BigInt,
+  blockTimestamp: BigInt,
+  transactionHash: Bytes,
+  logIndex: BigInt
+): MarketEvent {
   if (MarketEvent.load(id) != null) {
     log.critical("Duplicate MarketEvent for trigger {}", [id]);
   }
@@ -35,10 +54,10 @@ export function recordMarketEventForMarketId(
   record.market = marketId;
   record.sequence = cursor.nextSequence;
   record.kind = kind;
-  record.blockNumber = event.block.number;
-  record.blockTimestamp = event.block.timestamp;
-  record.transactionHash = event.transaction.hash;
-  record.logIndex = event.logIndex;
+  record.blockNumber = blockNumber;
+  record.blockTimestamp = blockTimestamp;
+  record.transactionHash = transactionHash;
+  record.logIndex = logIndex;
   record.save();
 
   cursor.nextSequence = cursor.nextSequence + 1;

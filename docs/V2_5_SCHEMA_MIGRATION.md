@@ -3,6 +3,11 @@
 Status: subgraph implementation complete; SDK and app source migrations
 complete; deployed endpoint cutover pending.
 
+That status includes the v2.5.9 identity, authority, and event-history additions
+on the coordinated subgraph and SDK branches. The final Sepolia deployment
+targets are configured; hosted endpoint cutover remains pending. See
+`docs/V2_5_9_EVENT_MODEL.md`.
+
 The V2.5 endpoint is a clean schema deployment. It does not attempt to remain
 query-compatible with earlier V2 endpoints. Historical factories and markets
 remain indexed, but consumers must migrate the relationships below before they
@@ -169,9 +174,9 @@ withdrawal, profile, and analytics models. It retains only documented
 app-owned notification/subscription/discovery GraphQL escape hatches.
 `Market.createdAt` remains intentionally available for compatibility.
 
-The remaining cutover work is to insert verified deployment targets and a
-hosted endpoint, refresh SDK endpoint metadata, and run fixed-block/live SDK
-and app smoke against the deployed V2.5 graph.
+The remaining cutover work is to deploy the hosted endpoint, refresh SDK
+endpoint metadata, and run fixed-block/live SDK and app smoke against the
+deployed V2.5 graph.
 
 ## Cutover gate
 

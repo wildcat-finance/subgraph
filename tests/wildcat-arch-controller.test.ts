@@ -82,7 +82,7 @@ describe("wildcat arch controller", () => {
     let context = new DataSourceContext();
     context.setString(
       configuredHooksFactoryContextKey(hooksFactory),
-      "REVOLVING|v2.5|hooks-v2.5-revolving|BASE|123|true|true|ACTIVE|revolving-v2.5|" +
+      "REVOLVING|v2.5|hooks-sepolia-current|LEGACY|BASE|123|true|true|ACTIVE|revolving-v2.5|" +
         added.address.toHexString()
     );
     dataSourceMock.setContext(context);
@@ -121,6 +121,12 @@ describe("wildcat arch controller", () => {
       hooksFactory.toHexString(),
       "generation",
       "v2.5"
+    );
+    assert.fieldEquals(
+      "HooksFactory",
+      hooksFactory.toHexString(),
+      "eventGeneration",
+      "LEGACY"
     );
     assert.fieldEquals(
       "HooksFactory",

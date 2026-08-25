@@ -1,5 +1,7 @@
 # V2.5 Subgraph Configuration and Builds
 
+The hard-cut v2.5 event-generation path and its remaining protocol dependency are documented in `docs/V2_5_9_EVENT_MODEL.md`.
+
 The V2.5 subgraph uses one schema and mapping codebase with an explicit
 descriptor for each chain. Generated manifests are outputs, not configuration
 sources.
@@ -103,9 +105,8 @@ blocks:
 1. Verify the protocol factory inventory and deployment files.
 2. Add the standard, revolving, and wrapper V2.5 factory records to the relevant
    chain descriptor with exact generation and ABI-family metadata.
-   On Sepolia, existing pre-V2.5 hooks factories use the
-   `hooks-shared-current` / `FORCE_BUYBACK` tuple family; new V2.5 factories use
-   the `hooks-sepolia-current` / `BASE` tuple family.
+   On Sepolia, existing pre-V2.5 hooks factories use the legacy ABI families;
+   the final V2.5 factories use the `hooks-v2-5` / `V2_5` / `BASE` family.
 3. Keep every historical factory with markets as `indexed: true`, even if it is
    no longer registered or deployable.
 4. Mark only the new V2.5 standard, revolving, and wrapper factories as

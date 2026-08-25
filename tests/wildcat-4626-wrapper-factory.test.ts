@@ -84,9 +84,14 @@ function seedMarket(): void {
   market.originKind = "HOOKS";
   market.generation = "test";
   market.abiFamily = "test";
+  market.eventGeneration = "LEGACY";
   market.borrower = BORROWER_ADDRESS;
+  market.borrowerPrincipal = BORROWER_ADDRESS;
+  market.initialBorrower = BORROWER_ADDRESS;
+  market.initialBorrowerPrincipal = BORROWER_ADDRESS;
   market.sentinel = BORROWER_ADDRESS;
   market.feeRecipient = BORROWER_ADDRESS;
+  market.originationFeeAmount = BigInt.zero();
   market.name = "Mock Market";
   market.symbol = "mMOCK";
   market.decimals = 18;
@@ -248,6 +253,8 @@ describe("Wildcat4626WrapperFactory", () => {
       "token",
       generateTokenId(WRAPPER_ADDRESS)
     );
+    assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "totalShares", "0");
+    assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "principalBasis", "0");
 
     assert.entityCount("Wildcat4626WrapperDeployed", 1);
     assert.fieldEquals("Wildcat4626WrapperDeployed", eventId, "factory", factoryId);

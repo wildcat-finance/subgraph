@@ -30,6 +30,7 @@ function createTestHooksFactory(address: Address, indexed: boolean): void {
     marketKind: "STANDARD",
     generation: "v2.5",
     abiFamily: "test-hooks-abi",
+    eventGeneration: "LEGACY",
     hookedMarketAbi: "BASE",
     configuredStartBlock: BigInt.zero(),
     indexed,
