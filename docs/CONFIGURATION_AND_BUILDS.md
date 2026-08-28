@@ -1,6 +1,8 @@
 # V2.5 Subgraph Configuration and Builds
 
-The hard-cut v2.5 event-generation path and its remaining protocol dependency are documented in `docs/V2_5_9_EVENT_MODEL.md`.
+The hard-cut v2.5 event-generation path is documented in
+`docs/V2_5_9_EVENT_MODEL.md`. The current Sepolia factory set is documented in
+`docs/V2_5_10_SEPOLIA_ROTATION.md`.
 
 The V2.5 subgraph uses one schema and mapping codebase with an explicit
 descriptor for each chain. Generated manifests are outputs, not configuration
@@ -115,14 +117,20 @@ blocks:
    frozen protocol compatibility projection should move to the new factory.
 6. Run `yarn verify:all-networks`.
 7. Compare every hooks/wrapper generation, start block, indexing policy, and
-   selected deployment target against the completed protocol
-   `handoff-v2-5.json`, then record that review with the deployment artifacts.
+   selected deployment target against the completed protocol handoff.
 
-There is currently no checked-in cross-repo validator for step 7. The older
-`scripts/validate-factory-inventory.js` command referenced by this guide is no
-longer present. Until a replacement is added, the protocol handoff plus
-`yarn verify:all-networks` and an explicit reviewed diff are the gate; do not
-claim automated cross-repo coverage.
+After the subgraph and SDK constants are updated, run the cross-repo gate from
+`v2-protocol`:
+
+```sh
+node scripts/validate-factory-inventory.js \
+  --network sepolia \
+  --subgraph-dir ../subgraph
+```
+
+This checks the protocol inventory against generated subgraph configuration,
+protocol deployment aliases, and SDK factory routing. Run it again after any
+of those inputs changes.
 
 ## Current transitional constraint
 

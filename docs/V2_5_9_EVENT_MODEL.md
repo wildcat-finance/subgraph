@@ -1,6 +1,8 @@
 # v2.5.9 event and identity model
 
-Status: configured for the final Sepolia v2.5 deployment. The protocol event dependency is resolved in deployed source, and the Sepolia descriptor selects the final factories through the `hooks-v2-5` ABI family.
+Status: v2.5.9 introduced the current event model. Its original Sepolia factory
+set has been superseded by the v2.5.10 rotation documented in
+`docs/V2_5_10_SEPOLIA_ROTATION.md`.
 
 ## What this pass changes
 
@@ -98,9 +100,9 @@ yarn test -d
 
 Matchstick does not run natively through the pinned Graph CLI on Apple Silicon. `yarn test -d` uses the existing linux/amd64 Docker image under emulation and must be run from a terminal with a TTY.
 
-## Sepolia handoff
+## Original Sepolia handoff
 
-The final Sepolia descriptor is pinned to:
+The v2.5.9 Sepolia descriptor was pinned to:
 
 - standard factory `0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18` from block `11559133`;
 - revolving factory `0x190B42942fe9492df9CeA441dA5c43309840E93A` from block `11559137`;

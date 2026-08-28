@@ -33,7 +33,7 @@ test("loads and validates every supported chain descriptor", () => {
   );
 });
 
-test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets", () => {
+test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5.3 targets", () => {
   const { configs } = loadAllChainConfigs();
   for (const config of configs.filter(({ network }) => network !== "sepolia")) {
     assert.equal(config.deploymentTargetsReady, false);
@@ -45,7 +45,7 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
 
   const sepolia = configs.find(({ network }) => network === "sepolia");
   assert.equal(sepolia.deploymentTargetsReady, true);
-  assert.equal(sepolia.hooksTemplates.length, 13);
+  assert.equal(sepolia.hooksTemplates.length, 16);
   assert.deepEqual(
     [...new Set(sepolia.hooksTemplates.map(({ kind }) => kind))].sort(),
     ["FixedTerm", "OpenTerm", "PeriodicTerm"]
@@ -62,18 +62,18 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
       })),
     [
       {
-        label: "standard-v2.5",
+        label: "standard-v2.5.3",
         marketKind: "STANDARD",
         abiFamily: "hooks-v2-5",
-        address: "0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18",
-        startBlock: 11559133
+        address: "0x89797b782cA5b4BBFC975146B98ba3941Fe26C56",
+        startBlock: 11581361
       },
       {
-        label: "revolving-v2.5",
+        label: "revolving-v2.5.3",
         marketKind: "REVOLVING",
         abiFamily: "hooks-v2-5",
-        address: "0x190B42942fe9492df9CeA441dA5c43309840E93A",
-        startBlock: 11559137
+        address: "0xb3FBD4FBeb1EE4BEE7afdbC4A75C7c4E97CF105C",
+        startBlock: 11581363
       }
     ]
   );
@@ -87,10 +87,35 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
       })),
     [
       {
-        label: "wrapper-v2.5",
-        address: "0x6B1DD93453584346C530A1646e98aB306fD6D37C",
-        startBlock: 11559124
+        label: "wrapper-v2.5.3",
+        address: "0x31D8D5564Ce11f764E74beca5B4e8d363046949f",
+        startBlock: 11581359
       }
+    ]
+  );
+  for (const label of ["standard-v2.5", "revolving-v2.5"]) {
+    const predecessor = sepolia.factories.find(
+      factory => factory.label === label
+    );
+    assert.equal(predecessor.indexed, true);
+    assert.equal(predecessor.deploymentTarget, false);
+    assert.equal(predecessor.lifecycle, "active");
+  }
+  const predecessorWrapper = sepolia.wrapperFactories.find(
+    factory => factory.label === "wrapper-v2.5"
+  );
+  assert.equal(predecessorWrapper.indexed, true);
+  assert.equal(predecessorWrapper.deploymentTarget, false);
+  assert.equal(predecessorWrapper.lifecycle, "active");
+  assert.deepEqual(
+    sepolia.factories
+      .filter(factory => !factory.indexed)
+      .map(factory => factory.label),
+    [
+      "revolving-preview-2026-04-19",
+      "standard-test-2024-08-05",
+      "standard-test-2024-09-23",
+      "standard-test-2024-11-21"
     ]
   );
   assert.deepEqual(sepolia.borrowerIdentityRegistries, [
@@ -117,10 +142,10 @@ test("keeps non-Sepolia targets blocked and pins the live Sepolia V2.5 targets",
     }
   ]);
   assert.deepEqual(sepolia.provenance, {
-    kind: "protocol-live-evidence-packet",
+    kind: "protocol-deployment-handoff",
     source:
-      "v2-protocol/v2-5-sepolia-live-20260824T194947Z.tar.gz",
-    sha256: "8d8464612987074b151b8cb66451298962431ee24b2dd5b19757057318eb34ad"
+      "v2-protocol/deployments/sepolia/handoff-v2-5-sepolia-fix-1.json",
+    sha256: "5c0a38d145152e79b0333161fa8644c820659be0776eb19129b735a594a54f9a"
   });
 });
 
@@ -139,16 +164,16 @@ test("keeps legacy Plasma factories on the base hooked-market ABI", () => {
   }
 });
 
-test("derives current manifest aliases from the live Sepolia V2.5 targets", () => {
+test("derives current manifest aliases from the live Sepolia V2.5.3 targets", () => {
   const sepolia = loadChainConfig("sepolia");
   const standard = sepolia.factories.find(
-    factory => factory.label === "standard-v2.5"
+    factory => factory.label === "standard-v2.5.3"
   );
   const revolving = sepolia.factories.find(
-    factory => factory.label === "revolving-v2.5"
+    factory => factory.label === "revolving-v2.5.3"
   );
   const wrapper = sepolia.wrapperFactories.find(
-    factory => factory.label === "wrapper-v2.5"
+    factory => factory.label === "wrapper-v2.5.3"
   );
   assert.equal(finalHooksFactoryName(sepolia, standard), "HooksFactory");
   assert.equal(
@@ -289,10 +314,10 @@ test("requires a wrapper target on wrapper-enabled chains when marked ready", ()
     factory.deploymentTarget = false;
   });
   config.factories.find(
-    factory => factory.label === "standard-v2.5"
+    factory => factory.label === "standard-v2.5.3"
   ).deploymentTarget = true;
   config.factories.find(
-    factory => factory.label === "revolving-v2.5"
+    factory => factory.label === "revolving-v2.5.3"
   ).deploymentTarget = true;
   assert.throws(
     () =>

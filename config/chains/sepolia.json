@@ -80,6 +80,21 @@
       "address": "0xB63929E732156C46857C0d9b08e483f8845Ed1BE",
       "kind": "PeriodicTerm",
       "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0xae00f2c2fd926007beF2EeC2B2204A4c3528b401",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0xEB2f6c7DF8b760542e5b4ba509f4347252bdE4b8",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x931329D440E66f22F1CcDCe73C1049DBf5C35659",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
     }
   ],
   "factories": [
@@ -200,7 +215,7 @@
       "address": "0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18",
       "startBlock": 11559133,
       "indexed": true,
-      "deploymentTarget": true,
+      "deploymentTarget": false,
       "lifecycle": "active"
     },
     {
@@ -211,6 +226,30 @@
       "abiFamily": "hooks-v2-5",
       "address": "0x190B42942fe9492df9CeA441dA5c43309840E93A",
       "startBlock": 11559137,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "standard-v2.5.3",
+      "manifestName": "HooksFactoryStandardV2_5_3",
+      "marketKind": "STANDARD",
+      "generation": "v2.5.3",
+      "abiFamily": "hooks-v2-5",
+      "address": "0x89797b782cA5b4BBFC975146B98ba3941Fe26C56",
+      "startBlock": 11581361,
+      "indexed": true,
+      "deploymentTarget": true,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-v2.5.3",
+      "manifestName": "HooksFactoryRevolvingV2_5_3",
+      "marketKind": "REVOLVING",
+      "generation": "v2.5.3",
+      "abiFamily": "hooks-v2-5",
+      "address": "0xb3FBD4FBeb1EE4BEE7afdbC4A75C7c4E97CF105C",
+      "startBlock": 11581363,
       "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
@@ -266,6 +305,16 @@
       "generation": "v2.5",
       "address": "0x6B1DD93453584346C530A1646e98aB306fD6D37C",
       "startBlock": 11559124,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "wrapper-v2.5.3",
+      "manifestName": "Wildcat4626WrapperFactoryV2_5_3",
+      "generation": "v2.5.3",
+      "address": "0x31D8D5564Ce11f764E74beca5B4e8d363046949f",
+      "startBlock": 11581359,
       "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
@@ -329,15 +378,15 @@
   },
   "compatibility": {
     "canonicalFactoryByMarketKind": {
-      "STANDARD": "standard-v2.5",
-      "REVOLVING": "revolving-v2.5"
+      "STANDARD": "standard-v2.5.3",
+      "REVOLVING": "revolving-v2.5.3"
     },
-    "primaryWrapperFactory": "wrapper-v2.5",
+    "primaryWrapperFactory": "wrapper-v2.5.3",
     "primaryCollateralFactory": "collateral-v1"
   },
   "provenance": {
-    "kind": "protocol-live-evidence-packet",
-    "source": "v2-protocol/v2-5-sepolia-live-20260824T194947Z.tar.gz",
-    "sha256": "8d8464612987074b151b8cb66451298962431ee24b2dd5b19757057318eb34ad"
+    "kind": "protocol-deployment-handoff",
+    "source": "v2-protocol/deployments/sepolia/handoff-v2-5-sepolia-fix-1.json",
+    "sha256": "5c0a38d145152e79b0333161fa8644c820659be0776eb19129b735a594a54f9a"
   }
 }
