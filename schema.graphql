@@ -1882,6 +1882,8 @@ type Market @entity {
   maxTotalSupplyUpdatedRecords: [MaxTotalSupplyUpdated!]!
     @derivedFrom(field: "market")
   withdrawalRequestRecords: [WithdrawalRequest!]! @derivedFrom(field: "market")
+  withdrawalExecutionRecords: [WithdrawalExecution!]!
+    @derivedFrom(field: "market")
   protocolFeeBipsUpdatedRecords: [ProtocolFeeBipsUpdated!]!
     @derivedFrom(field: "market")
   forceBuyBackRecords: [ForceBuyBack!]! @derivedFrom(field: "market")
@@ -2495,6 +2497,10 @@ type WithdrawalBatchPayment @entity(immutable: true) {
 
 type WithdrawalExecution @entity(immutable: true) {
   id: ID! # WDEXEC-<market>-<account>-<expiry>-<lender>-<execution index>
+  # Position in the payload-rich market record stream. This is intentionally
+  # distinct from MarketEvent.sequence, which includes every indexed lifecycle event.
+  eventIndex: Int!
+  market: Market!
   account: LenderAccount!
   status: LenderWithdrawalStatus!
   batch: WithdrawalBatch!

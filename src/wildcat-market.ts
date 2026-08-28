@@ -1479,6 +1479,8 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       status.executionsCount
     ),
     {
+      eventIndex: market.eventIndex,
+      market: market.id,
       batch: status.batch,
       status: status.id,
       account: status.account,
@@ -1489,6 +1491,7 @@ export function handleWithdrawalExecuted(event: WithdrawalExecutedEvent): void {
       blockLogIndex: event.logIndex.toI32(),
     }
   );
+  market.eventIndex = market.eventIndex + 1;
   status.normalizedAmountWithdrawn = status.normalizedAmountWithdrawn.plus(
     normalizedAmount
   );

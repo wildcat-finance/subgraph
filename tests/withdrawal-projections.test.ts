@@ -19,6 +19,7 @@ import {
   generateMarketId,
   generateTokenId,
   generateWithdrawalBatchId,
+  generateWithdrawalExecutionId,
 } from "../generated/UncrashableEntityHelpers";
 import { createInitialMarketSnapshot } from "../src/market-domain";
 import { recordMarketEvent } from "../src/market-event-domain";
@@ -257,6 +258,16 @@ describe("withdrawal projections", () => {
     let accountId = generateLenderAccountId(MARKET, LENDER);
     let batchId = generateWithdrawalBatchId(MARKET, expiry);
     let statusId = generateLenderWithdrawalStatusId(MARKET, expiry, LENDER);
+    let executionId = generateWithdrawalExecutionId(
+      MARKET,
+      expiry,
+      LENDER,
+      1
+    );
+
+    assert.fieldEquals("WithdrawalExecution", executionId, "eventIndex", "2");
+    assert.fieldEquals("WithdrawalExecution", executionId, "market", marketId);
+    assert.fieldEquals("Market", marketId, "eventIndex", "3");
 
     assert.fieldEquals("MarketSnapshot", marketId, "scaledTotalSupply", "60");
     assert.fieldEquals(
