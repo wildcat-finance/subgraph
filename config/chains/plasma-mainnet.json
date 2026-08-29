@@ -1,0 +1,66 @@
+{
+  "configVersion": 2,
+  "schemaRelease": "2.5",
+  "network": "plasma-mainnet",
+  "chainId": 9745,
+  "graphNetwork": "plasma-mainnet",
+  "deploymentTargetsReady": false,
+  "anchors": {
+    "archController": {
+      "address": "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae",
+      "startBlock": 1989721
+    },
+    "sanctionsSentinel": {
+      "address": "0x37064895ba2C1e269EAF7FF32564818d08903f5B",
+      "startBlock": 1989725
+    }
+  },
+  "hooksTemplates": [],
+  "factories": [
+    {
+      "label": "standard-v2",
+      "manifestName": "HooksFactoryStandardV2",
+      "marketKind": "STANDARD",
+      "generation": "v2",
+      "abiFamily": "hooks-mainnet-current",
+      "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
+      "startBlock": 1989742,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    }
+  ],
+  "borrowerIdentityRegistries": [],
+  "roleProviderFactories": [],
+  "wrapperFactories": [],
+  "collateralFactories": [],
+  "features": {
+    "analytics": true,
+    "collateral": false,
+    "wrappers": false
+  },
+  "pricing": {
+    "mode": "USD_PEG",
+    "feedRegistry": null,
+    "denominations": null,
+    "bridgeFeeds": null,
+    "stablecoins": [
+      "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+    ],
+    "directFeeds": [],
+    "syntheticPrices": []
+  },
+  "compatibility": {
+    "canonicalFactoryByMarketKind": {
+      "STANDARD": "standard-v2"
+    },
+    "primaryWrapperFactory": null,
+    "primaryCollateralFactory": null
+  },
+  "provenance": {
+    "kind": "legacy-subgraph-config",
+    "source": "subgraph/networks.json",
+    "sourceRevision": "919e3e1fe2464313139a1cd2fbd09a4b45377deb",
+    "sha256": "8f502a36794d3cff27d6b8ce4dc17fa3cdc3960bf99ead4760ce54cf4b069d2d"
+  }
+}

@@ -1289,7 +1289,13 @@
       }
     ],
     "name": "queueWithdrawal",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "expiry",
+        "type": "uint32"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -1583,7 +1589,7 @@
         "type": "string"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "pure",
     "type": "function"
   },
   {

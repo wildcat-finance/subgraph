@@ -32,9 +32,12 @@ import {
   getOrInitializeRoleProvider,
   getRoleProvider,
 } from "../generated/UncrashableEntityHelpers";
-import { Address } from "@graphprotocol/graph-ts";
+import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 
 import { HooksConfig, HooksInstance, Market } from "../generated/schema";
+import { saveMarketAndSnapshot } from "./market-domain";
+import { recordMarketEvent } from "./market-event-domain";
+import { getOrCreateRoleProviderInstance } from "./role-provider-domain";
 import {
   CombinedHooks as CombinedHooksContract,
   AccountAccessGranted as AccountAccessGrantedEvent,
@@ -67,24 +70,40 @@ function generateHooksInstanceEventId(hooks: HooksInstance): string {
 export function handleAccountAccessGranted(
   event: AccountAccessGrantedEvent
 ): void {
+  handleAccountAccessGrantedValues(
+    event,
+    event.params.providerAddress,
+    event.params.accountAddress,
+    null,
+    event.params.credentialTimestamp
+  );
+}
+
+export function handleAccountAccessGrantedValues(
+  event: ethereum.Event,
+  providerAddress: Address,
+  accountAddress: Address,
+  caller: Address | null,
+  credentialTimestamp: BigInt
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
   let provider = getRoleProvider(
-    generateRoleProviderId(event.address, event.params.providerAddress)
+    generateRoleProviderId(event.address, providerAddress)
   );
   let lenderHooksAccess = getOrInitializeLenderHooksAccess(
-    generateLenderHooksAccessId(event.address, event.params.accountAddress),
+    generateLenderHooksAccessId(event.address, accountAddress),
     {
       canRefresh: provider.isPullProvider,
       hooks: hooks.id,
-      lastApprovalTimestamp: event.params.credentialTimestamp.toI32(),
+      lastApprovalTimestamp: credentialTimestamp.toI32(),
       lastProvider: provider.id,
-      lender: event.params.accountAddress,
+      lender: accountAddress,
       addedTimestamp: event.block.timestamp.toI32(),
     }
   );
   if (!lenderHooksAccess.wasCreated) {
     lenderHooksAccess.entity.canRefresh = provider.isPullProvider;
-    lenderHooksAccess.entity.lastApprovalTimestamp = event.params.credentialTimestamp.toI32();
+    lenderHooksAccess.entity.lastApprovalTimestamp = credentialTimestamp.toI32();
     lenderHooksAccess.entity.lastProvider = provider.id;
     lenderHooksAccess.entity.save();
   }
@@ -95,8 +114,9 @@ export function handleAccountAccessGranted(
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
     blockLogIndex: event.logIndex.toI32(),
-    credentialTimestamp: event.params.credentialTimestamp.toI32(),
+    credentialTimestamp: credentialTimestamp.toI32(),
     provider: provider.id,
+    caller: caller,
     eventIndex: hooks.eventIndex,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
@@ -106,11 +126,31 @@ export function handleAccountAccessGranted(
 export function handleAccountAccessRevoked(
   event: AccountAccessRevokedEvent
 ): void {
+  handleAccountAccessRevokedValues(
+    event,
+    Address.zero(),
+    false,
+    event.params.accountAddress,
+    null
+  );
+}
+
+export function handleAccountAccessRevokedValues(
+  event: ethereum.Event,
+  providerAddress: Address,
+  hasProvider: boolean,
+  accountAddress: Address,
+  caller: Address | null
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
 
   let lenderHooksAccess = getLenderHooksAccess(
-    generateLenderHooksAccessId(event.address, event.params.accountAddress)
+    generateLenderHooksAccessId(event.address, accountAddress)
   );
+  let providerId: string | null = null;
+  if (hasProvider) {
+    providerId = generateRoleProviderId(event.address, providerAddress);
+  }
   createAccountAccessRevoked(generateHooksInstanceEventId(hooks), {
     hooks: hooks.id,
     account: lenderHooksAccess.id,
@@ -119,6 +159,8 @@ export function handleAccountAccessRevoked(
     transactionHash: event.transaction.hash,
     blockLogIndex: event.logIndex.toI32(),
     eventIndex: hooks.eventIndex,
+    provider: providerId,
+    caller: caller,
   });
   lenderHooksAccess.canRefresh = false;
   lenderHooksAccess.lastProvider = null;
@@ -132,15 +174,27 @@ export function handleAccountAccessRevoked(
 export function handleAccountBlockedFromDeposits(
   event: AccountBlockedFromDepositsEvent
 ): void {
+  handleAccountBlockedFromDepositsValues(
+    event,
+    null,
+    event.params.accountAddress
+  );
+}
+
+export function handleAccountBlockedFromDepositsValues(
+  event: ethereum.Event,
+  administrator: Address | null,
+  accountAddress: Address
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
   let lenderHooksAccess = getOrInitializeLenderHooksAccess(
-    generateLenderHooksAccessId(event.address, event.params.accountAddress),
+    generateLenderHooksAccessId(event.address, accountAddress),
     {
       canRefresh: false,
       hooks: hooks.id,
       lastApprovalTimestamp: 0,
       lastProvider: null,
-      lender: event.params.accountAddress,
+      lender: accountAddress,
       addedTimestamp: event.block.timestamp.toI32(),
     }
   );
@@ -160,6 +214,7 @@ export function handleAccountBlockedFromDeposits(
     transactionHash: event.transaction.hash,
     blockLogIndex: event.logIndex.toI32(),
     eventIndex: hooks.eventIndex,
+    administrator: administrator,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
@@ -178,6 +233,7 @@ export function handleAccountMadeFirstDeposit(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "ACCOUNT_FIRST_DEPOSIT");
   let lenderStatusId = generateLenderHooksAccessId(
     event.address,
     accountAddress
@@ -209,10 +265,22 @@ export function handleAccountMadeFirstDeposit(
 export function handleAccountUnblockedFromDeposits(
   event: AccountUnblockedFromDepositsEvent
 ): void {
+  handleAccountUnblockedFromDepositsValues(
+    event,
+    null,
+    event.params.accountAddress
+  );
+}
+
+export function handleAccountUnblockedFromDepositsValues(
+  event: ethereum.Event,
+  administrator: Address | null,
+  accountAddress: Address
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
   let lenderStatusId = generateLenderHooksAccessId(
     event.address,
-    event.params.accountAddress
+    accountAddress
   );
   let access = getLenderHooksAccess(lenderStatusId);
   access.isBlockedFromDeposits = false;
@@ -225,6 +293,7 @@ export function handleAccountUnblockedFromDeposits(
     blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
+    administrator: administrator,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
@@ -233,17 +302,39 @@ export function handleAccountUnblockedFromDeposits(
 export function handleMinimumDepositUpdated(
   event: MinimumDepositUpdatedEvent
 ): void {
+  handleMinimumDepositUpdatedValues(
+    event,
+    event.params.market,
+    null,
+    BigInt.fromI32(-1),
+    event.params.newMinimumDeposit
+  );
+}
+
+export function handleMinimumDepositUpdatedValues(
+  event: ethereum.Event,
+  marketAddress: Address,
+  caller: Address | null,
+  previousMinimumDeposit: BigInt,
+  newMinimumDeposit: BigInt
+): void {
   let hooksId = generateHooksInstanceId(event.address);
-  let marketId = generateMarketId(event.params.market);
+  let marketId = generateMarketId(marketAddress);
   let market = Market.load(marketId);
   if (market != null) {
-    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+    recordMarketEvent(event, market, "MINIMUM_DEPOSIT_UPDATED");
+    let hooksConfig = getHooksConfig(generateHooksConfigId(marketAddress));
+    let oldMinimumDeposit = hooksConfig.minimumDeposit;
+    if (!previousMinimumDeposit.lt(BigInt.zero())) {
+      oldMinimumDeposit = previousMinimumDeposit;
+    }
 
     createMinimumDepositUpdated(generateMarketEventId(market), {
       hooks: hooksId,
       market: market.id,
-      newMinimumDeposit: event.params.newMinimumDeposit,
-      oldMinimumDeposit: hooksConfig.minimumDeposit,
+      newMinimumDeposit: newMinimumDeposit,
+      oldMinimumDeposit: oldMinimumDeposit,
+      caller: caller,
       blockNumber: event.block.number.toI32(),
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
@@ -251,7 +342,7 @@ export function handleMinimumDepositUpdated(
       eventIndex: market.eventIndex,
       minimumDepositUpdatedIndex: market.minimumDepositUpdatedIndex,
     });
-    hooksConfig.minimumDeposit = event.params.newMinimumDeposit;
+    hooksConfig.minimumDeposit = newMinimumDeposit;
     market.eventIndex = market.eventIndex + 1;
     market.minimumDepositUpdatedIndex = market.minimumDepositUpdatedIndex + 1;
     hooksConfig.save();
@@ -260,15 +351,36 @@ export function handleMinimumDepositUpdated(
 }
 
 export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
-  let marketId = generateMarketId(event.params.market);
+  handleFixedTermUpdatedValues(
+    event,
+    event.params.market,
+    null,
+    -1,
+    event.params.fixedTermEndTime.toI32()
+  );
+}
+
+export function handleFixedTermUpdatedValues(
+  event: ethereum.Event,
+  marketAddress: Address,
+  caller: Address | null,
+  previousFixedTermEndTime: i32,
+  newFixedTermEndTime: i32
+): void {
+  let marketId = generateMarketId(marketAddress);
   let market = Market.load(marketId);
   if (market != null) {
-    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+    recordMarketEvent(event, market, "FIXED_TERM_UPDATED");
+    let hooksConfig = getHooksConfig(generateHooksConfigId(marketAddress));
+    if (previousFixedTermEndTime < 0) {
+      previousFixedTermEndTime = hooksConfig.fixedTermEndTime;
+    }
     createFixedTermUpdated(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
       market: market.id,
-      newFixedTermEndTime: event.params.fixedTermEndTime.toI32(),
-      oldFixedTermEndTime: hooksConfig.fixedTermEndTime,
+      newFixedTermEndTime: newFixedTermEndTime,
+      oldFixedTermEndTime: previousFixedTermEndTime,
+      caller: caller,
       blockNumber: event.block.number.toI32(),
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
@@ -276,7 +388,7 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
       eventIndex: market.eventIndex,
       fixedTermUpdatedIndex: market.fixedTermUpdatedIndex,
     });
-    hooksConfig.fixedTermEndTime = event.params.fixedTermEndTime.toI32();
+    hooksConfig.fixedTermEndTime = newFixedTermEndTime;
     market.eventIndex = market.eventIndex + 1;
     market.fixedTermUpdatedIndex = market.fixedTermUpdatedIndex + 1;
     market.save();
@@ -287,28 +399,48 @@ export function handleFixedTermUpdated(event: FixedTermUpdatedEvent): void {
 export function handlePeriodicTermUpdated(
   event: PeriodicTermUpdatedEvent
 ): void {
-  let marketId = generateMarketId(event.params.market);
+  handlePeriodicTermUpdatedValues(
+    event,
+    event.params.market,
+    null,
+    event.params.firstWithdrawalWindowStart.toI32(),
+    event.params.periodDuration.toI32(),
+    event.params.withdrawalWindowDuration.toI32()
+  );
+}
+
+export function handlePeriodicTermUpdatedValues(
+  event: ethereum.Event,
+  marketAddress: Address,
+  administrator: Address | null,
+  firstWithdrawalWindowStart: i32,
+  periodDuration: i32,
+  withdrawalWindowDuration: i32
+): void {
+  let marketId = generateMarketId(marketAddress);
   let market = Market.load(marketId);
   if (market != null) {
-    let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
+    recordMarketEvent(event, market, "PERIODIC_TERM_UPDATED");
+    let hooksConfig = getHooksConfig(generateHooksConfigId(marketAddress));
     createPeriodicTermUpdated(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
       market: market.id,
       oldFirstWithdrawalWindowStart: hooksConfig.firstWithdrawalWindowStart,
       oldPeriodDuration: hooksConfig.periodDuration,
       oldWithdrawalWindowDuration: hooksConfig.withdrawalWindowDuration,
-      newFirstWithdrawalWindowStart: event.params.firstWithdrawalWindowStart.toI32(),
-      newPeriodDuration: event.params.periodDuration.toI32(),
-      newWithdrawalWindowDuration: event.params.withdrawalWindowDuration.toI32(),
+      newFirstWithdrawalWindowStart: firstWithdrawalWindowStart,
+      newPeriodDuration: periodDuration,
+      newWithdrawalWindowDuration: withdrawalWindowDuration,
+      administrator: administrator,
       blockNumber: event.block.number.toI32(),
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       eventIndex: market.eventIndex,
     });
-    hooksConfig.firstWithdrawalWindowStart = event.params.firstWithdrawalWindowStart.toI32();
-    hooksConfig.periodDuration = event.params.periodDuration.toI32();
-    hooksConfig.withdrawalWindowDuration = event.params.withdrawalWindowDuration.toI32();
+    hooksConfig.firstWithdrawalWindowStart = firstWithdrawalWindowStart;
+    hooksConfig.periodDuration = periodDuration;
+    hooksConfig.withdrawalWindowDuration = withdrawalWindowDuration;
     market.eventIndex = market.eventIndex + 1;
     market.save();
     hooksConfig.save();
@@ -319,6 +451,7 @@ export function handlePeriodicTermClosed(event: PeriodicTermClosedEvent): void {
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "PERIODIC_TERM_CLOSED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
     createPeriodicTermClosed(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
@@ -358,6 +491,7 @@ export function handleAnnualInterestBipsReductionProposalCancelled(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "APR_REDUCTION_CANCELLED");
     createAnnualInterestBipsReductionProposalCancelled(
       generateMarketEventId(market),
       {
@@ -385,6 +519,7 @@ export function handleAnnualInterestBipsReductionExecuted(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "APR_REDUCTION_EXECUTED");
     createAnnualInterestBipsReductionExecuted(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
       market: market.id,
@@ -407,6 +542,7 @@ export function handleAnnualInterestBipsReductionProposed(
   let marketId = generateMarketId(event.params.market);
   let market = Market.load(marketId);
   if (market != null) {
+    recordMarketEvent(event, market, "APR_REDUCTION_PROPOSED");
     let hooksConfig = getHooksConfig(generateHooksConfigId(event.params.market));
     createAnnualInterestBipsReductionProposed(generateMarketEventId(market), {
       hooks: generateHooksInstanceId(event.address),
@@ -433,33 +569,56 @@ export function handleAnnualInterestBipsReductionProposed(
 }
 
 export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
+  handleRoleProviderAddedValues(
+    event,
+    null,
+    event.params.providerAddress,
+    event.params.timeToLive,
+    event.params.pullProviderIndex,
+    event.params.pushProviderIndex
+  );
+}
+
+export function handleRoleProviderAddedValues(
+  event: ethereum.Event,
+  administrator: Address | null,
+  providerAddress: Address,
+  timeToLive: BigInt,
+  pullProviderIndex: i32,
+  pushProviderIndex: i32
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let providerInstance = getOrCreateRoleProviderInstance(
+    providerAddress
+  );
   let nullProviderIndex = 2 ** 24 - 1;
   let roleProvider = getOrInitializeRoleProvider(
-    generateRoleProviderId(event.address, event.params.providerAddress),
+    generateRoleProviderId(event.address, providerAddress),
     {
       hooks: hooks.id,
-      timeToLive: event.params.timeToLive.toI32(),
-      isPullProvider: event.params.pullProviderIndex != nullProviderIndex,
-      pullProviderIndex: event.params.pullProviderIndex,
-      providerAddress: event.params.providerAddress,
-      isPushProvider: event.params.pushProviderIndex != nullProviderIndex,
-      pushProviderIndex: event.params.pushProviderIndex,
+      timeToLive: timeToLive,
+      isPullProvider: pullProviderIndex != nullProviderIndex,
+      pullProviderIndex: pullProviderIndex,
+      providerAddress: providerAddress,
+      providerInstance: providerInstance.id,
+      isPushProvider: pushProviderIndex != nullProviderIndex,
+      pushProviderIndex: pushProviderIndex,
       isApproved: true,
     }
   );
   if (!roleProvider.wasCreated) {
-    roleProvider.entity.timeToLive = event.params.timeToLive.toI32();
+    roleProvider.entity.timeToLive = timeToLive;
     roleProvider.entity.isPullProvider =
-      event.params.pullProviderIndex != nullProviderIndex;
-    roleProvider.entity.pullProviderIndex = event.params.pullProviderIndex;
+      pullProviderIndex != nullProviderIndex;
+    roleProvider.entity.pullProviderIndex = pullProviderIndex;
     roleProvider.entity.isPushProvider =
-      event.params.pushProviderIndex != nullProviderIndex;
-    roleProvider.entity.pushProviderIndex = event.params.pushProviderIndex;
+      pushProviderIndex != nullProviderIndex;
+    roleProvider.entity.pushProviderIndex = pushProviderIndex;
     roleProvider.entity.isApproved = true;
     roleProvider.entity.save();
   }
-  createRoleProviderAdded(generateHooksInstanceEventId(hooks), {
+  let roleProviderAddedId = generateHooksInstanceEventId(hooks);
+  createRoleProviderAdded(roleProviderAddedId, {
     hooks: hooks.id,
     isPullProvider: roleProvider.entity.isPullProvider,
     pullProviderIndex: roleProvider.entity.pullProviderIndex,
@@ -472,7 +631,10 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
     timeToLive: roleProvider.entity.timeToLive,
+    administrator: administrator,
   });
+  roleProvider.entity.addedEvent = roleProviderAddedId;
+  roleProvider.entity.save();
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
 }
@@ -480,12 +642,31 @@ export function handleRoleProviderAdded(event: RoleProviderAddedEvent): void {
 export function handleRoleProviderRemoved(
   event: RoleProviderRemovedEvent
 ): void {
+  handleRoleProviderRemovedValues(
+    event,
+    null,
+    event.params.providerAddress,
+    null,
+    null,
+    null
+  );
+}
+
+export function handleRoleProviderRemovedValues(
+  event: ethereum.Event,
+  administrator: Address | null,
+  providerAddress: Address,
+  timeToLive: BigInt | null,
+  pullProviderIndex: BigInt | null,
+  pushProviderIndex: BigInt | null
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
   let roleProvider = getRoleProvider(
-    generateRoleProviderId(event.address, event.params.providerAddress)
+    generateRoleProviderId(event.address, providerAddress)
   );
 
-  createRoleProviderRemoved(generateHooksInstanceEventId(hooks), {
+  let roleProviderRemovedId = generateHooksInstanceEventId(hooks);
+  createRoleProviderRemoved(roleProviderRemovedId, {
     hooks: hooks.id,
     provider: roleProvider.id,
     blockNumber: event.block.number.toI32(),
@@ -493,12 +674,19 @@ export function handleRoleProviderRemoved(
     blockLogIndex: event.logIndex.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     eventIndex: hooks.eventIndex,
+    administrator: administrator,
+    timeToLive: timeToLive,
+    pullProviderIndex: pullProviderIndex,
+    pushProviderIndex: pushProviderIndex,
   });
 
   roleProvider.isApproved = false;
   roleProvider.isPullProvider = false;
-  roleProvider.timeToLive = 0;
+  roleProvider.isPushProvider = false;
+  roleProvider.timeToLive = BigInt.zero();
   roleProvider.pullProviderIndex = 0;
+  roleProvider.pushProviderIndex = 0;
+  roleProvider.removedEvent = roleProviderRemovedId;
   roleProvider.save();
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
@@ -507,15 +695,39 @@ export function handleRoleProviderRemoved(
 export function handleRoleProviderUpdated(
   event: RoleProviderUpdatedEvent
 ): void {
+  handleRoleProviderUpdatedValues(
+    event,
+    null,
+    event.params.providerAddress,
+    null,
+    event.params.timeToLive,
+    null,
+    event.params.pullProviderIndex,
+    null,
+    event.params.pushProviderIndex
+  );
+}
+
+export function handleRoleProviderUpdatedValues(
+  event: ethereum.Event,
+  administrator: Address | null,
+  providerAddress: Address,
+  previousTimeToLive: BigInt | null,
+  newTimeToLive: BigInt,
+  previousPullProviderIndex: BigInt | null,
+  newPullProviderIndex: i32,
+  previousPushProviderIndex: BigInt | null,
+  newPushProviderIndex: i32
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
   let roleProvider = getRoleProvider(
-    generateRoleProviderId(event.address, event.params.providerAddress)
+    generateRoleProviderId(event.address, providerAddress)
   );
 
   let nullProviderIndex = 2 ** 24 - 1;
-  roleProvider.pullProviderIndex = event.params.pullProviderIndex;
-  roleProvider.pushProviderIndex = event.params.pushProviderIndex;
-  roleProvider.timeToLive = event.params.timeToLive.toI32();
+  roleProvider.pullProviderIndex = newPullProviderIndex;
+  roleProvider.pushProviderIndex = newPushProviderIndex;
+  roleProvider.timeToLive = newTimeToLive;
   roleProvider.isPullProvider =
     roleProvider.pullProviderIndex != nullProviderIndex;
   roleProvider.isPushProvider =
@@ -535,6 +747,10 @@ export function handleRoleProviderUpdated(
     isPushProvider: roleProvider.isPushProvider,
     pushProviderIndex: roleProvider.pushProviderIndex,
     timeToLive: roleProvider.timeToLive,
+    administrator: administrator,
+    previousTimeToLive: previousTimeToLive,
+    previousPullProviderIndex: previousPullProviderIndex,
+    previousPushProviderIndex: previousPushProviderIndex,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
   hooks.save();
@@ -550,11 +766,12 @@ export function handleTemporaryExcessReserveRatioActivated(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_ACTIVATED");
   market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.temporaryReserveRatioActive = true;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioCanceled(
@@ -567,11 +784,12 @@ export function handleTemporaryExcessReserveRatioCanceled(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_CANCELLED");
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioExpired(
@@ -584,11 +802,12 @@ export function handleTemporaryExcessReserveRatioExpired(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_EXPIRED");
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioUpdated(
@@ -601,16 +820,32 @@ export function handleTemporaryExcessReserveRatioUpdated(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_UPDATED");
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleNameUpdated(event: NameUpdatedEvent): void {
+  handleNameUpdatedValues(event, null, "", false, event.params.name);
+}
+
+export function handleNameUpdatedValues(
+  event: ethereum.Event,
+  administrator: Address | null,
+  previousName: string,
+  hasPreviousName: boolean,
+  newName: string
+): void {
   let hooks = getHooksInstance(generateHooksInstanceId(event.address));
+  let oldName = hooks.name;
+  if (hasPreviousName) {
+    oldName = previousName;
+  }
   createHooksNameUpdated(generateHooksInstanceEventId(hooks), {
     hooks: hooks.id,
-    newName: event.params.name,
-    oldName: hooks.name,
+    newName: newName,
+    oldName: oldName,
+    administrator: administrator,
     blockNumber: event.block.number.toI32(),
     blockTimestamp: event.block.timestamp.toI32(),
     transactionHash: event.transaction.hash,
@@ -618,7 +853,7 @@ export function handleNameUpdated(event: NameUpdatedEvent): void {
     eventIndex: hooks.eventIndex,
   });
   hooks.eventIndex = hooks.eventIndex + 1;
-  hooks.name = event.params.name;
+  hooks.name = newName;
   hooks.save();
 }
 
@@ -633,6 +868,7 @@ export function handleDisabledForceBuyBacks(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "FORCE_BUYBACK_DISABLED");
   createDisabledForceBuyBacks(generateMarketEventId(market), {
     hooks: hooksId,
     market: market.id,

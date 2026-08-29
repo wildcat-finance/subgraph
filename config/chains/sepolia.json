@@ -1,0 +1,392 @@
+{
+  "configVersion": 2,
+  "schemaRelease": "2.5",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "graphNetwork": "sepolia",
+  "deploymentTargetsReady": true,
+  "anchors": {
+    "archController": {
+      "address": "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f",
+      "startBlock": 4796511
+    },
+    "sanctionsSentinel": {
+      "address": "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B",
+      "startBlock": 4796511
+    }
+  },
+  "hooksTemplates": [
+    {
+      "address": "0xD26f107796582fDf64658d81E2170c7c05082E5f",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0xE6AEbE0Fd1f41053967907d6edD1801d77cbf969",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0xdb2d6EeB5ac72252955783fEe44f6667b63b7a11",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0x3D5f0AAcFC976A88fC8CA2Adbe0453Fe876a84bb",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x8B076B2502cDd5F86fc1710Cb0408Be0adEbF38d",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0xaacAcf6729391742CbE130D6C5aE76469C0600D6",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0x271EC1C852Bf7BF7E7eDdBf47B35E2ecdF3b328B",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0x2E8Bc3cc859f517535aD7A5352322F3926D9BEaa",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0x0ae2033719bE2D5aad4144De8406aCF5aC59cb17",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x52D1B53fc667ef5cbf1A792494266946cDa86fa7",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0x1840E97Fba22DbA0996f4b8D02fc8bB74473dD95",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0x7Cf683E0802257180EDf4C21A12C5070acd166d2",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0xB63929E732156C46857C0d9b08e483f8845Ed1BE",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0xae00f2c2fd926007beF2EeC2B2204A4c3528b401",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0xEB2f6c7DF8b760542e5b4ba509f4347252bdE4b8",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x931329D440E66f22F1CcDCe73C1049DBf5C35659",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
+    }
+  ],
+  "factories": [
+    {
+      "label": "standard-v2",
+      "manifestName": "HooksFactoryLegacyV2",
+      "marketKind": "STANDARD",
+      "generation": "v2",
+      "abiFamily": "hooks-shared-current",
+      "address": "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88",
+      "startBlock": 6973842,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "standard-v2.1",
+      "manifestName": "HooksFactoryStandardV2_1",
+      "marketKind": "STANDARD",
+      "generation": "v2.1",
+      "abiFamily": "hooks-shared-current",
+      "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
+      "startBlock": 7124440,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-preview-2026-04-19",
+      "manifestName": "HooksFactoryRevolving_20260419_233246",
+      "marketKind": "REVOLVING",
+      "generation": "preview-2026-04-19",
+      "abiFamily": "hooks-shared-current",
+      "address": "0xF4564015E524cf5629828E61F45ed339D998D85f",
+      "startBlock": 10695521,
+      "indexed": false,
+      "deploymentTarget": false,
+      "lifecycle": "retired"
+    },
+    {
+      "label": "revolving-preview-2026-04-24",
+      "manifestName": "HooksFactoryRevolvingPreview20260424",
+      "marketKind": "REVOLVING",
+      "generation": "preview-2026-04-24",
+      "abiFamily": "hooks-shared-current",
+      "address": "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5",
+      "startBlock": 10725492,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "standard-test-2024-08-05",
+      "manifestName": "HooksFactoryStandardTest20240805",
+      "marketKind": "STANDARD",
+      "generation": "test-2024-08-05",
+      "abiFamily": "hooks-shared-current",
+      "address": "0x6Cb3512b541733d340Aa520b63105586588BD600",
+      "startBlock": 6443857,
+      "indexed": false,
+      "deploymentTarget": false,
+      "lifecycle": "retired"
+    },
+    {
+      "label": "standard-test-2024-09-23",
+      "manifestName": "HooksFactoryStandardTest20240923",
+      "marketKind": "STANDARD",
+      "generation": "test-2024-09-23",
+      "abiFamily": "hooks-shared-current",
+      "address": "0xE1d14E8176d27415c204A4F9Ef58E107964CA12C",
+      "startBlock": 6746262,
+      "indexed": false,
+      "deploymentTarget": false,
+      "lifecycle": "retired"
+    },
+    {
+      "label": "standard-test-2024-11-21",
+      "manifestName": "HooksFactoryStandardTest20241121",
+      "marketKind": "STANDARD",
+      "generation": "test-2024-11-21",
+      "abiFamily": "hooks-shared-current",
+      "address": "0xCf872Ac862d2ba97F99804ed25f0dB5F2352933a",
+      "startBlock": 7123486,
+      "indexed": false,
+      "deploymentTarget": false,
+      "lifecycle": "retired"
+    },
+    {
+      "label": "standard-v2.5-preview-20260727",
+      "manifestName": "HooksFactoryStandardV2_5Preview20260727",
+      "marketKind": "STANDARD",
+      "generation": "v2.5-preview-20260727",
+      "abiFamily": "hooks-sepolia-current",
+      "address": "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C",
+      "startBlock": 11363908,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-v2.5-preview-20260727",
+      "manifestName": "HooksFactoryRevolvingV2_5Preview20260727",
+      "marketKind": "REVOLVING",
+      "generation": "v2.5-preview-20260727",
+      "abiFamily": "hooks-sepolia-current",
+      "address": "0x76Fe050d91940a72133e1819BF34c1042d8DBe73",
+      "startBlock": 11363912,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "standard-v2.5",
+      "manifestName": "HooksFactoryStandardV2_5",
+      "marketKind": "STANDARD",
+      "generation": "v2.5",
+      "abiFamily": "hooks-v2-5",
+      "address": "0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18",
+      "startBlock": 11559133,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-v2.5",
+      "manifestName": "HooksFactoryRevolvingV2_5",
+      "marketKind": "REVOLVING",
+      "generation": "v2.5",
+      "abiFamily": "hooks-v2-5",
+      "address": "0x190B42942fe9492df9CeA441dA5c43309840E93A",
+      "startBlock": 11559137,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "standard-v2.5.3",
+      "manifestName": "HooksFactoryStandardV2_5_3",
+      "marketKind": "STANDARD",
+      "generation": "v2.5.3",
+      "abiFamily": "hooks-v2-5",
+      "address": "0x89797b782cA5b4BBFC975146B98ba3941Fe26C56",
+      "startBlock": 11581361,
+      "indexed": true,
+      "deploymentTarget": true,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-v2.5.3",
+      "manifestName": "HooksFactoryRevolvingV2_5_3",
+      "marketKind": "REVOLVING",
+      "generation": "v2.5.3",
+      "abiFamily": "hooks-v2-5",
+      "address": "0xb3FBD4FBeb1EE4BEE7afdbC4A75C7c4E97CF105C",
+      "startBlock": 11581363,
+      "indexed": true,
+      "deploymentTarget": true,
+      "lifecycle": "active"
+    }
+  ],
+  "borrowerIdentityRegistries": [
+    {
+      "label": "borrower-identity-registry-v2.5",
+      "manifestName": "WildcatBorrowerIdentityRegistryV2_5",
+      "generation": "v2.5",
+      "address": "0xc2cF90781595203D1e75c28246b306C95d4b8b21",
+      "startBlock": 11559126,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
+  "roleProviderFactories": [
+    {
+      "label": "access-list-role-provider-factory-v2.5",
+      "manifestName": "AccessListRoleProviderFactoryV2_5",
+      "kind": "ACCESS_LIST",
+      "generation": "v2.5",
+      "address": "0x92995EA2ba572E4Cb8bB41E30f813BeB77FD4974",
+      "startBlock": 11559128,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
+  "wrapperFactories": [
+    {
+      "label": "wrapper-v1",
+      "manifestName": "Wildcat4626WrapperFactoryV1",
+      "generation": "v1",
+      "address": "0x0566Fe57682164af689f1440cb3BCEedEe3bf843",
+      "startBlock": 10534112,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "wrapper-v2.5-preview-20260727",
+      "manifestName": "Wildcat4626WrapperFactoryV2_5Preview20260727",
+      "generation": "v2.5-preview-20260727",
+      "address": "0x8a77449eaBB1522983cd700f002b5b191463378e",
+      "startBlock": 11363904,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "wrapper-v2.5",
+      "manifestName": "Wildcat4626WrapperFactoryV2_5",
+      "generation": "v2.5",
+      "address": "0x6B1DD93453584346C530A1646e98aB306fD6D37C",
+      "startBlock": 11559124,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "wrapper-v2.5.3",
+      "manifestName": "Wildcat4626WrapperFactoryV2_5_3",
+      "generation": "v2.5.3",
+      "address": "0x31D8D5564Ce11f764E74beca5B4e8d363046949f",
+      "startBlock": 11581359,
+      "indexed": true,
+      "deploymentTarget": true,
+      "lifecycle": "active"
+    }
+  ],
+  "collateralFactories": [
+    {
+      "label": "collateral-v1",
+      "manifestName": "WildcatMarketCollateralFactory",
+      "generation": "v1",
+      "address": "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0",
+      "startBlock": 9751444,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
+  "features": {
+    "analytics": true,
+    "collateral": true,
+    "wrappers": true
+  },
+  "pricing": {
+    "mode": "SYNTHETIC_TESTNET",
+    "feedRegistry": null,
+    "denominations": null,
+    "bridgeFeeds": null,
+    "stablecoins": [],
+    "directFeeds": [],
+    "syntheticPrices": [
+      {
+        "symbol": "USDC",
+        "priceUSD": "1",
+        "usdPeg": true
+      },
+      {
+        "symbol": "USDT",
+        "priceUSD": "1",
+        "usdPeg": true
+      },
+      {
+        "symbol": "DAI",
+        "priceUSD": "1",
+        "usdPeg": true
+      },
+      {
+        "symbol": "WETH",
+        "priceUSD": "2000",
+        "usdPeg": false
+      },
+      {
+        "symbol": "WBTC",
+        "priceUSD": "70000",
+        "usdPeg": false
+      },
+      {
+        "symbol": "ZRX",
+        "priceUSD": "0.10",
+        "usdPeg": false
+      }
+    ]
+  },
+  "compatibility": {
+    "canonicalFactoryByMarketKind": {
+      "STANDARD": "standard-v2.5.3",
+      "REVOLVING": "revolving-v2.5.3"
+    },
+    "primaryWrapperFactory": "wrapper-v2.5.3",
+    "primaryCollateralFactory": "collateral-v1"
+  },
+  "provenance": {
+    "kind": "protocol-deployment-handoff",
+    "source": "v2-protocol/deployments/sepolia/handoff-v2-5-sepolia-fix-1.json",
+    "sha256": "5c0a38d145152e79b0333161fa8644c820659be0776eb19129b735a594a54f9a"
+  }
+}

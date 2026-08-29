@@ -1,4 +1,4 @@
-import { BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import {
   createLenderAuthorizationChange,
   createMarket,
@@ -13,6 +13,7 @@ import {
   getOrInitializeToken,
 } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket } from "../generated/templates/WildcatMarket/WildcatMarket";
+import { IERC20 } from "../generated/templates/WildcatMarketController/IERC20";
 import {
   LenderAuthorized as LenderAuthorizedEvent,
   LenderDeauthorized as LenderDeauthorizedEvent,
@@ -24,11 +25,18 @@ import {
 } from "../generated/templates/WildcatMarketController/WildcatMarketController";
 import { generateEventId, loadExistingMarket } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
-import { getOrCreateProtocolStats, getOrCreateBorrowerStats } from "./daily-stats";
+import { recordMarketCreated } from "./daily-stats";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
 import { readTokenMetadata } from "./token-metadata";
+import {
+  createInitialMarketSnapshot,
+  saveMarketAndSnapshot,
+} from "./market-domain";
+import { recordMarketEvent } from "./market-event-domain";
+import { getOrCreateBorrower } from "./borrower-domain";
+import { createDeploymentChildContext } from "./deployment-context";
 
 export function handleLenderAuthorized(event: LenderAuthorizedEvent): void {
   let controller = getController(generateControllerId(event.address));
@@ -94,10 +102,13 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       decimals: metadata.decimals,
       isMock: metadata.isMock,
     });
-    setupTokenPriceFeeds(newToken);
+    setupTokenPriceFeeds(newToken, event.block.timestamp);
   }
   const marketId = generateMarketId(event.params.market);
-  MarketTemplate.create(event.params.market);
+  MarketTemplate.createWithContext(
+    event.params.market,
+    createDeploymentChildContext()
+  );
   const marketDeployedId = generateEventId(event);
   createMarketDeployed(marketDeployedId, {
     blockNumber: event.block.number.toI32(),
@@ -108,20 +119,32 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
   });
 
   const version = "V1";
-  createMarket(marketId, {
+  let borrowerProfile = getOrCreateBorrower(
+    event,
+    Address.fromBytes(controller.borrower)
+  );
+  let market = createMarket(marketId, {
+    address: event.params.market,
     name: event.params.name,
     symbol: event.params.symbol,
     asset: assetId,
     borrower: controller.borrower,
+    borrowerPrincipal: controller.borrower,
+    initialBorrower: controller.borrower,
+    initialBorrowerPrincipal: controller.borrower,
+    borrowerProfile: borrowerProfile.id,
     controller: controller.id,
     annualInterestBips: event.params.annualInterestBips.toI32(),
     decimals: contract.decimals(),
     delinquencyGracePeriod: event.params.delinquencyGracePeriod.toI32(),
     delinquencyFeeBips: event.params.delinquencyFeeBips.toI32(),
     feeRecipient: controllerFactory.feeRecipient,
+    originationFeeAsset: null,
+    originationFeeAmount: BigInt.zero(),
     protocolFeeBips: controllerFactory.protocolFeeBips,
     sentinel: controllerFactory.sentinel,
     scaleFactor: BigInt.fromI32(10).pow(27),
+    totalAssets: IERC20.bind(event.params.asset).balanceOf(event.params.market),
     maxTotalSupply: event.params.maxTotalSupply,
     lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
     lastInterestAccruedBlockNumber: event.block.number.toI32(),
@@ -129,26 +152,32 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     withdrawalBatchDuration: event.params.withdrawalBatchDuration.toI32(),
     isRegistered: true,
     archController: controller.archController,
+    marketKind: "STANDARD",
+    originKind: "CONTROLLER",
+    generation: "v1",
+    abiFamily: "controller-market-v1",
+    eventGeneration: "LEGACY",
     deployedEvent: marketDeployedId,
     createdAt: event.block.timestamp.toI32(),
+    createdAtBlock: event.block.number,
+    createdAtTimestamp: event.block.timestamp,
+    createdAtTransaction: event.transaction.hash,
+    createdAtLogIndex: event.logIndex,
     hooks: null,
     hooksFactory: null,
     commitmentFeeBips: null,
     drawnAmount: null,
     version: version,
+    usdTotalsComplete: true,
+    totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
   });
+  createInitialMarketSnapshot(event, market, "EVENT_AND_CONTRACT_CALL");
+  recordMarketEvent(event, market, "MARKET_DEPLOYED");
   controller.numMarkets = controller.numMarkets + 1;
   controller.save();
 
-  // Update protocol and borrower stats
-  let ps = getOrCreateProtocolStats();
-  ps.numMarkets = ps.numMarkets + 1;
-  ps.save();
-
-  let bs = getOrCreateBorrowerStats(controller.borrower);
-  bs.numMarkets = bs.numMarkets + 1;
-  bs.save();
+  recordMarketCreated(controller.borrower, event.block.timestamp);
 }
 
 export function handleTemporaryExcessReserveRatioActivated(
@@ -161,11 +190,12 @@ export function handleTemporaryExcessReserveRatioActivated(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_ACTIVATED");
   market.originalAnnualInterestBips = market.annualInterestBips;
   market.originalReserveRatioBips = event.params.originalReserveRatioBips.toI32();
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
   market.temporaryReserveRatioActive = true;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioUpdated(
@@ -178,8 +208,9 @@ export function handleTemporaryExcessReserveRatioUpdated(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_UPDATED");
   market.temporaryReserveRatioExpiry = event.params.temporaryReserveRatioExpiry.toI32();
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioExpired(
@@ -192,11 +223,12 @@ export function handleTemporaryExcessReserveRatioExpired(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_EXPIRED");
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }
 
 export function handleTemporaryExcessReserveRatioCanceled(
@@ -209,9 +241,10 @@ export function handleTemporaryExcessReserveRatioCanceled(
   if (market == null) {
     return;
   }
+  recordMarketEvent(event, market, "TEMPORARY_RESERVE_RATIO_CANCELLED");
   market.originalAnnualInterestBips = 0;
   market.temporaryReserveRatioActive = false;
   market.originalReserveRatioBips = 0;
   market.temporaryReserveRatioExpiry = 0;
-  market.save();
+  saveMarketAndSnapshot(event, market);
 }

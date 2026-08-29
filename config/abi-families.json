@@ -1,0 +1,58 @@
+{
+  "hooks-mainnet-current": {
+    "kind": "hooksFactory",
+    "eventGeneration": "LEGACY",
+    "hookedMarketAbi": "BASE",
+    "abis": {
+      "HooksFactory": "./abis/HooksFactory.json",
+      "WildcatMarket": "./abis/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/IWildcatMarketRevolving.json",
+      "CombinedHooks": "./abis/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  },
+  "hooks-sepolia-current": {
+    "kind": "hooksFactory",
+    "eventGeneration": "LEGACY",
+    "hookedMarketAbi": "BASE",
+    "abis": {
+      "HooksFactory": "./abis/HooksFactory.json",
+      "WildcatMarket": "./abis/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/IWildcatMarketRevolving.json",
+      "CombinedHooks": "./abis/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  },
+  "hooks-shared-current": {
+    "kind": "hooksFactory",
+    "eventGeneration": "LEGACY",
+    "hookedMarketAbi": "FORCE_BUYBACK",
+    "abis": {
+      "HooksFactory": "./abis/HooksFactory.json",
+      "WildcatMarket": "./abis/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/IWildcatMarketRevolving.json",
+      "CombinedHooks": "./abis/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  },
+  "hooks-v2-5": {
+    "kind": "hooksFactory",
+    "eventGeneration": "V2_5",
+    "hookedMarketAbi": "BASE",
+    "abis": {
+      "HooksFactory": "./abis/v2.5/HooksFactory.json",
+      "WildcatMarket": "./abis/v2.5/WildcatMarket.json",
+      "IWildcatMarketRevolving": "./abis/v2.5/IWildcatMarketRevolving.json",
+      "CombinedHooks": "./abis/v2.5/CombinedHooks.json",
+      "IERC20": "./abis/IERC20.json",
+      "ChainlinkFeedRegistry": "./abis/ChainlinkFeedRegistry.json",
+      "ChainlinkAggregator": "./abis/ChainlinkAggregator.json"
+    }
+  }
+}

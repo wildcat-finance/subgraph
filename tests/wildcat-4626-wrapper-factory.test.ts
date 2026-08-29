@@ -2,15 +2,32 @@ import {
   assert,
   clearStore,
   createMockedFunction,
+  dataSourceMock,
   describe,
   newMockEvent,
   test,
 } from "matchstick-as/assembly/index";
-import { Address, BigDecimal, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import {
+  Address,
+  BigDecimal,
+  BigInt,
+  Bytes,
+  DataSourceContext,
+  ethereum,
+} from "@graphprotocol/graph-ts";
 import { WrapperDeployed } from "../generated/Wildcat4626WrapperFactory/Wildcat4626WrapperFactory";
 import { ArchController, Market, Token } from "../generated/schema";
 import { generateTokenId } from "../generated/UncrashableEntityHelpers";
 import { handleWrapperDeployed } from "../src/wildcat-4626-wrapper-factory";
+import {
+  CONTEXT_MODULE_FACTORY_DEPLOYMENT_TARGET,
+  CONTEXT_MODULE_FACTORY_GENERATION,
+  CONTEXT_MODULE_FACTORY_INDEXED,
+  CONTEXT_MODULE_FACTORY_LABEL,
+  CONTEXT_MODULE_FACTORY_LIFECYCLE,
+  CONTEXT_MODULE_FACTORY_START_BLOCK,
+} from "../src/optional-module-context";
+import { reconcileOptionalMarketLinks } from "../src/optional-market-links";
 
 const ARCH_CONTROLLER_ADDRESS = addressFrom(
   "0x1000000000000000000000000000000000000001"
@@ -34,6 +51,17 @@ function seedArchController(): void {
   archController.save();
 }
 
+function setWrapperFactoryContext(): void {
+  let context = new DataSourceContext();
+  context.setString(CONTEXT_MODULE_FACTORY_LABEL, "wrapper-v2.5");
+  context.setString(CONTEXT_MODULE_FACTORY_GENERATION, "v2.5");
+  context.setString(CONTEXT_MODULE_FACTORY_START_BLOCK, "123");
+  context.setString(CONTEXT_MODULE_FACTORY_INDEXED, "true");
+  context.setString(CONTEXT_MODULE_FACTORY_DEPLOYMENT_TARGET, "true");
+  context.setString(CONTEXT_MODULE_FACTORY_LIFECYCLE, "ACTIVE");
+  dataSourceMock.setContext(context);
+}
+
 function seedToken(address: Address, name: string, symbol: string): void {
   let token = new Token(generateTokenId(address));
   token.address = address;
@@ -42,18 +70,28 @@ function seedToken(address: Address, name: string, symbol: string): void {
   token.decimals = 18;
   token.isMock = false;
   token.isUsdStablecoin = false;
+  token.lastPriceFeedSearchDay = -1;
   token.save();
 }
 
 function seedMarket(): void {
   let market = new Market(MARKET_ADDRESS.toHexString());
+  market.address = MARKET_ADDRESS;
   market.archController = ARCH_CONTROLLER_ADDRESS.toHexString();
   market.isRegistered = true;
   market.version = "V2";
-  market.marketType = "Legacy";
+  market.marketKind = "STANDARD";
+  market.originKind = "HOOKS";
+  market.generation = "test";
+  market.abiFamily = "test";
+  market.eventGeneration = "LEGACY";
   market.borrower = BORROWER_ADDRESS;
+  market.borrowerPrincipal = BORROWER_ADDRESS;
+  market.initialBorrower = BORROWER_ADDRESS;
+  market.initialBorrowerPrincipal = BORROWER_ADDRESS;
   market.sentinel = BORROWER_ADDRESS;
   market.feeRecipient = BORROWER_ADDRESS;
+  market.originationFeeAmount = BigInt.zero();
   market.name = "Mock Market";
   market.symbol = "mMOCK";
   market.decimals = 18;
@@ -63,6 +101,7 @@ function seedMarket(): void {
   market.asset = generateTokenId(ASSET_ADDRESS);
   market.withdrawalBatchDuration = 3600;
   market.isClosed = false;
+  market.totalAssets = BigInt.zero();
   market.maxTotalSupply = BigInt.fromI32(1_000_000);
   market.pendingProtocolFees = BigInt.zero();
   market.normalizedUnclaimedWithdrawals = BigInt.zero();
@@ -97,6 +136,7 @@ function seedMarket(): void {
   market.totalDepositedUSD = BigDecimal.zero();
   market.totalWithdrawalsRequestedUSD = BigDecimal.zero();
   market.totalWithdrawalsExecutedUSD = BigDecimal.zero();
+  market.usdTotalsComplete = true;
   market.totalDebtUSD = BigDecimal.zero();
   market.eventIndex = 0;
   market.delinquencyStatusChangedIndex = 0;
@@ -113,6 +153,10 @@ function seedMarket(): void {
   market.minimumDepositUpdatedIndex = 0;
   market.numCollateralContracts = 0;
   market.createdAt = 1;
+  market.createdAtBlock = BigInt.fromI32(1);
+  market.createdAtTimestamp = BigInt.fromI32(1);
+  market.createdAtTransaction = Address.zero();
+  market.createdAtLogIndex = BigInt.zero();
   market.deployedEvent = "DEPLOYED";
   market.commitmentFeeBips = null;
   market.drawnAmount = null;
@@ -138,6 +182,7 @@ function createWrapperDeployedEvent(
 describe("Wildcat4626WrapperFactory", () => {
   test("indexes wrapper deployments and links them to markets", () => {
     clearStore();
+    setWrapperFactoryContext();
     seedArchController();
     seedToken(ASSET_ADDRESS, "Mock Asset", "MOCK");
     seedToken(MARKET_ADDRESS, "Mock Market", "mMOCK");
@@ -174,6 +219,18 @@ describe("Wildcat4626WrapperFactory", () => {
       "eventIndex",
       "1"
     );
+    assert.fieldEquals(
+      "Wildcat4626WrapperFactory",
+      factoryId,
+      "generation",
+      "v2.5"
+    );
+    assert.fieldEquals(
+      "Wildcat4626WrapperFactory",
+      factoryId,
+      "deploymentTarget",
+      "true"
+    );
 
     assert.entityCount("Wildcat4626Wrapper", 1);
     assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "factory", factoryId);
@@ -196,10 +253,64 @@ describe("Wildcat4626WrapperFactory", () => {
       "token",
       generateTokenId(WRAPPER_ADDRESS)
     );
+    assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "totalShares", "0");
+    assert.fieldEquals("Wildcat4626Wrapper", wrapperId, "principalBasis", "0");
 
     assert.entityCount("Wildcat4626WrapperDeployed", 1);
     assert.fieldEquals("Wildcat4626WrapperDeployed", eventId, "factory", factoryId);
     assert.fieldEquals("Wildcat4626WrapperDeployed", eventId, "market", marketId);
     assert.fieldEquals("Wildcat4626WrapperDeployed", eventId, "wrapper", wrapperId);
+    dataSourceMock.resetValues();
+  });
+
+  test("retains and later reconciles wrappers observed before their markets", () => {
+    clearStore();
+    setWrapperFactoryContext();
+    seedArchController();
+    seedToken(ASSET_ADDRESS, "Mock Asset", "MOCK");
+    seedToken(MARKET_ADDRESS, "Mock Market", "mMOCK");
+    seedToken(WRAPPER_ADDRESS, "Wrapped Mock Market", "wmMOCK");
+
+    createMockedFunction(
+      WRAPPER_FACTORY_ADDRESS,
+      "archController",
+      "archController():(address)"
+    ).returns([ethereum.Value.fromAddress(ARCH_CONTROLLER_ADDRESS)]);
+
+    let event = createWrapperDeployedEvent(MARKET_ADDRESS, WRAPPER_ADDRESS);
+    handleWrapperDeployed(event);
+
+    assert.fieldEquals(
+      "Wildcat4626Wrapper",
+      WRAPPER_ADDRESS.toHexString(),
+      "marketAddress",
+      MARKET_ADDRESS.toHexString()
+    );
+    assert.fieldEquals(
+      "WrapperMarketIndex",
+      MARKET_ADDRESS.toHexString(),
+      "wrapper",
+      WRAPPER_ADDRESS.toHexString()
+    );
+    assert.entityCount("IndexerDiagnostic", 1);
+
+    seedMarket();
+    let market = Market.load(MARKET_ADDRESS.toHexString());
+    assert.assertNotNull(market);
+    reconcileOptionalMarketLinks(market!);
+
+    assert.fieldEquals(
+      "Wildcat4626Wrapper",
+      WRAPPER_ADDRESS.toHexString(),
+      "market",
+      MARKET_ADDRESS.toHexString()
+    );
+    assert.fieldEquals(
+      "Market",
+      MARKET_ADDRESS.toHexString(),
+      "tokenWrapper",
+      WRAPPER_ADDRESS.toHexString()
+    );
+    dataSourceMock.resetValues();
   });
 });

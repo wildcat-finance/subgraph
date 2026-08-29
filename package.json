@@ -1,6 +1,6 @@
 {
   "name": "@wildcatfi/wildcat-subgraph",
-  "version": "2.5.0",
+  "version": "2.5.11",
   "license": "UNLICENSED",
   "main": "index.js",
   "repository": "git@github.com:wildcat-finance/subgraph",
@@ -9,7 +9,12 @@
     "auth": "graph auth --studio",
     "codegen": "graph codegen -u",
     "build": "graph build",
+    "build:all-networks": "node ./scripts/build-all-networks.js",
+    "verify:all-networks": "yarn config:validate && yarn test:config && yarn build:all-networks",
     "deploy": "node scripts/deploy.js",
+    "test:deploy-args": "node --test scripts/deploy-args.test.js",
+    "test:deploy-shortcuts": "node --test scripts/deploy-shortcuts.test.js",
+    "test:hinterlight-paths": "node --test scripts/hinterlight-paths.test.js",
     "create-local": "graph create --node $NODE_HOST:$NODE_PORT/ wildcat-test-deployment",
     "remove-local": "graph remove --node $NODE_HOST:$NODE_PORT/ wildcat-test-deployment",
     "local:sepolia": "graph deploy --node $NODE_HOST:$NODE_PORT --ipfs $NODE_HOST:$IPFS_PORT wildcat-test-deployment --version-label v2.0.16",
@@ -17,23 +22,29 @@
     "test": "graph test",
     "test:config": "node --test scripts/*.test.js",
     "test:rcf-v2": "graph test rcf-v2",
-    "netconfig": "node ./scripts/set-addresses",
+    "config:validate": "node ./scripts/validate-config.js",
+    "netconfig": "node ./scripts/generate-manifest.js",
+    "netconfig:check": "node ./scripts/generate-manifest.js --check",
     "postnetconfig": "yarn codegen",
-    "deploy:sepolia": "yarn deploy goldsky sepolia",
-    "deploy:mainnet": "yarn deploy goldsky mainnet",
-    "deploy:plasma-testnet": "yarn deploy goldsky plasma-testnet",
-    "deploy:plasma-mainnet": "yarn deploy goldsky plasma-mainnet",
+    "deploy:goldsky:mainnet": "yarn deploy goldsky mainnet mainnet",
+    "deploy:goldsky:sepolia": "yarn deploy goldsky sepolia sepolia",
+    "deploy:goldsky:plasma-mainnet": "yarn deploy goldsky plasma-mainnet plasma-mainnet",
+    "deploy:goldsky:plasma-testnet": "yarn deploy goldsky plasma-testnet plasma-testnet",
+    "deploy:hinterlight:mainnet": "yarn deploy hinterlight mainnet mainnet",
+    "deploy:hinterlight:sepolia": "yarn deploy hinterlight sepolia sepolia",
+    "deploy:hinterlight:plasma-mainnet": "yarn deploy hinterlight plasma-mainnet plasma-mainnet",
+    "deploy:hinterlight:plasma-testnet": "yarn deploy hinterlight plasma-testnet plasma-testnet",
     "deploy:mainnet-analytics": "yarn deploy dev mainnet wildcat_ethereum_mainnet_analytics",
     "deploy:sepolia-analytics": "yarn deploy dev sepolia wildcat_ethereum_sepolia_analytics"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.60.0",
     "@graphprotocol/graph-ts": "0.30.0",
-    "dotenv": "16.6.1"
+    "dotenv": "16.6.1",
+    "yaml": "1.10.2"
   },
   "devDependencies": {
     "@ethersproject/abi": "5.7.0",
     "matchstick-as": "0.5.0"
-  },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  }
 }

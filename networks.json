@@ -41,72 +41,32 @@
       }
     ]
   },
-  "sepolia": {
-    "name": "sepolia",
+  "plasma-mainnet": {
+    "name": "plasma-mainnet",
     "contracts": {
       "WildcatArchController": {
-        "address": "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f",
-        "startBlock": 4796511
+        "address": "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae",
+        "startBlock": 1989721
       },
       "WildcatSanctionsSentinel": {
-        "address": "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B",
-        "startBlock": 4796511
+        "address": "0x37064895ba2C1e269EAF7FF32564818d08903f5B",
+        "startBlock": 1989725
       },
       "HooksFactory": {
-        "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
-        "startBlock": 7124440
-      },
-      "HooksFactoryRevolving": {
-        "address": "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5",
-        "startBlock": 10725492
-      },
-      "CollateralFactory": {
-        "address": "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0",
-        "startBlock": 9751444
-      },
-      "Wildcat4626WrapperFactory": {
-        "address": "0x0566Fe57682164af689f1440cb3BCEedEe3bf843",
-        "startBlock": 10534112
+        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
+        "startBlock": 1989742
       }
     },
     "hooksFactories": [
       {
-        "name": "HooksFactoryLegacyV2",
-        "marketType": "legacy",
-        "address": "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88",
-        "startBlock": 6973842,
-        "indexed": true
-      },
-      {
         "name": "HooksFactory",
         "marketType": "legacy",
-        "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
-        "startBlock": 7124440,
-        "indexed": true
-      },
-      {
-        "name": "HooksFactoryRevolving_20260419_233246",
-        "marketType": "revolving",
-        "address": "0xF4564015E524cf5629828E61F45ed339D998D85f",
-        "startBlock": 10695521,
-        "indexed": false
-      },
-      {
-        "name": "HooksFactoryRevolving",
-        "marketType": "revolving",
-        "address": "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5",
-        "startBlock": 10725492,
+        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
+        "startBlock": 1989742,
         "indexed": true
       }
     ],
-    "wrapperFactories": [
-      {
-        "name": "Wildcat4626WrapperFactory",
-        "address": "0x0566Fe57682164af689f1440cb3BCEedEe3bf843",
-        "startBlock": 10534112,
-        "indexed": true
-      }
-    ]
+    "wrapperFactories": []
   },
   "plasma-testnet": {
     "name": "plasma-testnet",
@@ -132,30 +92,153 @@
         "startBlock": 2994816,
         "indexed": true
       }
-    ]
+    ],
+    "wrapperFactories": []
   },
-  "plasma-mainnet": {
-    "name": "plasma-mainnet",
+  "sepolia": {
+    "name": "sepolia",
     "contracts": {
       "WildcatArchController": {
-        "address": "0xdb2e0DE97d6d96aa56754635704a4273E0F348ae",
-        "startBlock": 1989721
+        "address": "0xC003f20F2642c76B81e5e1620c6D8cdEE826408f",
+        "startBlock": 4796511
       },
       "WildcatSanctionsSentinel": {
-        "address": "0x37064895ba2C1e269EAF7FF32564818d08903f5B",
-        "startBlock": 1989725
+        "address": "0xFBCE262eC835be5e6A458cE1722EeCe0E453316B",
+        "startBlock": 4796511
       },
       "HooksFactory": {
-        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
-        "startBlock": 1989742
+        "address": "0x89797b782cA5b4BBFC975146B98ba3941Fe26C56",
+        "startBlock": 11581361
+      },
+      "HooksFactoryRevolving": {
+        "address": "0xb3FBD4FBeb1EE4BEE7afdbC4A75C7c4E97CF105C",
+        "startBlock": 11581363
+      },
+      "CollateralFactory": {
+        "address": "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0",
+        "startBlock": 9751444
+      },
+      "Wildcat4626WrapperFactory": {
+        "address": "0x31D8D5564Ce11f764E74beca5B4e8d363046949f",
+        "startBlock": 11581359
       }
     },
     "hooksFactories": [
       {
+        "name": "HooksFactoryLegacyV2",
+        "marketType": "legacy",
+        "address": "0xE3e4B7C9E0Ab4ccbC70e0583Dca7B4Db9B4CFD88",
+        "startBlock": 6973842,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryStandardV2_1",
+        "marketType": "legacy",
+        "address": "0x10A64ABa0159720F8a23E1A552800CA4eb21576C",
+        "startBlock": 7124440,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryRevolving_20260419_233246",
+        "marketType": "revolving",
+        "address": "0xF4564015E524cf5629828E61F45ed339D998D85f",
+        "startBlock": 10695521,
+        "indexed": false
+      },
+      {
+        "name": "HooksFactoryRevolvingPreview20260424",
+        "marketType": "revolving",
+        "address": "0xb899ba2a5F5b609898A2bABe445Aa31dDf0277e5",
+        "startBlock": 10725492,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryStandardTest20240805",
+        "marketType": "legacy",
+        "address": "0x6Cb3512b541733d340Aa520b63105586588BD600",
+        "startBlock": 6443857,
+        "indexed": false
+      },
+      {
+        "name": "HooksFactoryStandardTest20240923",
+        "marketType": "legacy",
+        "address": "0xE1d14E8176d27415c204A4F9Ef58E107964CA12C",
+        "startBlock": 6746262,
+        "indexed": false
+      },
+      {
+        "name": "HooksFactoryStandardTest20241121",
+        "marketType": "legacy",
+        "address": "0xCf872Ac862d2ba97F99804ed25f0dB5F2352933a",
+        "startBlock": 7123486,
+        "indexed": false
+      },
+      {
+        "name": "HooksFactoryStandardV2_5Preview20260727",
+        "marketType": "legacy",
+        "address": "0xAa9BbaE0D519e85B6aBEA81aD3C2cBeBfA57696C",
+        "startBlock": 11363908,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryRevolvingV2_5Preview20260727",
+        "marketType": "revolving",
+        "address": "0x76Fe050d91940a72133e1819BF34c1042d8DBe73",
+        "startBlock": 11363912,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryStandardV2_5",
+        "marketType": "legacy",
+        "address": "0xbFbDaFc91977eE599a61B30D9e75788565Ad6d18",
+        "startBlock": 11559133,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryRevolvingV2_5",
+        "marketType": "revolving",
+        "address": "0x190B42942fe9492df9CeA441dA5c43309840E93A",
+        "startBlock": 11559137,
+        "indexed": true
+      },
+      {
         "name": "HooksFactory",
         "marketType": "legacy",
-        "address": "0xB46bae25AC6D23148531ed1853a8881FD842E517",
-        "startBlock": 1989742,
+        "address": "0x89797b782cA5b4BBFC975146B98ba3941Fe26C56",
+        "startBlock": 11581361,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryRevolving",
+        "marketType": "revolving",
+        "address": "0xb3FBD4FBeb1EE4BEE7afdbC4A75C7c4E97CF105C",
+        "startBlock": 11581363,
+        "indexed": true
+      }
+    ],
+    "wrapperFactories": [
+      {
+        "name": "Wildcat4626WrapperFactoryV1",
+        "address": "0x0566Fe57682164af689f1440cb3BCEedEe3bf843",
+        "startBlock": 10534112,
+        "indexed": true
+      },
+      {
+        "name": "Wildcat4626WrapperFactoryV2_5Preview20260727",
+        "address": "0x8a77449eaBB1522983cd700f002b5b191463378e",
+        "startBlock": 11363904,
+        "indexed": true
+      },
+      {
+        "name": "Wildcat4626WrapperFactoryV2_5",
+        "address": "0x6B1DD93453584346C530A1646e98aB306fD6D37C",
+        "startBlock": 11559124,
+        "indexed": true
+      },
+      {
+        "name": "Wildcat4626WrapperFactory",
+        "address": "0x31D8D5564Ce11f764E74beca5B4e8d363046949f",
+        "startBlock": 11581359,
         "indexed": true
       }
     ]

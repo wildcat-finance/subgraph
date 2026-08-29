@@ -1,0 +1,74 @@
+{
+  "configVersion": 2,
+  "schemaRelease": "2.5",
+  "network": "plasma-testnet",
+  "chainId": 9746,
+  "graphNetwork": "plasma-testnet",
+  "deploymentTargetsReady": false,
+  "anchors": {
+    "archController": {
+      "address": "0x1EeBC079aE1e7dCDe31C74A7EF48fA8737673A6a",
+      "startBlock": 2994796
+    },
+    "sanctionsSentinel": {
+      "address": "0x7cc91e3c64A0b5844650d586B87B291AC3A3aaD4",
+      "startBlock": 2994800
+    }
+  },
+  "hooksTemplates": [],
+  "factories": [
+    {
+      "label": "standard-v2",
+      "manifestName": "HooksFactoryStandardV2",
+      "marketKind": "STANDARD",
+      "generation": "v2",
+      "abiFamily": "hooks-mainnet-current",
+      "address": "0x5Ad00b665eA71E27628D75102B1497CC75E531FB",
+      "startBlock": 2994816,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    }
+  ],
+  "borrowerIdentityRegistries": [],
+  "roleProviderFactories": [],
+  "wrapperFactories": [],
+  "collateralFactories": [],
+  "features": {
+    "analytics": true,
+    "collateral": false,
+    "wrappers": false
+  },
+  "pricing": {
+    "mode": "USD_PEG",
+    "feedRegistry": null,
+    "denominations": null,
+    "bridgeFeeds": null,
+    "stablecoins": [
+      "0x8756591e2695da611a927f2a3f23dd5bc3dd97c6",
+      "0x98b1ffa19befdcc43df4edd6569dff8f01900aa6",
+      "0x998b1d2b82b03b3f9eadace173496e9a00117650",
+      "0xc69cec70647a144561acc63c4380b8d81fcf5f18",
+      "0xd48ca6f2506afb586a283740a657ce5158f0c213",
+      "0xd8f42112168a7459f6590811e95e5ff8b70e3e53",
+      "0xe4183d4562f6c06a5d312c82078be55cb4b8cb64",
+      "0xe59e9598017a59b33ccf2a88ce15d0e3a79ab682",
+      "0xf925dc937d10c3cda5914457d18db1ffb0f460d2"
+    ],
+    "directFeeds": [],
+    "syntheticPrices": []
+  },
+  "compatibility": {
+    "canonicalFactoryByMarketKind": {
+      "STANDARD": "standard-v2"
+    },
+    "primaryWrapperFactory": null,
+    "primaryCollateralFactory": null
+  },
+  "provenance": {
+    "kind": "legacy-subgraph-config",
+    "source": "subgraph/networks.json",
+    "sourceRevision": "919e3e1fe2464313139a1cd2fbd09a4b45377deb",
+    "sha256": "8f502a36794d3cff27d6b8ce4dc17fa3cdc3960bf99ead4760ce54cf4b069d2d"
+  }
+}

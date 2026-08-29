@@ -1,0 +1,78 @@
+[
+  {
+    "type": "function",
+    "name": "getHookedMarket",
+    "inputs": [
+      {
+        "name": "marketAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct HookedMarket",
+        "components": [
+          {
+            "name": "isHooked",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "transferRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "depositRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "withdrawalRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "depositHookEnabled",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "minimumDeposit",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "firstWithdrawalWindowStart",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "periodDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "withdrawalWindowDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "transfersDisabled",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "isClosed",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  }
+]

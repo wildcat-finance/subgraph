@@ -1,0 +1,104 @@
+{
+  "configVersion": 2,
+  "schemaRelease": "2.5",
+  "network": "mainnet",
+  "chainId": 1,
+  "graphNetwork": "mainnet",
+  "deploymentTargetsReady": false,
+  "anchors": {
+    "archController": {
+      "address": "0xfEB516d9D946dD487A9346F6fee11f40C6945eE4",
+      "startBlock": 18686645
+    },
+    "sanctionsSentinel": {
+      "address": "0x437e0551892C2C9b06d3fFd248fe60572e08CD1A",
+      "startBlock": 18686645
+    }
+  },
+  "hooksTemplates": [],
+  "factories": [
+    {
+      "label": "standard-v2",
+      "manifestName": "HooksFactoryStandardV2",
+      "marketKind": "STANDARD",
+      "generation": "v2",
+      "abiFamily": "hooks-mainnet-current",
+      "address": "0xdd7dd3b5076cf89440d05585ff56d246386207be",
+      "startBlock": 21788182,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    }
+  ],
+  "borrowerIdentityRegistries": [],
+  "roleProviderFactories": [],
+  "wrapperFactories": [
+    {
+      "label": "wrapper-v1",
+      "manifestName": "Wildcat4626WrapperFactoryV1",
+      "generation": "v1",
+      "address": "0xEA6DE11f8F3F83c79bD9d8Db5517fCFDf2Bb148a",
+      "startBlock": 24750455,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    }
+  ],
+  "collateralFactories": [
+    {
+      "label": "collateral-v1",
+      "manifestName": "WildcatMarketCollateralFactory",
+      "generation": "v1",
+      "address": "0xBdf64bd7Ea91A534445d06736a0f0E2a33FfA47c",
+      "startBlock": 23167811,
+      "indexed": true,
+      "lifecycle": "active"
+    }
+  ],
+  "features": {
+    "analytics": true,
+    "collateral": true,
+    "wrappers": true
+  },
+  "pricing": {
+    "mode": "CHAINLINK",
+    "feedRegistry": "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf",
+    "denominations": {
+      "usd": "0x0000000000000000000000000000000000000348",
+      "eth": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      "btc": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
+    },
+    "bridgeFeeds": {
+      "ethUsd": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+      "btcUsd": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
+    },
+    "stablecoins": [
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "0xdac17f958d2ee523a2206206994597c13d831ec7"
+    ],
+    "directFeeds": [
+      {
+        "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "feed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+      },
+      {
+        "token": "0xd31a59c85ae9d8edefec411d448f90841571b89c",
+        "feed": "0x4ffC43a60e009B551865A93d232E33Fce9f01507"
+      }
+    ],
+    "syntheticPrices": []
+  },
+  "compatibility": {
+    "canonicalFactoryByMarketKind": {
+      "STANDARD": "standard-v2"
+    },
+    "primaryWrapperFactory": "wrapper-v1",
+    "primaryCollateralFactory": "collateral-v1"
+  },
+  "provenance": {
+    "kind": "protocol-factory-inventory",
+    "source": "v2-protocol/deployments/mainnet/factory-inventory.json",
+    "schemaVersion": "1.1.0",
+    "sha256": "87d15ea62f69714cedd0b603aa2ff1d6f506b83c14477179b9aff82e01dbb312"
+  }
+}

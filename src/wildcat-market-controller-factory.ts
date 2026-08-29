@@ -1,4 +1,4 @@
-import { Address } from "@graphprotocol/graph-ts";
+import { Address, BigInt } from "@graphprotocol/graph-ts";
 import {
   createController,
   createToken,
@@ -16,8 +16,12 @@ import { Token } from "../generated/schema";
 import { readTokenMetadata } from "./token-metadata";
 import { isNullAddress } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
+import { createDeploymentChildContext } from "./deployment-context";
 
-function createTokenIfNotExists(asset: Address): string | null {
+function createTokenIfNotExists(
+  asset: Address,
+  timestamp: BigInt
+): string | null {
   if (isNullAddress(asset)) {
     return null;
   }
@@ -32,7 +36,7 @@ function createTokenIfNotExists(asset: Address): string | null {
       decimals: metadata.decimals,
       isMock: metadata.isMock,
     });
-    setupTokenPriceFeeds(newToken);
+    setupTokenPriceFeeds(newToken, timestamp);
     return newToken.id;
   }
   return token.id;
@@ -44,7 +48,10 @@ export function handleNewController(event: NewControllerEvent): void {
   );
   let controller = event.params.controller;
   let borrower = event.params.borrower;
-  WildcatMarketControllerTemplate.create(controller);
+  WildcatMarketControllerTemplate.createWithContext(
+    controller,
+    createDeploymentChildContext()
+  );
   createController(generateControllerId(controller), {
     borrower: borrower,
     controllerFactory: generateControllerFactoryId(event.address),
@@ -66,7 +73,8 @@ export function handleUpdateProtocolFeeConfiguration(
   controllerFactory.feeRecipient = feeRecipient;
   controllerFactory.originationFeeAmount = originationFeeAmount;
   controllerFactory.originationFeeAsset = createTokenIfNotExists(
-    originationFeeAsset
+    originationFeeAsset,
+    event.block.timestamp
   );
   controllerFactory.protocolFeeBips = protocolFeeBips;
   controllerFactory.save();

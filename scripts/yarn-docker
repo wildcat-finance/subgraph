@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+node_image="docker.io/library/node@sha256:c2cc26d8f991c2db236ad51a61efee843c482372d6d22570787309d511694110"
+
+if [[ "$#" -eq 0 ]]; then
+  printf 'usage: scripts/yarn-docker <yarn-command> [arguments...]\n' >&2
+  exit 1
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  printf 'docker is required to run the repository Yarn wrapper\n' >&2
+  exit 1
+fi
+
+docker_command=(docker)
+if ! docker info >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
+    docker_command=(sudo docker)
+  else
+    printf 'cannot access Docker directly or through passwordless sudo\n' >&2
+    exit 1
+  fi
+fi
+
+terminal_arguments=(-i)
+if [[ -t 0 && -t 1 ]]; then
+  terminal_arguments+=(-t)
+fi
+
+exec "${docker_command[@]}" run --rm \
+  "${terminal_arguments[@]}" \
+  --user "$(id -u):$(id -g)" \
+  --env YARN_CACHE_FOLDER=/tmp/yarn-cache \
+  --volume "${project_root}:/work" \
+  --workdir /work \
+  "${node_image}" \
+  yarn "$@"

@@ -1,132 +1,224 @@
-import { BigInt } from "@graphprotocol/graph-ts";
-import { ApprovedLiquidator, Token } from "../generated/schema";
-import { createSimpleCollateralContract, createToken, generateTokenId, createLiquidatorApproved, createLiquidatorRemoved,  getApprovedLiquidator, getOrInitializeApprovedLiquidator, getOrInitializeSimpleCollateralFactory, generateMarketId, getOrInitializeApprovedCollateralExchange, createCollateralExchangeApproved, createCollateralExchangeRemoved, getApprovedCollateralExchange } from "../generated/UncrashableEntityHelpers";
-import { CollateralContractCreated, ExecutorApproved, ExecutorRemoved, ExchangeRemoved, ExchangeApproved } from "../generated/WildcatMarketCollateralFactory/WildcatMarketCollateralFactory";
-import { generateEventId, loadExistingMarket } from "./utils";
-import { readTokenMetadata } from "./token-metadata";
-import { setupTokenPriceFeeds } from "./price-feeds";
+import { Address, BigInt } from "@graphprotocol/graph-ts";
+import {
+  CollateralContractCreated,
+  ExchangeApproved,
+  ExchangeRemoved,
+  ExecutorApproved,
+  ExecutorRemoved,
+} from "../generated/WildcatMarketCollateralFactory/WildcatMarketCollateralFactory";
 import { SimpleMarketCollateralMultiParty } from "../generated/templates/SimpleMarketCollateralMultiParty/SimpleMarketCollateralMultiParty";
 import { SimpleMarketCollateralMultiParty as SimpleMarketCollateralMultiPartyTemplate } from "../generated/templates";
+import {
+  ApprovedCollateralExchange,
+  ApprovedLiquidator,
+  CollateralExchangeApproved,
+  CollateralExchangeRemoved,
+  LiquidatorApproved,
+  LiquidatorRemoved,
+  SimpleCollateralContract,
+  SimpleCollateralContractCreated,
+  Token,
+} from "../generated/schema";
+import {
+  createToken,
+  generateTokenId,
+} from "../generated/UncrashableEntityHelpers";
+import {
+  generateFactoryAccountId,
+  getOrCreateCollateralFactory,
+  saveCollateralSnapshot,
+} from "./collateral-domain";
+import { createDeploymentChildContext } from "./deployment-context";
+import { recordIndexerDiagnostic } from "./indexer-diagnostics";
+import { observeCollateralMarketLink } from "./optional-market-links";
+import { setupTokenPriceFeeds } from "./price-feeds";
+import { readTokenMetadata } from "./token-metadata";
+import { generateEventId } from "./utils";
 
-export function handleCollateralContractCreated(event: CollateralContractCreated): void {
-    getOrInitializeSimpleCollateralFactory(event.address.toHex(), {});
-    let collateralAssetId = generateTokenId(event.params.collateralToken);
-    if (Token.load(collateralAssetId) == null) {
-      let metadata = readTokenMetadata(event.params.collateralToken);
-      let newToken = createToken(collateralAssetId, {
-        address: event.params.collateralToken,
-        name: metadata.name,
-        symbol: metadata.symbol,
-        decimals: metadata.decimals,
-        isMock: metadata.isMock
-      });
-      setupTokenPriceFeeds(newToken);
-    }
-    let market = loadExistingMarket(
-      generateMarketId(event.params.associatedMarket),
-      "handleCollateralContractCreated"
+function getOrCreateToken(address: Address, timestamp: BigInt): Token {
+  let id = generateTokenId(address);
+  let token = Token.load(id);
+  if (token != null) {
+    return token;
+  }
+  let metadata = readTokenMetadata(address);
+  token = createToken(id, {
+    address: address,
+    name: metadata.name,
+    symbol: metadata.symbol,
+    decimals: metadata.decimals,
+    isMock: metadata.isMock,
+  });
+  setupTokenPriceFeeds(token, timestamp);
+  return token;
+}
+
+export function handleCollateralContractCreated(
+  event: CollateralContractCreated
+): void {
+  let factory = getOrCreateCollateralFactory(event);
+  let collateralAsset = getOrCreateToken(
+    event.params.collateralToken,
+    event.block.timestamp
+  );
+  let collateralId = event.params.collateralContract.toHexString();
+  let collateral = SimpleCollateralContract.load(collateralId);
+  if (collateral == null) {
+    collateral = new SimpleCollateralContract(collateralId);
+    collateral.address = event.params.collateralContract;
+    collateral.factory = factory.id;
+    collateral.market = null;
+    collateral.marketAddress = event.params.associatedMarket;
+    collateral.collateralAsset = collateralAsset.id;
+    collateral.totalDeposited = BigInt.zero();
+    collateral.totalReclaimed = BigInt.zero();
+    collateral.totalLiquidated = BigInt.zero();
+    collateral.totalShares = BigInt.zero();
+    collateral.availableCollateral = BigInt.zero();
+    collateral.lastFullLiquidationIndex = 0;
+    collateral.depositIndex = 0;
+    collateral.unset("liquidationCooldown");
+    collateral.nextLiquidationTrigger = 0;
+    collateral.eventIndex = 0;
+    collateral.createdAtBlock = event.block.number;
+    collateral.createdAtTimestamp = event.block.timestamp;
+    collateral.createdAtTransaction = event.transaction.hash;
+    collateral.createdAtLogIndex = event.logIndex;
+  }
+
+  let collateralContract = SimpleMarketCollateralMultiParty.bind(
+    event.params.collateralContract
+  );
+  let cooldown = collateralContract.try_LIQUIDATION_COOLDOWN();
+  if (cooldown.reverted) {
+    recordIndexerDiagnostic(
+      event,
+      "COLLATERAL_COOLDOWN_UNAVAILABLE",
+      "Collateral contract LIQUIDATION_COOLDOWN() reverted",
+      event.params.collateralContract
     );
-    if (market == null) {
-      return;
-    }
-    market.numCollateralContracts = market.numCollateralContracts + 1;
-    market.save();
-    let collateralContract = SimpleMarketCollateralMultiParty.bind(event.params.collateralContract);
-    let liquidationCooldown = collateralContract.LIQUIDATION_COOLDOWN();
-    createSimpleCollateralContract(event.params.collateralContract.toHex(), {
-        availableCollateral: BigInt.fromI32(0),
-        collateralAsset: collateralAssetId,
-        factory: event.address.toHex(),
-        lastFullLiquidationIndex: 0,
-        depositIndex: 0,
-        totalDeposited: BigInt.fromI32(0),
-        totalLiquidated: BigInt.fromI32(0),
-        totalReclaimed: BigInt.fromI32(0),
-        totalShares: BigInt.fromI32(0),
-        market: event.params.associatedMarket.toHex(),
-        liquidationCooldown: liquidationCooldown.toI32(),
-        nextLiquidationTrigger: 0,
-        eventIndex: 0,
-    })
-    SimpleMarketCollateralMultiPartyTemplate.create(event.params.collateralContract);
+  } else {
+    collateral.liquidationCooldown = cooldown.value.toI32();
+  }
+  collateral.save();
+
+  let market = observeCollateralMarketLink(
+    event.params.associatedMarket,
+    collateral
+  );
+  if (market == null) {
+    recordIndexerDiagnostic(
+      event,
+      "UNKNOWN_COLLATERAL_MARKET",
+      "Collateral contract referenced a market not yet indexed",
+      event.params.associatedMarket
+    );
+  }
+
+  let created = new SimpleCollateralContractCreated(generateEventId(event));
+  created.factory = factory.id;
+  created.collateralContract = collateral.id;
+  created.collateralContractAddress = event.params.collateralContract;
+  created.collateralAsset = collateralAsset.id;
+  created.market = market == null ? null : market.id;
+  created.marketAddress = event.params.associatedMarket;
+  created.blockNumber = event.block.number;
+  created.blockTimestamp = event.block.timestamp;
+  created.transactionHash = event.transaction.hash;
+  created.blockLogIndex = event.logIndex;
+  created.save();
+
+  saveCollateralSnapshot(event, collateral, "EVENT_AND_CONTRACT_CALL");
+  SimpleMarketCollateralMultiPartyTemplate.createWithContext(
+    event.params.collateralContract,
+    createDeploymentChildContext()
+  );
 }
 
 export function handleExecutorApproved(event: ExecutorApproved): void {
-    getOrInitializeSimpleCollateralFactory(event.address.toHex(), {});
-    let liquidatorApprovedEventId = generateEventId(event);
-    let approvedLiquidatorId = event.params.executor.toHex();
-    let approvedLiquidator = getOrInitializeApprovedLiquidator(approvedLiquidatorId, {
-        isApproved: true,
-        liquidator: event.params.executor,
-        factory: event.address.toHex(),
-    })
-    if (!approvedLiquidator.wasCreated) {
-        approvedLiquidator.entity.isApproved = true;
-        approvedLiquidator.entity.save();
-    }
-    createLiquidatorApproved(liquidatorApprovedEventId, {
-        liquidator: event.params.executor,
-        blockTimestamp: event.block.timestamp.toI32(),
-        transactionHash: event.transaction.hash,
-        blockLogIndex: event.logIndex.toI32(),
-        blockNumber: event.block.number.toI32(),
-        factory: event.address.toHex(),
-    })
+  let factory = getOrCreateCollateralFactory(event);
+  let id = generateFactoryAccountId(event.address, event.params.executor);
+  let approved = ApprovedLiquidator.load(id);
+  if (approved == null) {
+    approved = new ApprovedLiquidator(id);
+    approved.factory = factory.id;
+    approved.liquidator = event.params.executor;
+  }
+  approved.isApproved = true;
+  approved.save();
+
+  let record = new LiquidatorApproved(generateEventId(event));
+  record.liquidator = event.params.executor;
+  record.blockTimestamp = event.block.timestamp.toI32();
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex.toI32();
+  record.blockNumber = event.block.number.toI32();
+  record.factory = factory.id;
+  record.save();
 }
 
 export function handleExecutorRemoved(event: ExecutorRemoved): void {
-    getOrInitializeSimpleCollateralFactory(event.address.toHex(), {});
-    let liquidatorRemovedEventId = generateEventId(event);
-    let approvedLiquidatorId = event.params.executor.toHex();
-    let approvedLiquidator = getApprovedLiquidator(approvedLiquidatorId);
-    approvedLiquidator.isApproved = false;
-    approvedLiquidator.save();
-    createLiquidatorRemoved(liquidatorRemovedEventId, {
-        liquidator: event.params.executor,
-        blockTimestamp: event.block.timestamp.toI32(),
-        transactionHash: event.transaction.hash,
-        blockLogIndex: event.logIndex.toI32(),
-        blockNumber: event.block.number.toI32(),
-        factory: event.address.toHex(),
-    })
+  let factory = getOrCreateCollateralFactory(event);
+  let id = generateFactoryAccountId(event.address, event.params.executor);
+  let approved = ApprovedLiquidator.load(id);
+  if (approved == null) {
+    approved = new ApprovedLiquidator(id);
+    approved.factory = factory.id;
+    approved.liquidator = event.params.executor;
+  }
+  approved.isApproved = false;
+  approved.save();
+
+  let record = new LiquidatorRemoved(generateEventId(event));
+  record.liquidator = event.params.executor;
+  record.blockTimestamp = event.block.timestamp.toI32();
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex.toI32();
+  record.blockNumber = event.block.number.toI32();
+  record.factory = factory.id;
+  record.save();
 }
 
 export function handleExchangeApproved(event: ExchangeApproved): void {
-    getOrInitializeSimpleCollateralFactory(event.address.toHex(), {});
-    let exchangeApprovedEventId = generateEventId(event);
-    let approvedCollateralExchangeId = event.params.exchange.toHex();
-    let approvedCollateralExchange = getOrInitializeApprovedCollateralExchange(approvedCollateralExchangeId, {
-        isApproved: true,
-        exchange: event.params.exchange,
-        factory: event.address.toHex(),
-    })
-    if (!approvedCollateralExchange.wasCreated) {
-        approvedCollateralExchange.entity.isApproved = true;
-        approvedCollateralExchange.entity.save();
-    }
-    createCollateralExchangeApproved(exchangeApprovedEventId, {
-        exchange: event.params.exchange,
-        blockTimestamp: event.block.timestamp.toI32(),
-        transactionHash: event.transaction.hash,
-        blockLogIndex: event.logIndex.toI32(),
-        blockNumber: event.block.number.toI32(),
-        factory: event.address.toHex(),
-    })
+  let factory = getOrCreateCollateralFactory(event);
+  let id = generateFactoryAccountId(event.address, event.params.exchange);
+  let approved = ApprovedCollateralExchange.load(id);
+  if (approved == null) {
+    approved = new ApprovedCollateralExchange(id);
+    approved.factory = factory.id;
+    approved.exchange = event.params.exchange;
+  }
+  approved.isApproved = true;
+  approved.save();
+
+  let record = new CollateralExchangeApproved(generateEventId(event));
+  record.exchange = event.params.exchange;
+  record.blockTimestamp = event.block.timestamp.toI32();
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex.toI32();
+  record.blockNumber = event.block.number.toI32();
+  record.factory = factory.id;
+  record.save();
 }
 
 export function handleExchangeRemoved(event: ExchangeRemoved): void {
-    getOrInitializeSimpleCollateralFactory(event.address.toHex(), {});
-    let exchangeRemovedEventId = generateEventId(event);
-    let approvedCollateralExchangeId = event.params.exchange.toHex();
-    let approvedCollateralExchange = getApprovedCollateralExchange(approvedCollateralExchangeId);
-    approvedCollateralExchange.isApproved = false;
-    approvedCollateralExchange.save();
-    createCollateralExchangeRemoved(exchangeRemovedEventId, {
-        exchange: event.params.exchange,
-        blockTimestamp: event.block.timestamp.toI32(),
-        transactionHash: event.transaction.hash,
-        blockLogIndex: event.logIndex.toI32(),
-        blockNumber: event.block.number.toI32(),
-        factory: event.address.toHex(),
-    })
+  let factory = getOrCreateCollateralFactory(event);
+  let id = generateFactoryAccountId(event.address, event.params.exchange);
+  let approved = ApprovedCollateralExchange.load(id);
+  if (approved == null) {
+    approved = new ApprovedCollateralExchange(id);
+    approved.factory = factory.id;
+    approved.exchange = event.params.exchange;
+  }
+  approved.isApproved = false;
+  approved.save();
+
+  let record = new CollateralExchangeRemoved(generateEventId(event));
+  record.exchange = event.params.exchange;
+  record.blockTimestamp = event.block.timestamp.toI32();
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex.toI32();
+  record.blockNumber = event.block.number.toI32();
+  record.factory = factory.id;
+  record.save();
 }

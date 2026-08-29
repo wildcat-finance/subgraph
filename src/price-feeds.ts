@@ -1,283 +1,393 @@
-import { Address, BigDecimal, BigInt, Bytes, dataSource, log } from "@graphprotocol/graph-ts";
+import {
+  Address,
+  BigDecimal,
+  BigInt,
+  Bytes,
+  ethereum,
+  log,
+} from "@graphprotocol/graph-ts";
 import { ChainlinkFeedRegistry } from "../generated/templates/WildcatMarket/ChainlinkFeedRegistry";
 import { ChainlinkAggregator } from "../generated/templates/WildcatMarket/ChainlinkAggregator";
 import { Token, TokenDailyPrice } from "../generated/schema";
+import {
+  CONTEXT_PRICING_BTC_DENOMINATION,
+  CONTEXT_PRICING_BTC_USD_FEED,
+  CONTEXT_PRICING_DIRECT_FEEDS,
+  CONTEXT_PRICING_ETH_DENOMINATION,
+  CONTEXT_PRICING_ETH_USD_FEED,
+  CONTEXT_PRICING_FEED_REGISTRY,
+  CONTEXT_PRICING_MODE,
+  CONTEXT_PRICING_STABLECOINS,
+  CONTEXT_PRICING_SYNTHETIC_PRICES,
+  CONTEXT_PRICING_USD_DENOMINATION,
+  contextString,
+} from "./deployment-context";
 
-// Chainlink Feed Registry (mainnet only)
-const FEED_REGISTRY = Address.fromString(
-  "0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf"
-);
+const SECONDS_PER_DAY = BigInt.fromI32(86400);
+// This is a dead-feed guard, not a substitute for each feed's heartbeat.
+const MAX_PRICE_AGE = BigInt.fromI32(7 * 86400);
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-// Chainlink denomination addresses
-const USD = Address.fromString(
-  "0x0000000000000000000000000000000000000348"
-);
-const ETH = Address.fromString(
-  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
-);
-const BTC = Address.fromString(
-  "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"
-);
+class SyntheticPrice {
+  priceUSD: BigDecimal;
+  usdPeg: boolean;
 
-// Hardcoded second-hop feed addresses (mainnet)
-const ETH_USD_FEED = Address.fromString(
-  "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
-);
-const BTC_USD_FEED = Address.fromString(
-  "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
-);
-const SOL_USD_FEED = Address.fromString("0x4ffC43a60e009B551865A93d232E33Fce9f01507");
-
-// Known stablecoin addresses (mainnet)
-const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-const WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
-const SOL = "0xd31a59c85ae9d8edefec411d448f90841571b89c";
-
-const ONE_E8 = new BigDecimal(BigInt.fromI64(100000000)); // 10^8
-const SECONDS_PER_DAY: i64 = 86400;
-const SEPOLIA_NETWORK = "sepolia";
-const SYNTHETIC_PRICE_NONE: i32 = 0;
-const SYNTHETIC_PRICE_STABLECOIN: i32 = 1;
-const SYNTHETIC_PRICE_WETH: i32 = 2;
-const SYNTHETIC_PRICE_WBTC: i32 = 3;
-const SYNTHETIC_PRICE_ZRX: i32 = 4;
-
-function isSepolia(): boolean {
-  return dataSource.network() == SEPOLIA_NETWORK;
+  constructor(priceUSD: BigDecimal, usdPeg: boolean) {
+    this.priceUSD = priceUSD;
+    this.usdPeg = usdPeg;
+  }
 }
 
-function getSyntheticPriceKind(token: Token): i32 {
-  if (!isSepolia()) {
-    return SYNTHETIC_PRICE_NONE;
-  }
-
-  let symbol = token.symbol;
-  if (symbol == "USDC" || symbol == "USDT" || symbol == "DAI") {
-    return SYNTHETIC_PRICE_STABLECOIN;
-  }
-  if (symbol == "WETH") {
-    return SYNTHETIC_PRICE_WETH;
-  }
-  if (symbol == "WBTC") {
-    return SYNTHETIC_PRICE_WBTC;
-  }
-  if (symbol == "ZRX") {
-    return SYNTHETIC_PRICE_ZRX;
-  }
-
-  return SYNTHETIC_PRICE_NONE;
+function dayTimestamp(timestamp: BigInt): i32 {
+  return timestamp.div(SECONDS_PER_DAY).times(SECONDS_PER_DAY).toI32();
 }
 
-function getSyntheticPriceUSD(kind: i32): BigDecimal {
-  if (kind == SYNTHETIC_PRICE_WETH) {
-    return BigDecimal.fromString("2000");
+function pricingMode(): string {
+  let mode = contextString(CONTEXT_PRICING_MODE);
+  return mode == null ? "NONE" : (mode as string);
+}
+
+function configuredAddress(key: string): string {
+  let value = contextString(key);
+  if (value == null) return "";
+  let configured = value as string;
+  return configured.length == 0 ? "" : configured;
+}
+
+function isUsableAddress(value: string): boolean {
+  return value.length != 0 && value != ZERO_ADDRESS;
+}
+
+function isUsableFeed(address: Address): boolean {
+  return address.toHexString() != ZERO_ADDRESS;
+}
+
+function configuredListContains(key: string, value: string): boolean {
+  let encoded = contextString(key);
+  if (encoded == null) return false;
+  let configured = encoded as string;
+  if (configured.length == 0) return false;
+  let entries = configured.split(",");
+  for (let i = 0; i < entries.length; i++) {
+    if (entries[i] == value) return true;
   }
-  if (kind == SYNTHETIC_PRICE_WBTC) {
-    return BigDecimal.fromString("70000");
+  return false;
+}
+
+function configuredDirectFeed(tokenAddress: string): string {
+  let encoded = contextString(CONTEXT_PRICING_DIRECT_FEEDS);
+  if (encoded == null) return "";
+  let configured = encoded as string;
+  if (configured.length == 0) return "";
+  let entries = configured.split(",");
+  for (let i = 0; i < entries.length; i++) {
+    let parts = entries[i].split("=");
+    if (parts.length == 2 && parts[0] == tokenAddress) {
+      return parts[1];
+    }
   }
-  if (kind == SYNTHETIC_PRICE_ZRX) {
-    return BigDecimal.fromString("0.10");
+  return "";
+}
+
+function configuredSyntheticPrice(symbol: string): SyntheticPrice | null {
+  let encoded = contextString(CONTEXT_PRICING_SYNTHETIC_PRICES);
+  if (encoded == null) return null;
+  let configured = encoded as string;
+  if (configured.length == 0) return null;
+  let entries = configured.split(",");
+  for (let i = 0; i < entries.length; i++) {
+    let parts = entries[i].split("=");
+    if (parts.length == 3 && parts[0] == symbol) {
+      return new SyntheticPrice(
+        BigDecimal.fromString(parts[1]),
+        parts[2] == "true"
+      );
+    }
   }
-  return BigDecimal.fromString("1");
+  return null;
+}
+
+function nullableStringEquals(
+  value: string | null,
+  expected: string
+): boolean {
+  if (!value) return false;
+  return (value as string) == expected;
+}
+
+function discoverChainlinkPriceFeeds(
+  token: Token,
+  timestamp: BigInt,
+  replaceExisting: boolean
+): void {
+  if (pricingMode() != "CHAINLINK") return;
+  if (!replaceExisting && token.priceFeed0) return;
+
+  let searchDay = dayTimestamp(timestamp);
+  if (token.lastPriceFeedSearchDay == searchDay) return;
+  token.lastPriceFeedSearchDay = searchDay;
+  token.priceFeed0 = null;
+  token.priceFeed1 = null;
+  token.priceSource = null;
+
+  let address = token.address.toHexString();
+  let configuredFeed = configuredDirectFeed(address);
+  if (isUsableAddress(configuredFeed)) {
+    token.priceFeed0 = Address.fromString(configuredFeed);
+    token.priceSource = "CHAINLINK_DIRECT";
+    token.save();
+    return;
+  }
+
+  let feedRegistry = configuredAddress(CONTEXT_PRICING_FEED_REGISTRY);
+  let usd = configuredAddress(CONTEXT_PRICING_USD_DENOMINATION);
+  let eth = configuredAddress(CONTEXT_PRICING_ETH_DENOMINATION);
+  let btc = configuredAddress(CONTEXT_PRICING_BTC_DENOMINATION);
+  let ethUsdFeed = configuredAddress(CONTEXT_PRICING_ETH_USD_FEED);
+  let btcUsdFeed = configuredAddress(CONTEXT_PRICING_BTC_USD_FEED);
+  if (
+    !isUsableAddress(feedRegistry) ||
+    !isUsableAddress(usd) ||
+    !isUsableAddress(eth) ||
+    !isUsableAddress(btc) ||
+    !isUsableAddress(ethUsdFeed) ||
+    !isUsableAddress(btcUsdFeed)
+  ) {
+    log.warning("Incomplete Chainlink pricing context for token {}", [address]);
+    token.save();
+    return;
+  }
+
+  let registry = ChainlinkFeedRegistry.bind(Address.fromString(feedRegistry));
+  let asset = Address.fromBytes(token.address);
+  let direct = registry.try_getFeed(asset, Address.fromString(usd));
+  if (!direct.reverted && isUsableFeed(direct.value)) {
+    token.priceFeed0 = direct.value;
+    token.priceSource = "CHAINLINK_DIRECT";
+    token.save();
+    return;
+  }
+
+  let ethFeed = registry.try_getFeed(asset, Address.fromString(eth));
+  if (!ethFeed.reverted && isUsableFeed(ethFeed.value)) {
+    token.priceFeed0 = ethFeed.value;
+    token.priceFeed1 = Address.fromString(ethUsdFeed);
+    token.priceSource = "CHAINLINK_TWO_HOP";
+    token.save();
+    return;
+  }
+
+  let btcFeed = registry.try_getFeed(asset, Address.fromString(btc));
+  if (!btcFeed.reverted && isUsableFeed(btcFeed.value)) {
+    token.priceFeed0 = btcFeed.value;
+    token.priceFeed1 = Address.fromString(btcUsdFeed);
+    token.priceSource = "CHAINLINK_TWO_HOP";
+  }
+  // Persist failed discovery so an unpriced token does not make three
+  // registry calls on every event. Discovery retries on the next UTC day.
+  token.save();
 }
 
 /**
- * Called once per token at creation time to discover Chainlink price feed paths.
- * On non-mainnet networks, all registry calls revert and fields stay null.
+ * Applies generated per-chain pricing policy when token metadata is first
+ * indexed. Transaction preparation and live views must never use this
+ * analytics projection as an oracle.
  */
-export function setupTokenPriceFeeds(token: Token): void {
-  let addr = token.address.toHexString();
-  log.warning("Setting up token price feeds for token: {}", [addr]);
-  let syntheticPriceKind = getSyntheticPriceKind(token);
+export function setupTokenPriceFeeds(token: Token, timestamp: BigInt): void {
+  let mode = pricingMode();
+  if (mode == "NONE") return;
 
-  if (syntheticPriceKind == SYNTHETIC_PRICE_STABLECOIN) {
-    token.isUsdStablecoin = true;
+  if (mode == "SYNTHETIC_TESTNET") {
+    let synthetic = configuredSyntheticPrice(token.symbol);
+    if (synthetic == null) {
+      log.warning("No configured synthetic price for token {} ({})", [
+        token.symbol,
+        token.address.toHexString(),
+      ]);
+      return;
+    }
+    let configured = synthetic as SyntheticPrice;
+    token.isUsdStablecoin = configured.usdPeg;
+    token.priceSource = "SYNTHETIC_TESTNET";
     token.save();
     return;
   }
 
-  if (syntheticPriceKind != SYNTHETIC_PRICE_NONE) {
+  if (mode == "USD_PEG" || mode == "CHAINLINK") {
+    if (
+      configuredListContains(
+        CONTEXT_PRICING_STABLECOINS,
+        token.address.toHexString()
+      )
+    ) {
+      token.isUsdStablecoin = true;
+      token.priceSource = "USD_PEG";
+      token.save();
+      return;
+    }
+    if (mode == "USD_PEG") return;
+    discoverChainlinkPriceFeeds(token, timestamp, false);
     return;
   }
 
-  if (isSepolia()) {
-    log.warning("No synthetic Sepolia price configured for token {} ({})", [
-      token.symbol,
-      addr,
-    ]);
-    return;
-  }
-
-  // Stablecoins
-  if (addr == USDC || addr == USDT) {
-    token.isUsdStablecoin = true;
-    log.warning("Token is a USD stablecoin: {}", [addr]);
-    token.save();
-    return;
-  }
-
-  // Check if token is WETH
-  if (addr == WETH) {
-    token.priceFeed0 = ETH_USD_FEED;
-    log.warning("Token is WETH: {}", [addr]);
-    token.save();
-    return;
-  }
-
-  if (addr == SOL) {
-    token.priceFeed0 = SOL_USD_FEED;
-    log.warning("Token is SOL: {}", [addr]);
-    token.save();
-    return;
-  }
-
-  let registry = ChainlinkFeedRegistry.bind(FEED_REGISTRY);
-  let tokenAddress = Address.fromBytes(token.address);
-  let revertMsg: string = "";
-
-  // Try direct TOKEN/USD feed
-  let directResult = registry.try_getFeed(tokenAddress, USD);
-  if (directResult.reverted) {
-    revertMsg = "Feed reverted";
-  } else {
-    revertMsg = "Found feed";
-  }
-  log.warning("DIRECT result: {}", [revertMsg]);
-  if (!directResult.reverted) {
-    token.priceFeed0 = directResult.value;
-    token.save();
-    return;
-  }
-
-  // Try TOKEN/ETH + ETH/USD two-hop
-  let ethResult = registry.try_getFeed(tokenAddress, ETH);
-  if (ethResult.reverted) {
-    revertMsg = "Feed reverted";
-  } else {
-    revertMsg = "Found feed";
-  }
-  log.warning("ETH result: {}", [revertMsg]);
-  if (!ethResult.reverted) {
-    token.priceFeed0 = ethResult.value;
-    token.priceFeed1 = ETH_USD_FEED;
-    token.save();
-    return;
-  }
-
-  // Try TOKEN/BTC + BTC/USD two-hop
-  let btcResult = registry.try_getFeed(tokenAddress, BTC);
-  if (btcResult.reverted) {
-    revertMsg = "Feed reverted";
-  } else {
-    revertMsg = "Found feed";
-  }
-  log.warning("BTC result: {}", [revertMsg]);
-  if (!btcResult.reverted) {
-    token.priceFeed0 = btcResult.value;
-    token.priceFeed1 = BTC_USD_FEED;
-    token.save();
-    return;
-  }
-
-  // No feed found — fields remain null
+  log.warning("Unsupported pricing mode {} for token {}", [
+    mode,
+    token.address.toHexString(),
+  ]);
 }
 
-export function getTokenPriceUSD(
-  tokenId: string,
+function priceObservationId(token: Token, timestamp: BigInt): string {
+  return (
+    "TKNPRICE-" +
+    token.address.toHexString() +
+    "-" +
+    dayTimestamp(timestamp).toString()
+  );
+}
+
+function savePriceObservation(
+  token: Token,
+  event: ethereum.Event,
+  priceUSD: BigDecimal,
+  source: string
+): TokenDailyPrice {
+  let daily = new TokenDailyPrice(
+    priceObservationId(token, event.block.timestamp)
+  );
+  daily.token = token.id;
+  daily.timestamp = dayTimestamp(event.block.timestamp);
+  daily.priceUSD = priceUSD;
+  daily.source = source;
+  daily.feed0 = token.priceFeed0;
+  daily.feed1 = token.priceFeed1;
+  daily.observedAtBlock = event.block.number;
+  daily.observedAtTimestamp = event.block.timestamp;
+  daily.observedAtTransaction = event.transaction.hash;
+  daily.observedAtLogIndex = event.logIndex;
+  daily.save();
+  return daily;
+}
+
+function readFeedPrice(feed: Bytes, timestamp: BigInt): BigDecimal | null {
+  let aggregator = ChainlinkAggregator.bind(Address.fromBytes(feed));
+  let decimalsResult = aggregator.try_decimals();
+  let roundResult = aggregator.try_latestRoundData();
+  if (decimalsResult.reverted || roundResult.reverted) return null;
+
+  let decimals = decimalsResult.value;
+  let round = roundResult.value;
+  let roundId = round.value0;
+  let answer = round.value1;
+  let updatedAt = round.value3;
+  let answeredInRound = round.value4;
+  if (decimals < 0 || decimals > 36) return null;
+  if (answer.le(BigInt.zero())) return null;
+  if (updatedAt.isZero() || updatedAt.gt(timestamp)) return null;
+  if (answeredInRound.lt(roundId)) return null;
+  if (timestamp.minus(updatedAt).gt(MAX_PRICE_AGE)) return null;
+
+  let divisor = BigInt.fromI32(10).pow(u8(decimals)).toBigDecimal();
+  return answer.toBigDecimal().div(divisor);
+}
+
+function readTokenPricePath(
+  token: Token,
   timestamp: BigInt
 ): BigDecimal | null {
-  let token = Token.load(tokenId);
-  if (!token) {
-    return null;
-  }
+  let feed0 = token.priceFeed0;
+  if (!feed0) return null;
+  let price = readFeedPrice(feed0 as Bytes, timestamp);
+  if (!price) return null;
 
-  if (token.isUsdStablecoin) {
-    return new BigDecimal(BigInt.fromI64(1));
+  let feed1 = token.priceFeed1;
+  if (feed1) {
+    let secondPrice = readFeedPrice(feed1 as Bytes, timestamp);
+    if (!secondPrice) return null;
+    price = (price as BigDecimal).times(secondPrice as BigDecimal);
   }
-
-  let daily = ensureTokenDailyPrice(tokenId, timestamp);
-  if (daily != null) {
-    return daily.priceUSD;
-  }
-
-  return null;
+  return price;
 }
 
 export function ensureTokenDailyPrice(
   tokenId: string,
-  timestamp: BigInt
+  event: ethereum.Event
 ): TokenDailyPrice | null {
   let token = Token.load(tokenId);
-  if (!token) {
-    return null;
-  }
+  if (token == null) return null;
+  let configuredToken = token as Token;
 
-  if (token.isUsdStablecoin) {
-    return null;
-  }
-
-  // Daily cache
-  let dayTimestamp = timestamp
-    .div(BigInt.fromI64(SECONDS_PER_DAY))
-    .times(BigInt.fromI64(SECONDS_PER_DAY));
-  let cacheId =
-    "TKNPRICE-" +
-    token.address.toHexString() +
-    "-" +
-    dayTimestamp.toString();
-
+  let cacheId = priceObservationId(configuredToken, event.block.timestamp);
   let cached = TokenDailyPrice.load(cacheId);
-  if (cached) {
-    return cached;
-  }
+  if (cached != null) return cached as TokenDailyPrice;
 
-  let syntheticPriceKind = getSyntheticPriceKind(token);
-  if (syntheticPriceKind != SYNTHETIC_PRICE_NONE) {
-    let daily = new TokenDailyPrice(cacheId);
-    daily.token = tokenId;
-    daily.timestamp = dayTimestamp.toI32();
-    daily.priceUSD = getSyntheticPriceUSD(syntheticPriceKind);
-    daily.save();
-    return daily;
-  }
-
-  let feed0 = token.priceFeed0;
-  if (!feed0) {
-    return null;
-  }
-
-  // Query first feed
-  let aggregator0 = ChainlinkAggregator.bind(
-    Address.fromBytes(feed0 as Bytes)
-  );
-  let result0 = aggregator0.try_latestAnswer();
-  if (result0.reverted) {
-    return null;
-  }
-  let price = new BigDecimal(result0.value).div(ONE_E8);
-
-  // Two-hop path
-  let feed1 = token.priceFeed1;
-  if (feed1) {
-    let aggregator1 = ChainlinkAggregator.bind(
-      Address.fromBytes(feed1 as Bytes)
-    );
-    let result1 = aggregator1.try_latestAnswer();
-    if (result1.reverted) {
-      return null;
+  let source = configuredToken.priceSource;
+  if (configuredToken.isUsdStablecoin) {
+    if (!nullableStringEquals(source, "SYNTHETIC_TESTNET")) {
+      return savePriceObservation(
+        configuredToken,
+        event,
+        BigDecimal.fromString("1"),
+        "USD_PEG"
+      );
     }
-    // price = (price0 * price1) / 10^8
-    let price1 = new BigDecimal(result1.value).div(ONE_E8);
-    price = price.times(price1);
   }
 
-  // Save to daily cache
-  let daily = new TokenDailyPrice(cacheId);
-  daily.token = tokenId;
-  daily.timestamp = dayTimestamp.toI32();
-  daily.priceUSD = price;
-  daily.save();
+  if (nullableStringEquals(source, "SYNTHETIC_TESTNET")) {
+    let synthetic = configuredSyntheticPrice(configuredToken.symbol);
+    if (synthetic == null) return null;
+    return savePriceObservation(
+      configuredToken,
+      event,
+      (synthetic as SyntheticPrice).priceUSD,
+      "SYNTHETIC_TESTNET"
+    );
+  }
 
-  return daily;
+  if (pricingMode() != "CHAINLINK") return null;
+  if (!configuredToken.priceFeed0) {
+    discoverChainlinkPriceFeeds(
+      configuredToken,
+      event.block.timestamp,
+      false
+    );
+  }
+  let price = readTokenPricePath(configuredToken, event.block.timestamp);
+  let currentDay = dayTimestamp(event.block.timestamp);
+  if (!price && configuredToken.lastPriceFeedSearchDay != currentDay) {
+    discoverChainlinkPriceFeeds(
+      configuredToken,
+      event.block.timestamp,
+      true
+    );
+    price = readTokenPricePath(configuredToken, event.block.timestamp);
+  }
+  if (!price) {
+    // Stop calling a dead path on every event. The daily discovery throttle
+    // allows it to be retried after the next UTC boundary.
+    if (configuredToken.priceFeed0) {
+      configuredToken.priceFeed0 = null;
+      configuredToken.priceFeed1 = null;
+      configuredToken.priceSource = null;
+      configuredToken.save();
+    }
+    return null;
+  }
+
+  let observationSource = configuredToken.priceFeed1
+    ? "CHAINLINK_TWO_HOP"
+    : "CHAINLINK_DIRECT";
+  return savePriceObservation(
+    configuredToken,
+    event,
+    price as BigDecimal,
+    observationSource
+  );
+}
+
+export function getTokenPriceUSD(
+  tokenId: string,
+  event: ethereum.Event
+): BigDecimal | null {
+  let daily = ensureTokenDailyPrice(tokenId, event);
+  return daily == null ? null : (daily as TokenDailyPrice).priceUSD;
 }

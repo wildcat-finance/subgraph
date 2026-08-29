@@ -1,0 +1,48 @@
+[
+  {
+    "type": "function",
+    "name": "getHookedMarket",
+    "inputs": [
+      {
+        "name": "marketAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct HookedMarket",
+        "components": [
+          {
+            "name": "isHooked",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "transferRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "depositRequiresAccess",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "minimumDeposit",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "transfersDisabled",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  }
+]

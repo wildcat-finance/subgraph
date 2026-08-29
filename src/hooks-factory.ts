@@ -1,4 +1,4 @@
-import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import {
   ChangedSpherexEngineAddress as ChangedSpherexEngineAddressEvent,
   ChangedSpherexOperator as ChangedSpherexOperatorEvent,
@@ -7,83 +7,67 @@ import {
   HooksTemplateDisabled as HooksTemplateDisabledEvent,
   HooksTemplateFeesUpdated as HooksTemplateFeesUpdatedEvent,
   MarketDeployed as MarketDeployedEvent,
-  HooksFactory as HooksFactoryContract,
 } from "../generated/HooksFactory/HooksFactory";
 import {
   createHooksConfig,
-  createFactoryHooksTemplate,
-  createHooksFactory,
   createHooksInstance,
   createHooksInstanceDeployed,
-  createHooksTemplate,
-  createHooksTemplateAdded,
-  createHooksTemplateDisabled,
-  createHooksTemplateFeesUpdated,
   createMarket,
   createMarketDeployed,
   createRoleProvider,
-  createRoleProviderAdded,
   createToken,
   generateHooksConfigId,
-  generateFactoryHooksTemplateId,
   generateHooksInstanceDeployedId,
   generateHooksInstanceId,
-  generateHooksTemplateAddedId,
-  generateHooksTemplateDisabledId,
-  generateHooksTemplateFeesUpdatedId,
-  generateHooksTemplateId,
   generateMarketId,
   generateRoleProviderId,
   generateTokenId,
-  getHooksTemplate,
 } from "../generated/UncrashableEntityHelpers";
-import { OpenTermHooks as IOpenTermHooks } from "../generated/HooksFactory/OpenTermHooks";
-import { FixedTermHooks as IFixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
+import { OpenTermHooksBase as IOpenTermHooksBase } from "../generated/HooksFactory/OpenTermHooksBase";
+import { FixedTermHooksBase as IFixedTermHooksBase } from "../generated/HooksFactory/FixedTermHooksBase";
+import { OpenTermHooksForceBuyBack as IOpenTermHooksForceBuyBack } from "../generated/HooksFactory/OpenTermHooksForceBuyBack";
+import { FixedTermHooksForceBuyBack as IFixedTermHooksForceBuyBack } from "../generated/HooksFactory/FixedTermHooksForceBuyBack";
 import { PeriodicTermHooks as IPeriodicTermHooks } from "../generated/HooksFactory/PeriodicTermHooks";
 import { CombinedHooks } from "../generated/HooksFactory/CombinedHooks";
 import { IWildcatMarketRevolving } from "../generated/HooksFactory/IWildcatMarketRevolving";
+import { IERC20 } from "../generated/HooksFactory/IERC20";
 import {
   HooksInstance,
   HooksConfig,
-  FactoryHooksTemplate,
   HooksFactory,
-  HooksTemplate,
+  HooksTemplateRegistration,
   RoleProvider,
   Token,
 } from "../generated/schema";
 import { readTokenMetadata } from "./token-metadata";
 import { generateEventId, isNullAddress } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
-import { getOrCreateProtocolStats, getOrCreateBorrowerStats } from "./daily-stats";
+import { recordMarketCreated } from "./daily-stats";
 import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
 } from "../generated/templates";
-
-function generateRecordId(id: string, eventIndex: number): string {
-  return "RECORD" + "-" + id + "-" + eventIndex.toString();
-}
-
-function getOrCreateHooksFactory(
-  address: Address,
-  marketType: string
-): HooksFactory {
-  let hooksFactory = HooksFactory.load(address.toHex());
-  if (hooksFactory == null) {
-    let hooksFactoryContract = HooksFactoryContract.bind(address);
-    return createHooksFactory(address.toHex(), {
-      isRegistered: true,
-      sentinel: hooksFactoryContract.sanctionsSentinel(),
-      archController: hooksFactoryContract.archController().toHex(),
-      marketType: marketType,
-    });
-  }
-  if (hooksFactory.marketType == null || hooksFactory.marketType != marketType) {
-    hooksFactory.marketType = marketType;
-    hooksFactory.save();
-  }
-  return hooksFactory;
-}
+import { getOrCreateHooksFactory } from "./factory-domain";
+import {
+  CONTEXT_HOOKS_KIND,
+  CONTEXT_HOOKS_TEMPLATE,
+  CONTEXT_TEMPLATE_REGISTRATION,
+  createFactoryChildContext,
+} from "./factory-context";
+import {
+  createTemplateRegistration,
+  disableTemplateRegistration,
+  generateHooksTemplateId,
+  generateHooksTemplateRegistrationId,
+  getOrCreateHooksTemplate,
+  recordTemplateRegistrationEvent,
+  updateTemplateRegistrationFees,
+} from "./hooks-template-domain";
+import { recordIndexerDiagnostic } from "./indexer-diagnostics";
+import { createInitialMarketSnapshot } from "./market-domain";
+import { recordMarketEvent } from "./market-event-domain";
+import { getOrCreateBorrower } from "./borrower-domain";
+import { getOrCreateRoleProviderInstance } from "./role-provider-domain";
 
 export function handleChangedSpherexEngineAddress(
   event: ChangedSpherexEngineAddressEvent
@@ -100,99 +84,95 @@ export function handleHooksInstanceDeployedForMarketType(
   let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
   let hooksTemplateId = generateHooksTemplateId(hooksTemplateAddress);
   let hooksInstanceId = generateHooksInstanceId(hooksInstance);
-  let factoryHooksTemplate = getOrCreateFactoryHooksTemplateFromGlobal(
-    event.address,
-    hooksFactory,
-    hooksTemplateAddress
+  let templateRegistration = HooksTemplateRegistration.load(
+    generateHooksTemplateRegistrationId(event.address, hooksTemplateAddress)
   );
+  if (templateRegistration == null) {
+    recordIndexerDiagnostic(
+      event,
+      "MISSING_TEMPLATE_REGISTRATION",
+      "Hooks instance deployment referenced a template that is not registered on this factory",
+      hooksTemplateAddress
+    );
+    return;
+  }
   let hooksContract = CombinedHooks.bind(hooksInstance);
   let borrower = hooksContract.borrower();
   let name = hooksContract.name();
-  let hooksWithProvider: HooksInstance | null = null;
+  let hooksTemplate = getOrCreateHooksTemplate(
+    event,
+    hooksTemplateAddress,
+    hooksFactory.abiFamily
+  );
+  let hooksWithProvider = createHooksInstance(hooksInstanceId, {
+    address: hooksInstance,
+    borrower: borrower,
+    name: name,
+    hooksFactory: hooksFactory.id,
+    hooksTemplate: hooksTemplateId,
+    templateRegistration: templateRegistration.id,
+    kind: hooksTemplate.kind,
+    marketKind: hooksFactory.marketKind,
+    generation: hooksFactory.generation,
+    abiFamily: hooksFactory.abiFamily,
+    eventGeneration: hooksFactory.eventGeneration,
+    administrator: borrower,
+    deployer: event.transaction.from,
+    version: hooksTemplate.version,
+    providerMetadataState: "AVAILABLE",
+    deployedAtBlock: event.block.number,
+    deployedAtTimestamp: event.block.timestamp,
+    deployedAtTransaction: event.transaction.hash,
+    deployedAtLogIndex: event.logIndex,
+  });
 
-  if (factoryHooksTemplate.name == "OpenTermHooks") {
-    hooksWithProvider = createHooksInstance(hooksInstanceId, {
-      borrower: borrower,
-      name: name,
-      hooksFactory: hooksFactory.id,
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-      kind: "OpenTerm",
-    });
-  } else if (factoryHooksTemplate.name == "FixedTermHooks") {
-    hooksWithProvider = createHooksInstance(hooksInstanceId, {
-      borrower: borrower,
-      name: name,
-      hooksFactory: hooksFactory.id,
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-      kind: "FixedTerm",
-    });
-  } else if (factoryHooksTemplate.name == "PeriodicTermHooks") {
-    hooksWithProvider = createHooksInstance(hooksInstanceId, {
-      borrower: borrower,
-      name: name,
-      hooksFactory: hooksFactory.id,
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-      kind: "PeriodicTerm",
-    });
-  } else {
-    createHooksInstance(hooksInstanceId, {
-      borrower: borrower,
-      name: name,
-      hooksFactory: hooksFactory.id,
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-      kind: "Unknown",
-    });
+  let eventIndex = 0;
+  let pullProviders = hooksContract.getPullProviders();
+  let pushProviders = hooksContract.getPushProviders();
+  for (let i = 0; i < pullProviders.length; i++) {
+    let pullProvider = pullProviders[i];
+    decodeAndCreateRoleProvider(
+      hooksInstance,
+      hooksInstanceId,
+      pullProvider
+    );
+    eventIndex = eventIndex + 1;
   }
-
-  if (hooksWithProvider != null) {
-    let eventIndex = 0;
-    let pullProviders = hooksContract.getPullProviders();
-    let pushProviders = hooksContract.getPushProviders();
-    for (let i = 0; i < pullProviders.length; i++) {
-      let pullProvider = pullProviders[i];
-      decodeAndCreateRoleProvider(
-        event,
-        hooksInstance,
-        hooksInstanceId,
-        eventIndex,
-        pullProvider
-      );
-      eventIndex = eventIndex + 1;
-    }
-    for (let i = 0; i < pushProviders.length; i++) {
-      let pushProvider = pushProviders[i];
-      decodeAndCreateRoleProvider(
-        event,
-        hooksInstance,
-        hooksInstanceId,
-        eventIndex,
-        pushProvider
-      );
-      eventIndex = eventIndex + 1;
-    }
-    hooksWithProvider.eventIndex = eventIndex;
-    hooksWithProvider.save();
+  for (let i = 0; i < pushProviders.length; i++) {
+    let pushProvider = pushProviders[i];
+    decodeAndCreateRoleProvider(
+      hooksInstance,
+      hooksInstanceId,
+      pushProvider
+    );
+    eventIndex = eventIndex + 1;
   }
+  hooksWithProvider.eventIndex = eventIndex;
+  hooksWithProvider.save();
 
   createHooksInstanceDeployed(
     generateHooksInstanceDeployedId(hooksInstance, hooksFactory.eventIndex),
     {
       hooks: hooksInstanceId,
       hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
+      templateRegistration: templateRegistration.id,
       blockNumber: event.block.number.toI32(),
       blockTimestamp: event.block.timestamp.toI32(),
       transactionHash: event.transaction.hash,
       blockLogIndex: event.logIndex.toI32(),
+      administrator: borrower,
+      deployer: event.transaction.from,
+      name: name,
+      version: hooksTemplate.version,
     }
   );
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
-  CombinedHooksTemplate.create(hooksInstance);
+  let context = createFactoryChildContext(hooksFactory);
+  context.setString(CONTEXT_TEMPLATE_REGISTRATION, templateRegistration.id);
+  context.setString(CONTEXT_HOOKS_TEMPLATE, hooksTemplate.id);
+  context.setString(CONTEXT_HOOKS_KIND, hooksTemplate.kind);
+  CombinedHooksTemplate.createWithContext(hooksInstance, context);
 }
 
 export function handleHooksInstanceDeployed(
@@ -206,7 +186,10 @@ export function handleHooksInstanceDeployed(
   );
 }
 
-function createTokenIfNotExists(asset: Address): Token | null {
+export function createTokenIfNotExists(
+  asset: Address,
+  timestamp: BigInt
+): Token | null {
   if (isNullAddress(asset)) {
     return null;
   }
@@ -221,89 +204,21 @@ function createTokenIfNotExists(asset: Address): Token | null {
       decimals: metadata.decimals,
       isMock: metadata.isMock,
     });
-    setupTokenPriceFeeds(newToken);
+    setupTokenPriceFeeds(newToken, timestamp);
     return newToken;
   }
   return token;
 }
 
-function getOrCreateTokenId(asset: Address): string | null {
-  let token = createTokenIfNotExists(asset);
+export function getOrCreateTokenId(
+  asset: Address,
+  timestamp: BigInt
+): string | null {
+  let token = createTokenIfNotExists(asset, timestamp);
   if (token == null) {
     return null;
   }
   return token.id;
-}
-
-function getOrCreateFactoryHooksTemplateFromGlobal(
-  factoryAddress: Address,
-  hooksFactory: HooksFactory,
-  hooksTemplateAddress: Address
-): FactoryHooksTemplate {
-  let hooksTemplateId = generateHooksTemplateId(hooksTemplateAddress);
-  let factoryHooksTemplateId = generateFactoryHooksTemplateId(
-    factoryAddress,
-    hooksTemplateAddress
-  );
-  let factoryHooksTemplate = FactoryHooksTemplate.load(factoryHooksTemplateId);
-  if (factoryHooksTemplate != null) {
-    return factoryHooksTemplate;
-  }
-
-  let hooksTemplate = getHooksTemplate(hooksTemplateId);
-  return createFactoryHooksTemplate(factoryHooksTemplateId, {
-    hooksFactory: hooksFactory.id,
-    hooksTemplate: hooksTemplate.id,
-    templateAddress: hooksTemplateAddress,
-    feeRecipient: hooksTemplate.feeRecipient,
-    originationFeeAmount: hooksTemplate.originationFeeAmount,
-    originationFeeAsset: hooksTemplate.originationFeeAsset,
-    protocolFeeBips: hooksTemplate.protocolFeeBips,
-    name: hooksTemplate.name,
-  });
-}
-
-function createOrUpdateFactoryHooksTemplate(
-  factoryAddress: Address,
-  hooksFactory: HooksFactory,
-  hooksTemplateAddress: Address,
-  name: string,
-  feeRecipient: Address,
-  originationFeeAsset: Address,
-  originationFeeAmount: BigInt,
-  protocolFeeBips: i32
-): FactoryHooksTemplate {
-  let hooksTemplateId = generateHooksTemplateId(hooksTemplateAddress);
-  let factoryHooksTemplateId = generateFactoryHooksTemplateId(
-    factoryAddress,
-    hooksTemplateAddress
-  );
-  let originationFeeAssetId = getOrCreateTokenId(originationFeeAsset);
-  let factoryHooksTemplate = FactoryHooksTemplate.load(factoryHooksTemplateId);
-
-  if (factoryHooksTemplate == null) {
-    return createFactoryHooksTemplate(factoryHooksTemplateId, {
-      hooksFactory: hooksFactory.id,
-      hooksTemplate: hooksTemplateId,
-      templateAddress: hooksTemplateAddress,
-      feeRecipient: feeRecipient,
-      originationFeeAmount: originationFeeAmount,
-      originationFeeAsset: originationFeeAssetId,
-      protocolFeeBips: protocolFeeBips,
-      name: name,
-    });
-  }
-
-  factoryHooksTemplate.hooksFactory = hooksFactory.id;
-  factoryHooksTemplate.hooksTemplate = hooksTemplateId;
-  factoryHooksTemplate.templateAddress = hooksTemplateAddress;
-  factoryHooksTemplate.name = name;
-  factoryHooksTemplate.feeRecipient = feeRecipient;
-  factoryHooksTemplate.originationFeeAmount = originationFeeAmount;
-  factoryHooksTemplate.originationFeeAsset = originationFeeAssetId;
-  factoryHooksTemplate.protocolFeeBips = protocolFeeBips;
-  factoryHooksTemplate.save();
-  return factoryHooksTemplate;
 }
 
 export function handleHooksTemplateAddedForMarketType(
@@ -317,49 +232,26 @@ export function handleHooksTemplateAddedForMarketType(
   marketType: string
 ): void {
   let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
-  let hooksTemplateId = generateHooksTemplateId(hooksTemplate);
-  let originationFeeAssetId = getOrCreateTokenId(originationFeeAsset);
-  createHooksTemplate(hooksTemplateId, {
-    feeRecipient: feeRecipient,
-    originationFeeAmount: originationFeeAmount,
-    // originationFeeAsset: getOrCreateTokenId(event.params.originationFeeAsset),
-
-    // originationFeeAsset: event.params.originationFeeAsset,
-    originationFeeAsset: originationFeeAssetId,
-    protocolFeeBips: protocolFeeBips,
-    hooksFactory: hooksFactory.id,
-    name: name,
-  });
-  let factoryHooksTemplate = createOrUpdateFactoryHooksTemplate(
-    event.address,
-    hooksFactory,
+  let originationFeeAssetId = getOrCreateTokenId(
+    originationFeeAsset,
+    event.block.timestamp
+  );
+  let template = getOrCreateHooksTemplate(
+    event,
     hooksTemplate,
+    hooksFactory.abiFamily
+  );
+  let registration = createTemplateRegistration(
+    event,
+    hooksFactory,
+    template,
     name,
     feeRecipient,
-    originationFeeAsset,
+    originationFeeAssetId,
     originationFeeAmount,
     protocolFeeBips
   );
-  createHooksTemplateAdded(
-    generateHooksTemplateAddedId(
-      event.address,
-      hooksTemplate,
-      hooksFactory.eventIndex
-    ),
-    {
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-      blockLogIndex: event.logIndex.toI32(),
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-      feeRecipient: feeRecipient,
-      originationFeeAmount: originationFeeAmount,
-      originationFeeAsset: originationFeeAssetId,
-      // originationFeeAsset: event.params.originationFeeAsset,
-      protocolFeeBips: protocolFeeBips,
-    }
-  );
+  recordTemplateRegistrationEvent(event, registration, "ADDED");
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
 }
@@ -390,34 +282,22 @@ export function handleHooksTemplateDisabledForMarketType(
   marketType: string
 ): void {
   let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
-  let hooksTemplateId = generateHooksTemplateId(hooksTemplate);
-  let factoryHooksTemplate = getOrCreateFactoryHooksTemplateFromGlobal(
-    event.address,
-    hooksFactory,
-    hooksTemplate
+  let registration = HooksTemplateRegistration.load(
+    generateHooksTemplateRegistrationId(event.address, hooksTemplate)
   );
-  createHooksTemplateDisabled(
-    generateHooksTemplateDisabledId(
-      event.address,
-      hooksTemplate,
-      hooksFactory.eventIndex
-    ),
-    {
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-      blockLogIndex: event.logIndex.toI32(),
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-    }
-  );
+  if (registration == null) {
+    recordIndexerDiagnostic(
+      event,
+      "MISSING_TEMPLATE_REGISTRATION",
+      "Template disable referenced a template that is not registered on this factory",
+      hooksTemplate
+    );
+    return;
+  }
+  disableTemplateRegistration(event, registration);
+  recordTemplateRegistrationEvent(event, registration, "DISABLED");
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
-  factoryHooksTemplate.disabled = true;
-  factoryHooksTemplate.save();
-  let hooksTemplateEntity = getHooksTemplate(hooksTemplateId);
-  hooksTemplateEntity.disabled = true;
-  hooksTemplateEntity.save();
 }
 export function handleHooksTemplateFeesUpdatedForMarketType(
   event: ethereum.Event,
@@ -429,43 +309,31 @@ export function handleHooksTemplateFeesUpdatedForMarketType(
   marketType: string
 ): void {
   let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
-  let hooksTemplateId = generateHooksTemplateId(hooksTemplate);
-  let hooksTemplateEntity = getHooksTemplate(hooksTemplateId);
-  let originationFeeAssetId = getOrCreateTokenId(originationFeeAsset);
-  let factoryHooksTemplate = createOrUpdateFactoryHooksTemplate(
-    event.address,
-    hooksFactory,
-    hooksTemplate,
-    hooksTemplateEntity.name,
-    feeRecipient,
+  let originationFeeAssetId = getOrCreateTokenId(
     originationFeeAsset,
+    event.block.timestamp
+  );
+  let registration = HooksTemplateRegistration.load(
+    generateHooksTemplateRegistrationId(event.address, hooksTemplate)
+  );
+  if (registration == null) {
+    recordIndexerDiagnostic(
+      event,
+      "MISSING_TEMPLATE_REGISTRATION",
+      "Template fee update referenced a template that is not registered on this factory",
+      hooksTemplate
+    );
+    return;
+  }
+  updateTemplateRegistrationFees(
+    event,
+    registration,
+    feeRecipient,
+    originationFeeAssetId,
     originationFeeAmount,
     protocolFeeBips
   );
-  createHooksTemplateFeesUpdated(
-    generateHooksTemplateFeesUpdatedId(
-      event.address,
-      hooksTemplate,
-      hooksFactory.eventIndex
-    ),
-    {
-      blockNumber: event.block.number.toI32(),
-      blockTimestamp: event.block.timestamp.toI32(),
-      transactionHash: event.transaction.hash,
-      blockLogIndex: event.logIndex.toI32(),
-      hooksTemplate: hooksTemplateId,
-      factoryHooksTemplate: factoryHooksTemplate.id,
-      feeRecipient: feeRecipient,
-      originationFeeAmount: originationFeeAmount,
-      originationFeeAsset: originationFeeAssetId,
-      protocolFeeBips: protocolFeeBips,
-    }
-  );
-  hooksTemplateEntity.feeRecipient = feeRecipient;
-  hooksTemplateEntity.originationFeeAmount = originationFeeAmount;
-  hooksTemplateEntity.originationFeeAsset = originationFeeAssetId;
-  hooksTemplateEntity.protocolFeeBips = protocolFeeBips;
-  hooksTemplateEntity.save();
+  recordTemplateRegistrationEvent(event, registration, "FEES_UPDATED");
   hooksFactory.eventIndex = hooksFactory.eventIndex + 1;
   hooksFactory.save();
 }
@@ -482,44 +350,32 @@ export function handleHooksTemplateFeesUpdated(
     "Legacy"
   );
 }
-function decodeAndCreateRoleProvider(
-  event: ethereum.Event,
+export function decodeAndCreateRoleProvider(
   hooksAddress: Bytes,
   hooksInstanceId: string,
-  eventIndex: number,
   encodedRoleProvider: BigInt
 ): RoleProvider {
   let nullProviderIndex = 2 ** 24 - 1;
+  let providerIndexMask = BigInt.fromI32(nullProviderIndex);
   let hooksConfigBytes = encodedRoleProvider
     .toHex()
     .replace("0x", "")
     .padStart(64, "0");
 
-  let timeToLive = Bytes.fromHexString(hooksConfigBytes.slice(0, 8)).toI32();
+  let timeToLive = encodedRoleProvider.rightShift(224);
   let providerAddress = Bytes.fromHexString(hooksConfigBytes.slice(8, 48));
-  let pullProviderIndex = Bytes.fromHexString(
-    hooksConfigBytes.slice(48, 54)
-  ).toI32();
-  let pushProviderIndex = Bytes.fromHexString(
-    hooksConfigBytes.slice(54, 60)
-  ).toI32();
+  let pullProviderIndex = encodedRoleProvider
+    .rightShift(40)
+    .bitAnd(providerIndexMask)
+    .toI32();
+  let pushProviderIndex = encodedRoleProvider
+    .rightShift(16)
+    .bitAnd(providerIndexMask)
+    .toI32();
   let isPullProvider = pullProviderIndex !== nullProviderIndex;
   let isPushProvider = pushProviderIndex !== nullProviderIndex;
   let providerId = generateRoleProviderId(hooksAddress, providerAddress);
-  createRoleProviderAdded(generateRecordId(hooksInstanceId, eventIndex), {
-    blockNumber: event.block.number.toI32(),
-    blockTimestamp: event.block.timestamp.toI32(),
-    eventIndex: eventIndex as i32,
-    isPullProvider: isPullProvider,
-    isPushProvider: isPushProvider,
-    provider: providerId,
-    hooks: hooksInstanceId,
-    pullProviderIndex: pullProviderIndex,
-    pushProviderIndex: pushProviderIndex,
-    timeToLive: timeToLive,
-    transactionHash: event.transaction.hash,
-    blockLogIndex: event.logIndex.toI32(),
-  });
+  let providerInstance = getOrCreateRoleProviderInstance(providerAddress);
   return createRoleProvider(providerId, {
     isApproved: true,
     isPullProvider: isPullProvider,
@@ -529,13 +385,15 @@ function decodeAndCreateRoleProvider(
     pushProviderIndex: pushProviderIndex,
     timeToLive: timeToLive,
     providerAddress: providerAddress,
+    providerInstance: providerInstance.id,
   });
 }
 
 function decodeAndCreateHooksConfig(
   market: Bytes,
   marketId: string,
-  hooksConfig: BigInt
+  hooksConfig: BigInt,
+  hookedMarketAbi: string
 ): HooksConfig {
   let hooksConfigBytes = hooksConfig
     .toHex()
@@ -578,32 +436,64 @@ function decodeAndCreateHooksConfig(
   let pendingAprChangeResponseWindowStart: i32 = 0;
   let pendingAprChangeResponseWindowEnd: i32 = 0;
   if (versionString == "OpenTermHooks") {
-    let openTermHooksContract = IOpenTermHooks.bind(
-      Address.fromBytes(hooksAddress)
-    );
-    let hookedMarket = openTermHooksContract.getHookedMarket(
-      Address.fromBytes(market)
-    );
-    depositRequiresAccess = hookedMarket.depositRequiresAccess;
-    transferRequiresAccess = hookedMarket.transferRequiresAccess;
-    transfersDisabled = hookedMarket.transfersDisabled;
-    minimumDeposit = hookedMarket.minimumDeposit;
+    if (hookedMarketAbi == "FORCE_BUYBACK") {
+      let openTermHooksContract = IOpenTermHooksForceBuyBack.bind(
+        Address.fromBytes(hooksAddress)
+      );
+      let hookedMarket = openTermHooksContract.getHookedMarket(
+        Address.fromBytes(market)
+      );
+      depositRequiresAccess = hookedMarket.depositRequiresAccess;
+      transferRequiresAccess = hookedMarket.transferRequiresAccess;
+      transfersDisabled = hookedMarket.transfersDisabled;
+      minimumDeposit = hookedMarket.minimumDeposit;
+      allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
+    } else {
+      let openTermHooksContract = IOpenTermHooksBase.bind(
+        Address.fromBytes(hooksAddress)
+      );
+      let hookedMarket = openTermHooksContract.getHookedMarket(
+        Address.fromBytes(market)
+      );
+      depositRequiresAccess = hookedMarket.depositRequiresAccess;
+      transferRequiresAccess = hookedMarket.transferRequiresAccess;
+      transfersDisabled = hookedMarket.transfersDisabled;
+      minimumDeposit = hookedMarket.minimumDeposit;
+    }
     queueWithdrawalRequiresAccess = useOnQueueWithdrawal;
   } else if (versionString == "FixedTermHooks") {
-    let fixedTermHooksContract = IFixedTermHooks.bind(
-      Address.fromBytes(hooksAddress)
-    );
-    let hookedMarket = fixedTermHooksContract.getHookedMarket(
-      Address.fromBytes(market)
-    );
-    depositRequiresAccess = hookedMarket.depositRequiresAccess;
-    transferRequiresAccess = hookedMarket.transferRequiresAccess;
-    queueWithdrawalRequiresAccess = hookedMarket.withdrawalRequiresAccess;
-    transfersDisabled = hookedMarket.transfersDisabled;
-    allowClosureBeforeTerm = hookedMarket.allowClosureBeforeTerm;
-    allowTermReduction = hookedMarket.allowTermReduction;
-    fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
-    minimumDeposit = hookedMarket.minimumDeposit;
+    if (hookedMarketAbi == "FORCE_BUYBACK") {
+      let fixedTermHooksContract = IFixedTermHooksForceBuyBack.bind(
+        Address.fromBytes(hooksAddress)
+      );
+      let hookedMarket = fixedTermHooksContract.getHookedMarket(
+        Address.fromBytes(market)
+      );
+      depositRequiresAccess = hookedMarket.depositRequiresAccess;
+      transferRequiresAccess = hookedMarket.transferRequiresAccess;
+      queueWithdrawalRequiresAccess = hookedMarket.withdrawalRequiresAccess;
+      transfersDisabled = hookedMarket.transfersDisabled;
+      allowClosureBeforeTerm = hookedMarket.allowClosureBeforeTerm;
+      allowTermReduction = hookedMarket.allowTermReduction;
+      fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
+      minimumDeposit = hookedMarket.minimumDeposit;
+      allowForceBuyBacks = hookedMarket.allowForceBuyBacks;
+    } else {
+      let fixedTermHooksContract = IFixedTermHooksBase.bind(
+        Address.fromBytes(hooksAddress)
+      );
+      let hookedMarket = fixedTermHooksContract.getHookedMarket(
+        Address.fromBytes(market)
+      );
+      depositRequiresAccess = hookedMarket.depositRequiresAccess;
+      transferRequiresAccess = hookedMarket.transferRequiresAccess;
+      queueWithdrawalRequiresAccess = hookedMarket.withdrawalRequiresAccess;
+      transfersDisabled = hookedMarket.transfersDisabled;
+      allowClosureBeforeTerm = hookedMarket.allowClosureBeforeTerm;
+      allowTermReduction = hookedMarket.allowTermReduction;
+      fixedTermEndTime = hookedMarket.fixedTermEndTime.toI32();
+      minimumDeposit = hookedMarket.minimumDeposit;
+    }
   } else if (versionString == "PeriodicTermHooks") {
     let periodicTermHooksContract = IPeriodicTermHooks.bind(
       Address.fromBytes(hooksAddress)
@@ -671,10 +561,10 @@ export function handleMarketDeployedForMarketType(
   delinquencyGracePeriod: BigInt,
   marketType: string
 ): void {
-  let asset = createTokenIfNotExists(assetAddress);
+  let asset = createTokenIfNotExists(assetAddress, event.block.timestamp);
   if (asset != null) {
     let marketId = generateMarketId(market);
-    MarketTemplate.create(market);
+    let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
     let marketDeployedId = generateEventId(event);
     createMarketDeployed(marketDeployedId, {
       blockNumber: event.block.number.toI32(),
@@ -686,34 +576,36 @@ export function handleMarketDeployedForMarketType(
     let hooksConfig = decodeAndCreateHooksConfig(
       market,
       marketId,
-      hooksConfigValue
+      hooksConfigValue,
+      hooksFactory.hookedMarketAbi
     );
     let hooks = HooksInstance.load(hooksConfig.hooks);
     if (hooks == null) {
       return;
     }
 
-    let hooksFactory = getOrCreateHooksFactory(event.address, marketType);
-    let factoryHooksTemplate = FactoryHooksTemplate.load(
-      hooks.factoryHooksTemplate
+    let templateRegistration = HooksTemplateRegistration.load(
+      hooks.templateRegistration
     );
-    let feeRecipient: Bytes;
-    let protocolFeeBips: i32;
-    if (factoryHooksTemplate != null) {
-      feeRecipient = factoryHooksTemplate.feeRecipient;
-      protocolFeeBips = factoryHooksTemplate.protocolFeeBips;
-    } else {
-      let hooksTemplate = HooksTemplate.load(hooks.hooksTemplate);
-      if (hooksTemplate == null) {
-        return;
-      }
-      feeRecipient = hooksTemplate.feeRecipient;
-      protocolFeeBips = hooksTemplate.protocolFeeBips;
+    if (templateRegistration == null) {
+      recordIndexerDiagnostic(
+        event,
+        "MISSING_TEMPLATE_REGISTRATION",
+        "Market deployment referenced a hooks instance without a template registration",
+        Address.fromBytes(hooksFactory.address)
+      );
+      return;
     }
+    let feeRecipient = templateRegistration.feeRecipient;
+    let protocolFeeBips = templateRegistration.protocolFeeBips;
     let version = "V2";
+    let borrowerProfile = getOrCreateBorrower(
+      event,
+      Address.fromBytes(hooks.borrower)
+    );
     let commitmentFeeBips: BigInt | null = null;
     let drawnAmount: BigInt | null = null;
-    if (marketType == "Revolving") {
+    if (hooksFactory.marketKind == "REVOLVING") {
       let revolvingMarket = IWildcatMarketRevolving.bind(market);
       let commitmentFeeBipsResult = revolvingMarket.try_commitmentFeeBips();
       if (!commitmentFeeBipsResult.reverted) {
@@ -726,20 +618,28 @@ export function handleMarketDeployedForMarketType(
       }
     }
 
-    createMarket(marketId, {
+    let marketEntity = createMarket(marketId, {
+      address: market,
       name: name,
       symbol: symbol,
       asset: asset.id,
       borrower: hooks.borrower,
+      borrowerPrincipal: hooks.borrower,
+      initialBorrower: hooks.borrower,
+      initialBorrowerPrincipal: hooks.borrower,
+      borrowerProfile: borrowerProfile.id,
       controller: null,
       annualInterestBips: annualInterestBips.toI32(),
       decimals: asset.decimals,
       delinquencyGracePeriod: delinquencyGracePeriod.toI32(),
       delinquencyFeeBips: delinquencyFeeBips.toI32(),
       feeRecipient: feeRecipient,
+      originationFeeAsset: templateRegistration.originationFeeAsset,
+      originationFeeAmount: templateRegistration.originationFeeAmount,
       protocolFeeBips: protocolFeeBips,
       sentinel: hooksFactory.sentinel,
       scaleFactor: BigInt.fromI32(10).pow(27),
+      totalAssets: IERC20.bind(assetAddress).balanceOf(market),
       maxTotalSupply: maxTotalSupply,
       lastInterestAccruedTimestamp: event.block.timestamp.toI32(),
       lastInterestAccruedBlockNumber: event.block.number.toI32(),
@@ -747,27 +647,41 @@ export function handleMarketDeployedForMarketType(
       withdrawalBatchDuration: withdrawalBatchDuration.toI32(),
       isRegistered: true,
       archController: hooksFactory.archController,
+      marketKind: hooksFactory.marketKind,
+      originKind: "HOOKS",
+      generation: hooksFactory.generation,
+      abiFamily: hooksFactory.abiFamily,
+      eventGeneration: hooksFactory.eventGeneration,
       deployedEvent: marketDeployedId,
       createdAt: event.block.timestamp.toI32(),
+      createdAtBlock: event.block.number,
+      createdAtTimestamp: event.block.timestamp,
+      createdAtTransaction: event.transaction.hash,
+      createdAtLogIndex: event.logIndex,
       hooks: hooks.id,
       hooksFactory: hooksFactory.id,
-      marketType: hooksFactory.marketType,
       commitmentFeeBips: commitmentFeeBips,
       drawnAmount: drawnAmount,
       version: version,
+      usdTotalsComplete: true,
+      totalDebtUSD: BigDecimal.zero(),
       numCollateralContracts: 0,
     });
+    createInitialMarketSnapshot(
+      event,
+      marketEntity,
+      "EVENT_AND_CONTRACT_CALL"
+    );
+    recordMarketEvent(event, marketEntity, "MARKET_DEPLOYED");
+    let context = createFactoryChildContext(hooksFactory);
+    context.setString(CONTEXT_TEMPLATE_REGISTRATION, templateRegistration.id);
+    context.setString(CONTEXT_HOOKS_TEMPLATE, hooks.hooksTemplate);
+    context.setString(CONTEXT_HOOKS_KIND, hooks.kind);
+    MarketTemplate.createWithContext(market, context);
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
 
-    // Update protocol and borrower stats
-    let ps = getOrCreateProtocolStats();
-    ps.numMarkets = ps.numMarkets + 1;
-    ps.save();
-
-    let bs = getOrCreateBorrowerStats(hooks.borrower);
-    bs.numMarkets = bs.numMarkets + 1;
-    bs.save();
+    recordMarketCreated(hooks.borrower, event.block.timestamp);
   }
 }
 export function handleMarketDeployed(event: MarketDeployedEvent): void {
