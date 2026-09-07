@@ -913,6 +913,14 @@ function updateTimeDelinquentAndGetPenaltyTime(
 export function handleInterestAndFeesAccrued(
   event: InterestAndFeesAccruedEvent
 ): void {
+  handleInterestAndFeesAccruedValues(event, -1, null);
+}
+
+export function handleInterestAndFeesAccruedValues(
+  event: InterestAndFeesAccruedEvent,
+  storedTimeDelinquent: i32,
+  chargedPenaltyTime: BigInt | null
+): void {
   let market = getMarket(generateMarketId(event.address));
   recordMarketEvent(event, market, "INTEREST_AND_FEES_ACCRUED");
   let baseInterestRay = event.params.baseInterestRay;
@@ -932,10 +940,19 @@ export function handleInterestAndFeesAccrued(
   market.totalBaseInterestAccrued = market.totalBaseInterestAccrued.plus(
     baseInterestAccrued
   );
-  let timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(
-    market,
-    toTimestamp.minus(fromTimestamp)
-  );
+  let timeWithPenalties: BigInt;
+  if (storedTimeDelinquent >= 0) {
+    market.timeDelinquent = storedTimeDelinquent;
+    timeWithPenalties = chargedPenaltyTime as BigInt;
+  } else {
+    timeWithPenalties = updateTimeDelinquentAndGetPenaltyTime(
+      market,
+      toTimestamp.minus(fromTimestamp)
+    );
+    if (chargedPenaltyTime !== null) {
+      timeWithPenalties = chargedPenaltyTime as BigInt;
+    }
+  }
   createMarketInterestAccrued(generateEventId(event), {
     fromTimestamp: fromTimestamp.toI32(),
     toTimestamp: toTimestamp.toI32(),
@@ -1074,7 +1091,11 @@ export function handleInterestAndFeesAccrued(
   marketDaily.dayProtocolFeesAccrued =
     marketDaily.dayProtocolFeesAccrued.plus(protocolFee);
 
-  saveMarketAndSnapshot(event, market);
+  if (storedTimeDelinquent >= 0) {
+    saveMarketAndSnapshotWithContractCall(event, market);
+  } else {
+    saveMarketAndSnapshot(event, market);
+  }
   protocolStats.save();
   borrowerStats.save();
   protocolDaily.save();
@@ -1083,10 +1104,22 @@ export function handleInterestAndFeesAccrued(
 }
 
 export function handleStateUpdated(event: StateUpdatedEvent): void {
+  handleStateUpdatedValues(event, -1);
+}
+
+export function handleStateUpdatedValues(
+  event: StateUpdatedEvent,
+  storedTimeDelinquent: i32
+): void {
   let isDelinquent = event.params.isDelinquent;
   let marketId = generateMarketId(event.address);
   let market = getMarket(marketId);
   recordMarketEvent(event, market, "STATE_UPDATED");
+  if (storedTimeDelinquent >= 0) {
+    market.timeDelinquent = storedTimeDelinquent;
+    market.isIncurringPenalties =
+      storedTimeDelinquent > market.delinquencyGracePeriod;
+  }
   market.scaleFactor = event.params.scaleFactor;
   let totalAssets = getTotalAssets(market, event.address);
   market.totalAssets = totalAssets;
@@ -1153,7 +1186,7 @@ export function handleTransfer(event: TransferEvent): void {
     let from = fromResult.entity;
     // v2.5 standardized normalized-to-scaled conversions on floor rounding.
     // Earlier market generations retain the legacy half-up behavior.
-    let scaledAmount = market.generation == "v2.5"
+    let scaledAmount = market.eventGeneration == "V2_5"
       ? rayDivDown(value, market.scaleFactor)
       : rayDiv(value, market.scaleFactor);
     let toId = from.id;

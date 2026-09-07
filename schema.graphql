@@ -1764,7 +1764,8 @@ type Market @entity {
   isDelinquent: Boolean!
   # Whether market is currently incurring delinquency penalties (timeDelinquent > delinquencyGracePeriod)
   isIncurringPenalties: Boolean!
-  # Seconds borrower has been delinquent
+  # Rolling delinquency clock. V2.5 reads stored contract state at the indexed block;
+  # earlier protocol families project the clock from events.
   timeDelinquent: Int!
   # Annual interest rate accrued to lenders, in basis points
   annualInterestBips: Int!
@@ -2184,6 +2185,8 @@ type MarketInterestAccrued @entity(immutable: true) {
   market: Market! # address
   fromTimestamp: Int!
   toTimestamp: Int!
+  # V2.5: seconds charged a delinquency fee, recovered from the emitted fee rate;
+  # zero when delinquencyFeeBips is zero. Earlier families retain projected exposure.
   timeWithPenalties: Int!
   baseInterestRay: BigInt! # uint256
   delinquencyFeeRay: BigInt! # uint256

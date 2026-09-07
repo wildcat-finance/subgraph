@@ -1,4 +1,4 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigInt, log } from "@graphprotocol/graph-ts";
 import {
   AnnualInterestAndReserveRatioBipsUpdated,
   Approval,
@@ -26,6 +26,7 @@ import {
   WithdrawalBatchPayment,
   WithdrawalExecuted,
   WithdrawalQueued,
+  WildcatMarketV2_5,
   WrapperRegistered,
 } from "../generated/templates/WildcatMarketV2_5/WildcatMarketV2_5";
 import {
@@ -65,13 +66,13 @@ import {
   handleDebtRepaid as handleLegacyDebtRepaid,
   handleDeposit as handleLegacyDeposit,
   handleFeesCollectedValues,
-  handleInterestAndFeesAccrued as handleLegacyInterestAndFeesAccrued,
+  handleInterestAndFeesAccruedValues,
   handleMarketClosedValues,
   handleMaxTotalSupplyUpdatedValues,
   handleProtocolFeeBipsUpdatedValues,
   handleSanctionedAccountAssetsQueuedForWithdrawal as handleLegacySanctionedAccountAssetsQueuedForWithdrawal,
   handleSanctionedAccountWithdrawalSentToEscrow as handleLegacySanctionedAccountWithdrawalSentToEscrow,
-  handleStateUpdated as handleLegacyStateUpdated,
+  handleStateUpdatedValues,
   handleTransfer as handleLegacyTransfer,
   handleWithdrawalBatchClosed as handleLegacyWithdrawalBatchClosed,
   handleWithdrawalBatchCreated as handleLegacyWithdrawalBatchCreated,
@@ -308,8 +309,36 @@ export function handleFeesCollected(event: FeesCollected): void {
 export function handleInterestAndFeesAccrued(
   event: InterestAndFeesAccrued
 ): void {
-  handleLegacyInterestAndFeesAccrued(
-    changetype<LegacyInterestAndFeesAccrued>(event)
+  let market = getMarket(generateMarketId(event.address));
+  let chargedPenaltyTime = BigInt.zero();
+  if (market.delinquencyFeeBips > 0) {
+    // FeeMath emits floor(rateRay * penalizedSeconds / SECONDS_IN_365_DAYS).
+    // Even a one-bip rate separates adjacent seconds, so ceil inverts it exactly.
+    let rateRay = BigInt.fromI32(market.delinquencyFeeBips).times(
+      BigInt.fromI32(10).pow(23)
+    );
+    chargedPenaltyTime = event.params.delinquencyFeeRay
+      .times(BigInt.fromI32(31_536_000))
+      .plus(rateRay.minus(BigInt.fromI32(1)))
+      .div(rateRay);
+    if (chargedPenaltyTime.gt(event.params.toTimestamp.minus(event.params.fromTimestamp))) {
+      log.critical("Penalty duration exceeds accrual interval for market {}", [market.id]);
+    }
+  }
+
+  // Expiry can change delinquency between this transaction's two accrual events.
+  // Its asset checkpoint is private; a block-final token balance cannot replace it.
+  // Only read the stored clock for the interval ending at this block's timestamp.
+  // Earlier intervals retain their event-local clock, including on market closure.
+  let storedTimeDelinquent = -1;
+  if (event.params.toTimestamp.equals(event.block.timestamp)) {
+    storedTimeDelinquent = WildcatMarketV2_5.bind(event.address)
+      .previousState().timeDelinquent.toI32();
+  }
+  handleInterestAndFeesAccruedValues(
+    changetype<LegacyInterestAndFeesAccrued>(event),
+    storedTimeDelinquent,
+    chargedPenaltyTime
   );
 }
 
@@ -360,7 +389,9 @@ export function handleSanctionedAccountWithdrawalSentToEscrow(
 }
 
 export function handleStateUpdated(event: StateUpdated): void {
-  handleLegacyStateUpdated(changetype<LegacyStateUpdated>(event));
+  let storedTimeDelinquent = WildcatMarketV2_5.bind(event.address)
+    .previousState().timeDelinquent.toI32();
+  handleStateUpdatedValues(changetype<LegacyStateUpdated>(event), storedTimeDelinquent);
 }
 
 export function handleTransfer(event: Transfer): void {
