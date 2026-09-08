@@ -116,7 +116,8 @@ function positionSequenceEvent(
 function seedTransferMarket(
   event: ethereum.Event,
   generation: string,
-  scaleFactor: BigInt
+  scaleFactor: BigInt,
+  eventGeneration: string = "V2_5"
 ): void {
   let token = new Token(generateTokenId(ASSET));
   token.address = ASSET;
@@ -137,7 +138,7 @@ function seedTransferMarket(
     originKind: "HOOKS",
     generation,
     abiFamily: "test",
-    eventGeneration: "LEGACY",
+    eventGeneration,
     controller: null,
     hooksFactory: null,
     hooks: null,
@@ -519,7 +520,7 @@ describe("wildcat market", () => {
     assert.entityCount("MarketEvent", 1);
   });
 
-  test("rounds V2.5 transfer scaling down", () => {
+  test("rounds V2.5 transfer scaling down independently of deployment labels", () => {
     clearStore();
 
     let event = createTransferEvent(
@@ -528,7 +529,7 @@ describe("wildcat market", () => {
       ROUNDING_TRANSFER_AMOUNT
     );
     positionEvent(event, 7);
-    seedTransferMarket(event, "v2.5", ROUNDING_SCALE_FACTOR);
+    seedTransferMarket(event, "replacement-deployment", ROUNDING_SCALE_FACTOR);
     seedLender(event, LENDER_A, ROUNDING_FROM_BALANCE);
     seedLender(event, LENDER_B, ROUNDING_TO_BALANCE);
     seedProtocolActiveLenders(2);
@@ -568,7 +569,7 @@ describe("wildcat market", () => {
       ROUNDING_TRANSFER_AMOUNT
     );
     positionEvent(event, 8);
-    seedTransferMarket(event, "v2.1", ROUNDING_SCALE_FACTOR);
+    seedTransferMarket(event, "v2.1", ROUNDING_SCALE_FACTOR, "LEGACY");
     seedLender(event, LENDER_A, ROUNDING_FROM_BALANCE);
     seedLender(event, LENDER_B, ROUNDING_TO_BALANCE);
     seedProtocolActiveLenders(2);

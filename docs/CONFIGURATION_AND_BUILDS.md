@@ -2,7 +2,7 @@
 
 The hard-cut v2.5 event-generation path is documented in
 `docs/V2_5_9_EVENT_MODEL.md`. The current Sepolia factory set is documented in
-`docs/V2_5_10_SEPOLIA_ROTATION.md`.
+`docs/V2_5_12_PROTOCOL_COMPATIBILITY.md`.
 
 The V2.5 subgraph uses one schema and mapping codebase with an explicit
 descriptor for each chain. Generated manifests are outputs, not configuration
