@@ -91,6 +91,8 @@ import {
   generateEventId,
   generateMarketEventId,
   isNullAddress,
+  isMarketIncurringPenalties,
+  normalizeWithRemainder,
   rayDiv,
   rayDivDown,
   rayMul,
@@ -123,6 +125,8 @@ import {
 } from "./market-domain";
 import { saveLenderAccountAndSnapshot } from "./lender-account-domain";
 import {
+  applyWithdrawalPaymentRemainder,
+  releaseWithdrawalRemainder,
   saveLenderWithdrawalStatus,
   saveWithdrawalBatch,
 } from "./withdrawal-domain";
@@ -709,9 +713,23 @@ export function handleMarketClosedValues(
   let wasClosed = market.isClosed;
   market.annualInterestBips = 0;
   market.isClosed = true;
+  market.closedAt = timestamp;
   market.reserveRatioBips = 10000;
   market.timeDelinquent = 0;
   market.isIncurringPenalties = false;
+  // Scheduled closure bypasses the hook, so no PeriodicTermClosed or APR
+  // cancellation event is required. These fields mirror the effective views.
+  if (market.repaymentDate !== null) {
+    let config = HooksConfig.load(generateHooksConfigId(event.address));
+    if (config != null && config.periodDuration > 0) {
+      config.periodicTermClosed = true;
+      config.pendingAprChangeAnnualInterestBips = 0;
+      config.pendingAprChangeProposalTimestamp = 0;
+      config.pendingAprChangeResponseWindowStart = 0;
+      config.pendingAprChangeResponseWindowEnd = 0;
+      config.save();
+    }
+  }
   createMarketClosed(generateMarketEventId(market), {
     market: market.id,
     timestamp: timestamp.toI32(),
@@ -968,8 +986,7 @@ export function handleInterestAndFeesAccruedValues(
     timeWithPenalties: timeWithPenalties.toI32(),
     blockLogIndex: event.logIndex.toI32(),
   });
-  market.isIncurringPenalties =
-    market.timeDelinquent > market.delinquencyGracePeriod;
+  market.isIncurringPenalties = isMarketIncurringPenalties(market, toTimestamp);
 
   market.scaleFactor = scaleFactor;
   market.totalProtocolFeesAccrued = market.totalProtocolFeesAccrued.plus(
@@ -1117,15 +1134,14 @@ export function handleStateUpdatedValues(
   recordMarketEvent(event, market, "STATE_UPDATED");
   if (storedTimeDelinquent >= 0) {
     market.timeDelinquent = storedTimeDelinquent;
-    market.isIncurringPenalties =
-      storedTimeDelinquent > market.delinquencyGracePeriod;
   }
+  let wasDelinquent = market.isDelinquent;
+  market.isDelinquent = isDelinquent;
+  market.isIncurringPenalties = isMarketIncurringPenalties(market, event.block.timestamp);
   market.scaleFactor = event.params.scaleFactor;
   let totalAssets = getTotalAssets(market, event.address);
   market.totalAssets = totalAssets;
-  if (market.isDelinquent != isDelinquent) {
-    let wasDelinquent = market.isDelinquent;
-    market.isDelinquent = isDelinquent;
+  if (wasDelinquent != isDelinquent) {
     let liquidityRequired = calculateLiquidityRequired(market);
     createDelinquencyStatusChanged(generateMarketEventId(market), {
       blockNumber: event.block.number.toI32(),
@@ -1331,6 +1347,10 @@ export function handleWithdrawalBatchClosed(
   recordMarketEvent(event, market, "WITHDRAWAL_BATCH_CLOSED");
   processWithdrawalBatchInterestAccrued(event, batch, market);
   let wasClosed = batch.isClosed;
+  if (releaseWithdrawalRemainder(market, batch)) {
+    updateMarketTotalDebtUSD(market, event);
+    saveMarketAndSnapshot(event, market);
+  }
   batch.isClosed = true;
   saveWithdrawalBatch(event, batch);
 
@@ -1366,6 +1386,7 @@ export function handleWithdrawalBatchCreated(
   });
   let batch = createWithdrawalBatch(id, {
     expiry: expiry,
+    paymentRemainder: market.withdrawalRemainder === null ? null : BigInt.zero(),
     market: market.id,
     lastScaleFactor: market.scaleFactor,
     lastUpdatedTimestamp: event.block.timestamp.toI32(),
@@ -1392,13 +1413,16 @@ export function handleWithdrawalBatchExpired(
   recordMarketEvent(event, market, "WITHDRAWAL_BATCH_EXPIRED");
   processWithdrawalBatchInterestAccrued(event, batch, market);
 
+  releaseWithdrawalRemainder(market, batch);
   let scaledAmountOwed = satSub(
     batch.scaledTotalAmount,
     batch.scaledAmountBurned
   );
   let normalizedAmountOwed = scaledAmountOwed;
   if (scaledAmountOwed.gt(BigInt.zero())) {
-    normalizedAmountOwed = rayMul(scaledAmountOwed, batch.lastScaleFactor);
+    normalizedAmountOwed = normalizeWithRemainder(
+      scaledAmountOwed, batch.lastScaleFactor, batch.paymentRemainder
+    );
   }
 
   let result = createWithdrawalBatchExpired(generateEventId(event), {
@@ -1416,6 +1440,7 @@ export function handleWithdrawalBatchExpired(
   market.pendingWithdrawalExpiry = BigInt.zero();
   batch.expiration = result.id;
   saveWithdrawalBatch(event, batch);
+  updateMarketTotalDebtUSD(market, event);
   saveMarketAndSnapshot(event, market);
   let bs = getOrCreateBorrowerStats(market.borrowerPrincipal);
   bs.numBatchesExpired = bs.numBatchesExpired + 1;
@@ -1453,6 +1478,7 @@ export function handleWithdrawalBatchPayment(
     blockLogIndex: event.logIndex.toI32(),
   });
   batch.paymentsCount = batch.paymentsCount + 1;
+  applyWithdrawalPaymentRemainder(market, batch, scaledAmountBurned, normalizedAmountPaid);
   batch.scaledAmountBurned = batch.scaledAmountBurned.plus(scaledAmountBurned);
   batch.normalizedAmountPaid = batch.normalizedAmountPaid.plus(
     normalizedAmountPaid

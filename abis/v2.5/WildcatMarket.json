@@ -1,10 +1,5 @@
 [
   {
-    "type": "constructor",
-    "inputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "function",
     "name": "acceptBorrowerTransfer",
     "inputs": [],
@@ -235,7 +230,7 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -334,6 +329,11 @@
             "name": "lastInterestAccruedTimestamp",
             "type": "uint32",
             "internalType": "uint32"
+          },
+          {
+            "name": "withdrawalRemainder",
+            "type": "uint128",
+            "internalType": "uint128"
           }
         ]
       }
@@ -528,8 +528,8 @@
         "components": [
           {
             "name": "scaledAmount",
-            "type": "uint104",
-            "internalType": "uint104"
+            "type": "uint128",
+            "internalType": "uint128"
           },
           {
             "name": "normalizedAmountWithdrawn",
@@ -596,16 +596,21 @@
         "components": [
           {
             "name": "scaledTotalAmount",
-            "type": "uint104",
-            "internalType": "uint104"
+            "type": "uint128",
+            "internalType": "uint128"
           },
           {
             "name": "scaledAmountBurned",
-            "type": "uint104",
-            "internalType": "uint104"
+            "type": "uint128",
+            "internalType": "uint128"
           },
           {
             "name": "normalizedAmountPaid",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "paymentRemainder",
             "type": "uint128",
             "internalType": "uint128"
           }
@@ -797,6 +802,11 @@
             "name": "lastInterestAccruedTimestamp",
             "type": "uint32",
             "internalType": "uint32"
+          },
+          {
+            "name": "withdrawalRemainder",
+            "type": "uint128",
+            "internalType": "uint128"
           }
         ]
       }
@@ -2201,6 +2211,109 @@
   {
     "type": "error",
     "name": "WrapperAlreadyRegistered",
+    "inputs": []
+  },
+  {
+    "type": "function",
+    "name": "defaultedAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "repaymentDate",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "repaymentDeadline",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "repaymentPeriod",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "DefaultRecorded",
+    "inputs": [
+      {
+        "name": "effectiveTimestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RepaymentDateReached",
+    "inputs": [
+      {
+        "name": "effectiveTimestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "InvalidRepaymentTerms",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MarketInRepayment",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProtocolFeeRecipientRequired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RepaymentReserveRequired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnsupportedExecuteWithdrawalHook",
     "inputs": []
   }
 ]

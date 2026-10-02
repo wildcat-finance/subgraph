@@ -107,20 +107,20 @@
         "startBlock": 4796511
       },
       "HooksFactory": {
-        "address": "0x5ae696F4F1A771799e8d03Dc232C8F843f44417f",
-        "startBlock": 11652059
+        "address": "0x0E12301A4F4b81A2B9965E4959e21faDf1754Ead",
+        "startBlock": 11831246
       },
       "HooksFactoryRevolving": {
-        "address": "0x01c3E16434eCd4c76e2ff3a88D1e6Bf82BBda07e",
-        "startBlock": 11652063
+        "address": "0x130E07D24e2aF6ea4554032d4F53fcBAe000d1b1",
+        "startBlock": 11831251
       },
       "CollateralFactory": {
         "address": "0x58Ab4755221869cfcAe2A4F3EE31d591bA6AE1D0",
         "startBlock": 9751444
       },
       "Wildcat4626WrapperFactory": {
-        "address": "0xA159f68003e37cC77921e5e52F4c0e9A01D66262",
-        "startBlock": 11652056
+        "address": "0x1986DF1c77d25670e8D55865B83C5fFeD00e0134",
+        "startBlock": 11831239
       }
     },
     "hooksFactories": [
@@ -216,17 +216,31 @@
         "indexed": true
       },
       {
-        "name": "HooksFactory",
+        "name": "HooksFactoryStandardV2_5_4",
         "marketType": "legacy",
         "address": "0x5ae696F4F1A771799e8d03Dc232C8F843f44417f",
         "startBlock": 11652059,
         "indexed": true
       },
       {
-        "name": "HooksFactoryRevolving",
+        "name": "HooksFactoryRevolvingV2_5_4",
         "marketType": "revolving",
         "address": "0x01c3E16434eCd4c76e2ff3a88D1e6Bf82BBda07e",
         "startBlock": 11652063,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactory",
+        "marketType": "legacy",
+        "address": "0x0E12301A4F4b81A2B9965E4959e21faDf1754Ead",
+        "startBlock": 11831246,
+        "indexed": true
+      },
+      {
+        "name": "HooksFactoryRevolving",
+        "marketType": "revolving",
+        "address": "0x130E07D24e2aF6ea4554032d4F53fcBAe000d1b1",
+        "startBlock": 11831251,
         "indexed": true
       }
     ],
@@ -256,9 +270,15 @@
         "indexed": true
       },
       {
-        "name": "Wildcat4626WrapperFactory",
+        "name": "Wildcat4626WrapperFactoryV2_5_4",
         "address": "0xA159f68003e37cC77921e5e52F4c0e9A01D66262",
         "startBlock": 11652056,
+        "indexed": true
+      },
+      {
+        "name": "Wildcat4626WrapperFactory",
+        "address": "0x1986DF1c77d25670e8D55865B83C5fFeD00e0134",
+        "startBlock": 11831239,
         "indexed": true
       }
     ]

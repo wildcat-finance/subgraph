@@ -362,6 +362,10 @@ function buildManifest(config, abiFamilies, baseManifest) {
           handler: "handleHooksTemplateAdded"
         },
         {
+          event: "HooksTemplateInitCodeHashRecorded(indexed address,bytes32)",
+          handler: "handleHooksTemplateInitCodeHashRecorded"
+        },
+        {
           event: "HooksTemplateDisabled(indexed address,indexed address)",
           handler: "handleHooksTemplateDisabled"
         },
@@ -383,6 +387,10 @@ function buildManifest(config, abiFamilies, baseManifest) {
         {
           event: "MarketHooksData(indexed address,bytes)",
           handler: "handleMarketHooksData"
+        },
+        {
+          event: "MarketRepaymentTerms(indexed address,uint256,uint256)",
+          handler: "handleMarketRepaymentTerms"
         }
       ];
       if (factory.marketKind === "REVOLVING") {

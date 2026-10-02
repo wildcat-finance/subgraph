@@ -67,3 +67,12 @@ test("rejects unsafe subgraph names before invoking a shell", () => {
   assert.match(result.stderr, /Invalid subgraph name/);
   assert.doesNotMatch(result.stdout + result.stderr, /yarn netconfig/);
 });
+
+test("does not publish a network with pending deployment targets", () => {
+  const { loadChainConfig } = require("./chain-config");
+  assert.equal(loadChainConfig("mainnet").deploymentTargetsReady, false);
+  const result = runDeploy(["goldsky", "mainnet", "mainnet", "v2.5.13"]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Deployment targets for mainnet are pending/);
+  assert.doesNotMatch(result.stdout + result.stderr, /yarn netconfig/);
+});

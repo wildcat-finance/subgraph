@@ -113,6 +113,7 @@ dataSources:
         - HooksTemplate
         - HooksTemplateRegistration
         - HooksTemplateRegistrationEvent
+        - HooksTemplateInitCodeHashRecord
         - HooksInstanceDeployed
         - HooksInstanceRoleProviderSnapshot
         - BorrowerIdentityRegistry
@@ -122,6 +123,7 @@ dataSources:
         - Market
         - MarketDeployed
         - MarketDeploymentConfig
+        - MarketRepaymentTerms
         - MarketHooksData
         - PendingMarketDeployment
         - RevolvingMarketDeployment
@@ -826,6 +828,8 @@ templates:
         - BorrowerAccount
         - MarketBorrowerChange
         - MarketWrapperRegistration
+        - MarketRepaymentDateReached
+        - MarketDefaultRecorded
         - DrawnAmountUpdate
         - AnnualInterestBipsUpdated
         - ReserveRatioBipsUpdated
@@ -839,6 +843,8 @@ templates:
       abis:
         - name: WildcatMarketV2_5
           file: ./abis/v2.5/WildcatMarket.json
+        - name: WildcatMarketLegacyState
+          file: ./abis/v2.5/WildcatMarketLegacyState.json
         - name: IERC20
           file: ./abis/IERC20.json
         - name: ChainlinkAggregator
@@ -868,6 +874,10 @@ templates:
           handler: handleDeposit
         - event: DrawnAmountUpdated(uint256,uint256)
           handler: handleDrawnAmountUpdated
+        - event: DefaultRecorded(uint256)
+          handler: handleDefaultRecorded
+        - event: RepaymentDateReached(uint256)
+          handler: handleRepaymentDateReached
         - event: FeesCollected(indexed address,indexed address,uint256)
           handler: handleFeesCollected
         - event: InterestAndFeesAccrued(uint256,uint256,uint256,uint256,uint256,uint256)

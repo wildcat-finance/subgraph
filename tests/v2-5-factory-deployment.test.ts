@@ -6,10 +6,13 @@ import {
 } from "matchstick-as/assembly";
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { generateMarketId } from "../generated/UncrashableEntityHelpers";
+import { HooksTemplateRegistration } from "../generated/schema";
 import {
   handleMarketDeployed,
   handleMarketDeploymentConfig,
   handleMarketHooksData,
+  handleMarketRepaymentTerms,
+  handleHooksTemplateInitCodeHashRecorded,
   handleRevolvingMarketDeployed,
 } from "../src/hooks-factory-v2-5";
 import {
@@ -21,6 +24,7 @@ import {
   seedV25Factory,
   seedV25Hooks,
 } from "./v2-5-test-utils";
+import { generateEventId } from "../src/utils";
 
 const STANDARD_FACTORY = Address.fromString(
   "0x000000000000000000000000000000000000e001"
@@ -173,6 +177,14 @@ describe("v2.5 market deployment events", () => {
     assert.entityCount("MarketDeployed", 1);
     assert.entityCount("MarketDeploymentConfig", 1);
     assert.entityCount("MarketHooksData", 1);
+    let terms = createV25Event(STANDARD_FACTORY, 4);
+    pushAddress(terms, "market", STANDARD_MARKET);
+    pushBigInt(terms, "repaymentDate", BigInt.fromI32(2000));
+    pushBigInt(terms, "repaymentPeriod", BigInt.fromI32(300));
+    handleMarketRepaymentTerms(terms);
+    assert.fieldEquals("Market", generateMarketId(STANDARD_MARKET), "repaymentDeadline", "2300");
+    assert.fieldEquals("MarketSnapshot", generateMarketId(STANDARD_MARKET), "withdrawalRemainder", "0");
+    assert.fieldEquals("MarketRepaymentTerms", generateEventId(terms), "repaymentDate", "2000");
   });
 
   test("waits for revolving configuration before finalizing", () => {
@@ -225,5 +237,37 @@ describe("v2.5 market deployment events", () => {
       generateMarketId(REVOLVING_MARKET)
     );
     assert.entityCount("RevolvingMarketDeployment", 1);
+    let terms = createV25Event(REVOLVING_FACTORY, 5);
+    pushAddress(terms, "market", REVOLVING_MARKET);
+    pushBigInt(terms, "repaymentDate", BigInt.zero());
+    pushBigInt(terms, "repaymentPeriod", BigInt.zero());
+    handleMarketRepaymentTerms(terms);
+    assert.fieldEquals("Market", generateMarketId(REVOLVING_MARKET), "repaymentDate", "0");
+    assert.fieldEquals("Market", generateMarketId(REVOLVING_MARKET), "repaymentDeadline", "0");
+    assert.fieldEquals("MarketSnapshot", generateMarketId(REVOLVING_MARKET), "defaultedAt", "0");
+  });
+
+  test("records creation-code commitments independently for each factory", () => {
+    clearStore();
+    seedV25Factory(STANDARD_FACTORY, "STANDARD");
+    seedV25Factory(REVOLVING_FACTORY, "REVOLVING");
+    seedV25Hooks(STANDARD_FACTORY, TEMPLATE, STANDARD_HOOKS, BORROWER);
+    seedV25Hooks(REVOLVING_FACTORY, TEMPLATE, REVOLVING_HOOKS, BORROWER);
+    let hash = Bytes.fromHexString("0x1111111111111111111111111111111111111111111111111111111111111111");
+    let event = createV25Event(STANDARD_FACTORY, 1);
+    pushAddress(event, "hooksTemplate", TEMPLATE);
+    event.parameters.push(new ethereum.EventParam("initCodeHash", ethereum.Value.fromFixedBytes(hash)));
+    handleHooksTemplateInitCodeHashRecorded(event);
+    assert.fieldEquals("HooksTemplateRegistration", STANDARD_FACTORY.toHexString() + "-" + TEMPLATE.toHexString(), "initCodeHash", hash.toHexString());
+    assert.fieldEquals("HooksTemplateInitCodeHashRecord", generateEventId(event), "hooksFactory", STANDARD_FACTORY.toHexString());
+    assert.entityCount("HooksTemplateInitCodeHashRecord", 1);
+    let otherId = REVOLVING_FACTORY.toHexString() + "-" + TEMPLATE.toHexString();
+    let other = HooksTemplateRegistration.load(otherId) as HooksTemplateRegistration;
+    assert.assertTrue(other.initCodeHash === null);
+    event.address = REVOLVING_FACTORY;
+    event.logIndex = BigInt.fromI32(2);
+    handleHooksTemplateInitCodeHashRecorded(event);
+    assert.fieldEquals("HooksTemplateRegistration", otherId, "initCodeHash", hash.toHexString());
+    assert.entityCount("HooksTemplateInitCodeHashRecord", 2);
   });
 });
