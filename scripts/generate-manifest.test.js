@@ -162,7 +162,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     Object.keys(standardFactory.context).filter(key =>
       key.startsWith("hooksTemplate_")
     ).length,
-    22
+    25
   );
   assert.equal(standardFactory.context.pricingMode.data, "SYNTHETIC_TESTNET");
   assert.match(

@@ -2,20 +2,32 @@
 
 Run these commands from `mono/subgraph`. On a fresh checkout, install dependencies
 with `yarn install --frozen-lockfile` first. The examples below publish
-`v2.5.13` to Sepolia; use the intended release label for later deployments.
+`v2.5.14` to Sepolia; use the intended release label for later deployments.
 
 ## Goldsky
 
-With the `goldsky` CLI installed, log in using the intended project's API key
-from Goldsky's project settings, then deploy:
+With the `goldsky` CLI installed, run `goldsky login` and authorize the intended
+project in your browser, then deploy:
 
 ```sh
 goldsky login
-yarn deploy:goldsky:sepolia v2.5.13
+yarn deploy:goldsky:sepolia v2.5.14
 ```
 
 Login is only needed when credentials are missing or you are switching projects.
-The deployed name is `sepolia/v2.5.13`. Use the query URL from the CLI output
+When running the CLI over SSH, its browser callback listens on the remote
+machine's loopback interface. Keep the login command running and, in a terminal
+on the machine with your browser, forward the port shown in the login URL:
+
+```sh
+ssh -N -L 127.0.0.1:PORT:127.0.0.1:PORT user@host
+```
+
+Replace both `PORT` values with that callback port and `user@host` with your SSH
+destination. Keep the tunnel open while completing browser authorization.
+Each new login attempt may choose a different port.
+
+The deployed name is `sepolia/v2.5.14`. Use the query URL from the CLI output
 or Goldsky dashboard.
 
 ## Hinterlight
@@ -31,12 +43,12 @@ all three variables:
 | `IPFS_BEARER_TOKEN` | `Authorization: Bearer …` when uploading to `ipfs.hinterlight.net` |
 
 ```sh
-yarn deploy:hinterlight:sepolia v2.5.13
+yarn deploy:hinterlight:sepolia v2.5.14
 ```
 
 The script creates the subgraph if needed, uploads it, and prints its public
-query URL: `https://graph.hinterlight.net/sepolia/v2.5.13`.
-It converts the internal Graph Node name to `sepolia/v2-5-13` automatically;
+query URL: `https://graph.hinterlight.net/sepolia/v2.5.14`.
+It converts the internal Graph Node name to `sepolia/v2-5-14` automatically;
 keep the dotted version in the command and public URL.
 
 ## Checks and other networks
@@ -61,5 +73,5 @@ replace `sepolia` in the script name only when that network's release is ready.
 See [package.json](./package.json) for shortcuts,
 [scripts/deploy.js](./scripts/deploy.js) for credentials and deployment behavior,
 [configuration and builds](./docs/CONFIGURATION_AND_BUILDS.md) for network setup,
-and the [V2.5.13 release notes](./docs/V2_5_13_PROTOCOL_COMPATIBILITY.md)
-for the Sepolia V2.5.5 handoff.
+and the [V2.5.14 release notes](./docs/V2_5_14_PROTOCOL_COMPATIBILITY.md)
+for the Sepolia V2.5.6 template update.

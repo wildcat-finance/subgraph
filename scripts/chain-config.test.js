@@ -46,7 +46,7 @@ test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecesso
 
   const sepolia = configs.find(({ network }) => network === "sepolia");
   assert.equal(sepolia.deploymentTargetsReady, true);
-  assert.equal(sepolia.hooksTemplates.length, 22);
+  assert.equal(sepolia.hooksTemplates.length, 25);
   assert.deepEqual(
     [...new Set(sepolia.hooksTemplates.map(({ kind }) => kind))].sort(),
     ["FixedTerm", "OpenTerm", "PeriodicTerm"]
@@ -158,10 +158,10 @@ test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecesso
     }
   ]);
   assert.deepEqual(sepolia.provenance, {
-    kind: "protocol-deployment-handoff",
+    kind: "protocol-hook-template-update",
     source:
-      "v2-protocol/deployments/sepolia/handoff-v2.5.5.json",
-    sha256: "393e02e2cdf2711163e8e731ad2e161935e06028243a1d6cd633688dcbd8a0b2"
+      "v2-protocol/deployments/sepolia/template-update-v2.5.6.json",
+    sha256: "e102f1ccc2a620d4881991fbc4ca886bc844d482a197c6db10028c5dc4bb3b24"
   });
 });
 

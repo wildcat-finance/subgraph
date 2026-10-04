@@ -125,6 +125,21 @@
       "address": "0x9C83C59fB30816EFafDec25147f9C214Bf80688b",
       "kind": "PeriodicTerm",
       "version": "PeriodicTermHooks"
+    },
+    {
+      "address": "0xBcA425d384Da256040779DF532B6D2E8d3B3f1aD",
+      "kind": "OpenTerm",
+      "version": "OpenTermHooks"
+    },
+    {
+      "address": "0xa3FE06137cc893E19C2E4764a4A7b001E988ba2B",
+      "kind": "FixedTerm",
+      "version": "FixedTermHooks"
+    },
+    {
+      "address": "0x79DA352868305d37D0179f460Ded88886D4eE524",
+      "kind": "PeriodicTerm",
+      "version": "PeriodicTermHooks"
     }
   ],
   "factories": [
@@ -493,8 +508,8 @@
     "primaryCollateralFactory": "collateral-v1"
   },
   "provenance": {
-    "kind": "protocol-deployment-handoff",
-    "source": "v2-protocol/deployments/sepolia/handoff-v2.5.5.json",
-    "sha256": "393e02e2cdf2711163e8e731ad2e161935e06028243a1d6cd633688dcbd8a0b2"
+    "kind": "protocol-hook-template-update",
+    "source": "v2-protocol/deployments/sepolia/template-update-v2.5.6.json",
+    "sha256": "e102f1ccc2a620d4881991fbc4ca886bc844d482a197c6db10028c5dc4bb3b24"
   }
 }
