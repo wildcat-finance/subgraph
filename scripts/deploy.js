@@ -23,8 +23,8 @@ if (!version) {
   console.error(
     "Deployments require an explicit version label.\n" +
       "Examples:\n" +
-      "  yarn deploy:goldsky:sepolia v2.5.14\n" +
-      "  yarn deploy:hinterlight:sepolia v2.5.14"
+      "  yarn deploy:goldsky:sepolia v2.5.15\n" +
+      "  yarn deploy:hinterlight:sepolia v2.5.15"
   );
   process.exit(1);
 }

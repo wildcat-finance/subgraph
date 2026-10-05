@@ -332,7 +332,7 @@
       "address": "0x0E12301A4F4b81A2B9965E4959e21faDf1754Ead",
       "startBlock": 11831246,
       "indexed": true,
-      "deploymentTarget": true,
+      "deploymentTarget": false,
       "lifecycle": "active"
     },
     {
@@ -343,6 +343,30 @@
       "abiFamily": "hooks-v2-5",
       "address": "0x130E07D24e2aF6ea4554032d4F53fcBAe000d1b1",
       "startBlock": 11831251,
+      "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "standard-v2.5.7",
+      "manifestName": "HooksFactoryStandardV2_5_7",
+      "marketKind": "STANDARD",
+      "generation": "v2.5.7",
+      "abiFamily": "hooks-v2-5",
+      "address": "0xae525051d16912D13b63eCa01f52ADF576FC4380",
+      "startBlock": 11845725,
+      "indexed": true,
+      "deploymentTarget": true,
+      "lifecycle": "active"
+    },
+    {
+      "label": "revolving-v2.5.7",
+      "manifestName": "HooksFactoryRevolvingV2_5_7",
+      "marketKind": "REVOLVING",
+      "generation": "v2.5.7",
+      "abiFamily": "hooks-v2-5",
+      "address": "0x2f0E18ae9134cD16b7Ec0C63cC4B11B38eAdB2aF",
+      "startBlock": 11845732,
       "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
@@ -439,6 +463,16 @@
       "address": "0x1986DF1c77d25670e8D55865B83C5fFeD00e0134",
       "startBlock": 11831239,
       "indexed": true,
+      "deploymentTarget": false,
+      "lifecycle": "active"
+    },
+    {
+      "label": "wrapper-v2.5.7",
+      "manifestName": "Wildcat4626WrapperFactoryV2_5_7",
+      "generation": "v2.5.7",
+      "address": "0xCf2338947eeE38b7D82E187698339B3E67E67CBf",
+      "startBlock": 11845719,
+      "indexed": true,
       "deploymentTarget": true,
       "lifecycle": "active"
     }
@@ -501,15 +535,15 @@
   },
   "compatibility": {
     "canonicalFactoryByMarketKind": {
-      "STANDARD": "standard-v2.5.5",
-      "REVOLVING": "revolving-v2.5.5"
+      "STANDARD": "standard-v2.5.7",
+      "REVOLVING": "revolving-v2.5.7"
     },
-    "primaryWrapperFactory": "wrapper-v2.5.5",
+    "primaryWrapperFactory": "wrapper-v2.5.7",
     "primaryCollateralFactory": "collateral-v1"
   },
   "provenance": {
-    "kind": "protocol-hook-template-update",
-    "source": "v2-protocol/deployments/sepolia/template-update-v2.5.6.json",
-    "sha256": "e102f1ccc2a620d4881991fbc4ca886bc844d482a197c6db10028c5dc4bb3b24"
+    "kind": "protocol-factory-inventory-handoff",
+    "source": "v2-protocol/deployments/sepolia/handoff-v2.5.7.json",
+    "sha256": "fade102764b41984ab3d49c193d3d32c5489eaa595863d433225b1deb3114101"
   }
 }

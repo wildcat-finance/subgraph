@@ -78,10 +78,13 @@ enabled, have their expected template kinds and initcode hashes, and all six
 predecessor registrations are disabled. Check `_meta.hasIndexingErrors` is
 false and indexing has caught up before switching consumers.
 
-This release has been prepared locally; hosted deployment and indexing are
-still pending. At the SDK revision above, Sepolia configuration still selects
-the V2.5.4 factories and the `v2.5.12` subgraph endpoint. SDK address adoption and
-consumer endpoint selection remain separate steps.
+Hosted compatibility checks completed on 2026-10-04 against Hinterlight,
+Goldsky, and the gateway. The expected configuration, new registrations,
+initcode commitments, and predecessor disables passed the SDK checks. See the
+SDK's 3.2.14-beta verification and consumer migration notes
+(`wildcat.ts/docs/releases/3.2.14-beta.md`) for the tested scope. Consumer adoption
+remains a separate release step; the
+older SDK source pin in the classification discussion above is historical.
 
 The combined protocol/SDK inventory gate did not complete:
 `validate-factory-inventory.js --network sepolia --subgraph-dir ../subgraph`

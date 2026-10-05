@@ -1,10 +1,11 @@
 # V2.5 Subgraph Configuration and Builds
 
 The hard-cut v2.5 event-generation path is documented in
-`docs/V2_5_9_EVENT_MODEL.md`. The V2.5.14 release for the Sepolia V2.5.6 template
-update is documented in `docs/V2_5_14_PROTOCOL_COMPATIBILITY.md`. The retained
-Sepolia V2.5.5 factory set and repayment event model are documented in
-`docs/V2_5_13_PROTOCOL_COMPATIBILITY.md`.
+`docs/V2_5_9_EVENT_MODEL.md`. The V2.5.15 release for the Sepolia V2.5.7 factory
+update is documented in `docs/V2_5_15_PROTOCOL_COMPATIBILITY.md`. The reused
+V2.5.6 templates are documented in `docs/V2_5_14_PROTOCOL_COMPATIBILITY.md`;
+the retained Sepolia V2.5.5 factory set and repayment event model are documented
+in `docs/V2_5_13_PROTOCOL_COMPATIBILITY.md`.
 
 The V2.5 subgraph uses one schema and mapping codebase with an explicit
 descriptor for each chain. Generated manifests are outputs, not configuration

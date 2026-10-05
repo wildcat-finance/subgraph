@@ -33,7 +33,7 @@ test("loads and validates every supported chain descriptor", () => {
   );
 });
 
-test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecessors", () => {
+test("selects deployed Sepolia V2.5.7 targets while retaining indexed predecessors", () => {
   const { configs } = loadAllChainConfigs();
   for (const config of configs) {
     if (config.network === "sepolia") continue;
@@ -63,18 +63,18 @@ test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecesso
       })),
     [
       {
-        label: "standard-v2.5.5",
+        label: "standard-v2.5.7",
         marketKind: "STANDARD",
         abiFamily: "hooks-v2-5",
-        address: "0x0E12301A4F4b81A2B9965E4959e21faDf1754Ead",
-        startBlock: 11831246
+        address: "0xae525051d16912D13b63eCa01f52ADF576FC4380",
+        startBlock: 11845725
       },
       {
-        label: "revolving-v2.5.5",
+        label: "revolving-v2.5.7",
         marketKind: "REVOLVING",
         abiFamily: "hooks-v2-5",
-        address: "0x130E07D24e2aF6ea4554032d4F53fcBAe000d1b1",
-        startBlock: 11831251
+        address: "0x2f0E18ae9134cD16b7Ec0C63cC4B11B38eAdB2aF",
+        startBlock: 11845732
       }
     ]
   );
@@ -88,15 +88,15 @@ test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecesso
       })),
     [
       {
-        label: "wrapper-v2.5.5",
-        address: "0x1986DF1c77d25670e8D55865B83C5fFeD00e0134",
-        startBlock: 11831239
+        label: "wrapper-v2.5.7",
+        address: "0xCf2338947eeE38b7D82E187698339B3E67E67CBf",
+        startBlock: 11845719
       }
     ]
   );
   for (const label of [
     "standard-v2.5", "revolving-v2.5", "standard-v2.5.3", "revolving-v2.5.3",
-    "standard-v2.5.4", "revolving-v2.5.4"
+    "standard-v2.5.4", "revolving-v2.5.4", "standard-v2.5.5", "revolving-v2.5.5"
   ]) {
     const predecessor = sepolia.factories.find(
       factory => factory.label === label
@@ -105,7 +105,7 @@ test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecesso
     assert.equal(predecessor.deploymentTarget, false);
     assert.equal(predecessor.lifecycle, "active");
   }
-  for (const label of ["wrapper-v2.5", "wrapper-v2.5.3", "wrapper-v2.5.4"]) {
+  for (const label of ["wrapper-v2.5", "wrapper-v2.5.3", "wrapper-v2.5.4", "wrapper-v2.5.5"]) {
     const predecessorWrapper = sepolia.wrapperFactories.find(
       factory => factory.label === label
     );
@@ -158,10 +158,10 @@ test("selects deployed Sepolia V2.5.5 targets while retaining indexed predecesso
     }
   ]);
   assert.deepEqual(sepolia.provenance, {
-    kind: "protocol-hook-template-update",
+    kind: "protocol-factory-inventory-handoff",
     source:
-      "v2-protocol/deployments/sepolia/template-update-v2.5.6.json",
-    sha256: "e102f1ccc2a620d4881991fbc4ca886bc844d482a197c6db10028c5dc4bb3b24"
+      "v2-protocol/deployments/sepolia/handoff-v2.5.7.json",
+    sha256: "fade102764b41984ab3d49c193d3d32c5489eaa595863d433225b1deb3114101"
   });
 });
 
@@ -180,16 +180,16 @@ test("keeps legacy Plasma factories on the base hooked-market ABI", () => {
   }
 });
 
-test("routes compatibility aliases to the V2.5.5 deployment targets", () => {
+test("routes compatibility aliases to the V2.5.7 deployment targets", () => {
   const sepolia = loadChainConfig("sepolia");
   const standard = sepolia.factories.find(
-    factory => factory.label === "standard-v2.5.5"
+    factory => factory.label === "standard-v2.5.7"
   );
   const revolving = sepolia.factories.find(
-    factory => factory.label === "revolving-v2.5.5"
+    factory => factory.label === "revolving-v2.5.7"
   );
   const wrapper = sepolia.wrapperFactories.find(
-    factory => factory.label === "wrapper-v2.5.5"
+    factory => factory.label === "wrapper-v2.5.7"
   );
   assert.equal(finalHooksFactoryName(sepolia, standard), "HooksFactory");
   assert.equal(
