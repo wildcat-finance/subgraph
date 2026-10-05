@@ -37,44 +37,6 @@
   },
   {
     "type": "function",
-    "name": "addHooksTemplate",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "feeRecipient",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAsset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAmount",
-        "type": "uint80",
-        "internalType": "uint80"
-      },
-      {
-        "name": "protocolFeeBips",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "archController",
     "inputs": [],
     "outputs": [
@@ -147,203 +109,6 @@
       }
     ],
     "outputs": [
-      {
-        "name": "hooksInstance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "deployMarket",
-    "inputs": [
-      {
-        "name": "parameters",
-        "type": "tuple",
-        "internalType": "struct DeployMarketInputs",
-        "components": [
-          {
-            "name": "asset",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "namePrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "symbolPrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "maxTotalSupply",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "annualInterestBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "withdrawalBatchDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "reserveRatioBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "hooks",
-            "type": "uint256",
-            "internalType": "HooksConfig"
-          }
-        ]
-      },
-      {
-        "name": "hooksData",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "originationFeeAsset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "deployMarketAndHooks",
-    "inputs": [
-      {
-        "name": "hooksTemplate",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "hooksTemplateArgs",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "parameters",
-        "type": "tuple",
-        "internalType": "struct DeployMarketInputs",
-        "components": [
-          {
-            "name": "asset",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "namePrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "symbolPrefix",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "maxTotalSupply",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "annualInterestBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyFeeBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "withdrawalBatchDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "reserveRatioBips",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "delinquencyGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "hooks",
-            "type": "uint256",
-            "internalType": "HooksConfig"
-          }
-        ]
-      },
-      {
-        "name": "hooksData",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "originationFeeAsset",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "originationFeeAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "market",
-        "type": "address",
-        "internalType": "address"
-      },
       {
         "name": "hooksInstance",
         "type": "address",
@@ -757,6 +522,16 @@
             "name": "borrowerIdentityRegistry",
             "type": "address",
             "internalType": "address"
+          },
+          {
+            "name": "repaymentDate",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "repaymentPeriod",
+            "type": "uint32",
+            "internalType": "uint32"
           }
         ]
       }
@@ -1680,5 +1455,588 @@
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "function",
+    "name": "addHooksTemplate",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "feeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint80",
+        "internalType": "uint80"
+      },
+      {
+        "name": "protocolFeeBips",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "initCodeHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployMarket",
+    "inputs": [
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct DeployMarketInputs",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "namePrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbolPrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          },
+          {
+            "name": "repaymentDate",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "repaymentPeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      },
+      {
+        "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployMarketAndHooks",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hooksTemplateArgs",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct DeployMarketInputs",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "namePrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbolPrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          },
+          {
+            "name": "repaymentDate",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "repaymentPeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      },
+      {
+        "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getHooksTemplateInitCodeHash",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "initCodeHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "HooksTemplateInitCodeHashRecorded",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "initCodeHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketRepaymentTerms",
+    "inputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "repaymentDate",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "repaymentPeriod",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "HooksTemplateInitCodeHashMismatch",
+    "inputs": []
+  },
+  {
+    "type": "function",
+    "name": "deployMarket",
+    "inputs": [
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct DeployMarketInputs",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "namePrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbolPrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          },
+          {
+            "name": "repaymentDate",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "repaymentPeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      },
+      {
+        "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "marketData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deployMarketAndHooks",
+    "inputs": [
+      {
+        "name": "hooksTemplate",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hooksConstructorArgs",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "parameters",
+        "type": "tuple",
+        "internalType": "struct DeployMarketInputs",
+        "components": [
+          {
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "namePrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "symbolPrefix",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "maxTotalSupply",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "annualInterestBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyFeeBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "withdrawalBatchDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "reserveRatioBips",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "delinquencyGracePeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "hooks",
+            "type": "uint256",
+            "internalType": "HooksConfig"
+          },
+          {
+            "name": "repaymentDate",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "repaymentPeriod",
+            "type": "uint32",
+            "internalType": "uint32"
+          }
+        ]
+      },
+      {
+        "name": "hooksData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "marketData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "originationFeeAsset",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "originationFeeAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "market",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hooksInstance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getRevolvingMarketCommitmentFeeBips",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "InvalidCommitmentFeeBips",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMarketData",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnsupportedMarketDataVersion",
+    "inputs": []
   }
 ]

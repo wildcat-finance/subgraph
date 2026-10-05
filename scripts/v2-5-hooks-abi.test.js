@@ -185,11 +185,13 @@ test("v2.5 factory events retain the indexed data-model boundary", () => {
       "HooksInstanceDeployed(indexed address,indexed address,indexed address,address,string,string)",
       "HooksInstanceRoleProviders(indexed address,bool,uint256[],uint256[])",
       "HooksTemplateAdded(indexed address,indexed address,string,address,address,uint80,uint16)",
+      "HooksTemplateInitCodeHashRecorded(indexed address,bytes32)",
       "HooksTemplateDisabled(indexed address,indexed address)",
       "HooksTemplateFeesUpdated(indexed address,indexed address,address,address,address,address,uint80,uint80,uint16,uint16)",
       "MarketDeployed(indexed address,indexed address,indexed address,address,address,address,string,string,address,uint256,uint256)",
       "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
       "MarketHooksData(indexed address,bytes)",
+      "MarketRepaymentTerms(indexed address,uint256,uint256)",
       "RevolvingMarketDeployed(indexed address,uint256)"
     ].sort()
   );
@@ -203,10 +205,29 @@ test("v2.5 market events retain borrower and drawn-principal history", () => {
     "BorrowerTransferRequested(indexed address,indexed address,indexed address,address,address,address)",
     "BorrowerTransferred(indexed address,indexed address,address,indexed address)",
     "DrawnAmountUpdated(uint256,uint256)",
+    "DefaultRecorded(uint256)",
+    "RepaymentDateReached(uint256)",
     "WrapperRegistered(indexed address)"
   ]) {
     assert.ok(signatures.includes(signature), `${signature} is missing`);
   }
+});
+
+test("repayment/carry market getters retain their complete tuple shapes", () => {
+  const market = loadV25Abi("WildcatMarket");
+  const legacy = loadV25Abi("WildcatMarketLegacyState");
+  const previousState = getFunction(market, "previousState").outputs[0].components;
+  assert.equal(previousState.length, 15);
+  assert.deepEqual(previousState.at(-1), {
+    name: "withdrawalRemainder", type: "uint128", internalType: "uint128"
+  });
+  assert.deepEqual(previousState.slice(0, 14), getFunction(legacy, "previousState").outputs[0].components);
+  assert.deepEqual(getFunction(market, "getWithdrawalBatch").outputs[0].components.map(({type}) => type),
+    ["uint128", "uint128", "uint128", "uint128"]);
+  assert.deepEqual(getFunction(market, "getAccountWithdrawalStatus").outputs[0].components.map(({type}) => type),
+    ["uint128", "uint128"]);
+  assert.deepEqual(outputComponentNames(loadV25Abi("HooksFactory"), "getMarketParameters").slice(-2),
+    ["repaymentDate", "repaymentPeriod"]);
 });
 
 test("v2.5 identity and provider ABIs retain their transfer histories", () => {

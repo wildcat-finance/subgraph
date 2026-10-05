@@ -5,6 +5,13 @@ import { IWildcatMarketRevolving } from "../generated/templates/WildcatMarket/IW
 
 function copyMarketState(market: Market, snapshot: MarketSnapshot): void {
   snapshot.isClosed = market.isClosed;
+  snapshot.closedAt = market.closedAt;
+  snapshot.repaymentDate = market.repaymentDate;
+  snapshot.repaymentPeriod = market.repaymentPeriod;
+  snapshot.repaymentDeadline = market.repaymentDeadline;
+  snapshot.repaymentActivatedAt = market.repaymentActivatedAt;
+  snapshot.defaultedAt = market.defaultedAt;
+  snapshot.withdrawalRemainder = market.withdrawalRemainder;
   snapshot.totalAssets = market.totalAssets;
   snapshot.maxTotalSupply = market.maxTotalSupply;
   snapshot.protocolFeeBips = market.protocolFeeBips;

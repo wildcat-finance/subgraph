@@ -91,6 +91,9 @@ enum SnapshotSource {
 
 enum MarketEventKind {
   MARKET_DEPLOYED
+  REPAYMENT_TERMS
+  REPAYMENT_DATE_REACHED
+  DEFAULT_RECORDED
   MARKET_REGISTERED
   MARKET_DEREGISTERED
   ANNUAL_INTEREST_BIPS_UPDATED
@@ -1174,6 +1177,10 @@ type HooksTemplateRegistration @entity {
   hooksFactory: HooksFactory!
   hooksTemplate: HooksTemplate!
   templateAddress: Bytes! # address
+  # Original creation-code commitment, excluding instance constructor arguments.
+  # Null for factories predating commitment events.
+  initCodeHash: Bytes
+  initCodeHashRecord: HooksTemplateInitCodeHashRecord @derivedFrom(field: "registration")
   name: String!
   feeRecipient: Bytes! # address
   protocolFeeBips: Int!
@@ -1217,6 +1224,18 @@ type HooksInstanceRoleProviderSnapshot @entity(immutable: true) {
   metadataAvailable: Boolean!
   pullProviders: [BigInt!]!
   pushProviders: [BigInt!]!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+type HooksTemplateInitCodeHashRecord @entity(immutable: true) {
+  id: ID! # transaction hash and log index
+  registration: HooksTemplateRegistration!
+  hooksFactory: HooksFactory!
+  hooksTemplate: HooksTemplate!
+  initCodeHash: Bytes!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -1334,6 +1353,38 @@ type MarketHooksData @entity(immutable: true) {
   id: ID! # transaction hash and log index
   market: Market!
   hooksData: Bytes!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+"Immutable repayment terms emitted by the originating factory, including unscheduled (0, 0) terms."
+type MarketRepaymentTerms @entity(immutable: true) {
+  id: ID! # transaction hash and log index
+  market: Market!
+  repaymentDate: BigInt!
+  repaymentPeriod: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+type MarketRepaymentDateReached @entity(immutable: true) {
+  id: ID! # transaction hash and log index
+  market: Market!
+  effectiveTimestamp: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+type MarketDefaultRecorded @entity(immutable: true) {
+  id: ID! # transaction hash and log index
+  market: Market!
+  effectiveTimestamp: BigInt!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
@@ -1459,6 +1510,8 @@ type WithdrawalBatch @entity {
   scaledTotalAmount: BigInt!
   scaledAmountBurned: BigInt!
   normalizedAmountPaid: BigInt!
+  # Non-interest-bearing ray numerator retained between payments; null for older markets.
+  paymentRemainder: BigInt
   normalizedAmountClaimed: BigInt!
   lenderWithdrawalsCount: Int! # number of individual lenders with requests
   completedWithdrawalsCount: Int! # number of individual lenders with completed withdrawals
@@ -1744,9 +1797,23 @@ type Market @entity {
   delinquencyFeeBips: Int!
   asset: Token!
   withdrawalBatchDuration: Int!
+  # Null for markets without the repayment/carry event generation; zero means unscheduled.
+  repaymentDate: BigInt
+  repaymentPeriod: BigInt
+  repaymentDeadline: BigInt
+  repaymentTerms: MarketRepaymentTerms @derivedFrom(field: "market")
 
   # ---------------------------------- State --------------------------------- #
   isClosed: Boolean!
+  closedAt: BigInt
+  # Committed effective timestamps, not projections from the current block time.
+  repaymentActivatedAt: BigInt
+  repaymentDateReached: MarketRepaymentDateReached @derivedFrom(field: "market")
+  # Zero means no committed default on a supported market; null means unsupported.
+  defaultedAt: BigInt
+  defaultRecord: MarketDefaultRecorded @derivedFrom(field: "market")
+  # Sum of batch payment remainders, in ray numerator units; null for older markets.
+  withdrawalRemainder: BigInt
   # Balance of the underlying asset held by the market at the indexed block.
   # Direct ERC-20 transfers are reflected on the next StateUpdated event.
   totalAssets: BigInt!
@@ -1762,7 +1829,7 @@ type Market @entity {
   pendingWithdrawalExpiry: BigInt!
   # Whether market is currently delinquent (liquidity under requirement)
   isDelinquent: Boolean!
-  # Whether market is currently incurring delinquency penalties (timeDelinquent > delinquencyGracePeriod)
+  # Penalty exposure from the grace clock or immediate underfunding after repayment date.
   isIncurringPenalties: Boolean!
   # Rolling delinquency clock. V2.5 reads stored contract state at the indexed block;
   # earlier protocol families project the clock from events.
@@ -1937,6 +2004,13 @@ type MarketSnapshot @entity {
   market: Market!
   source: SnapshotSource!
   isClosed: Boolean!
+  closedAt: BigInt
+  repaymentDate: BigInt
+  repaymentPeriod: BigInt
+  repaymentDeadline: BigInt
+  repaymentActivatedAt: BigInt
+  defaultedAt: BigInt
+  withdrawalRemainder: BigInt
   totalAssets: BigInt!
   maxTotalSupply: BigInt!
   protocolFeeBips: Int!

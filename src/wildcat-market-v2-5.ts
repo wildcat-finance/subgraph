@@ -9,6 +9,7 @@ import {
   ChangedSpherexEngineAddress,
   ChangedSpherexOperator,
   DebtRepaid,
+  DefaultRecorded,
   Deposit,
   DrawnAmountUpdated,
   FeesCollected,
@@ -16,6 +17,7 @@ import {
   MarketClosed,
   MaxTotalSupplyUpdated,
   ProtocolFeeBipsUpdated,
+  RepaymentDateReached,
   SanctionedAccountAssetsQueuedForWithdrawal,
   SanctionedAccountWithdrawalSentToEscrow,
   StateUpdated,
@@ -29,6 +31,7 @@ import {
   WildcatMarketV2_5,
   WrapperRegistered,
 } from "../generated/templates/WildcatMarketV2_5/WildcatMarketV2_5";
+import { WildcatMarketLegacyState } from "../generated/templates/WildcatMarketV2_5/WildcatMarketLegacyState";
 import {
   Approval as LegacyApproval,
   ChangedSpherexEngineAddress as LegacyChangedSpherexEngineAddress,
@@ -51,6 +54,8 @@ import {
   BorrowerAccount,
   DrawnAmountUpdate,
   MarketBorrowerChange,
+  MarketDefaultRecorded,
+  MarketRepaymentDateReached,
   MarketWrapperRegistration,
 } from "../generated/schema";
 import {
@@ -90,7 +95,47 @@ import {
 } from "./daily-stats";
 import { saveMarketAndSnapshot } from "./market-domain";
 import { recordMarketEvent } from "./market-event-domain";
-import { generateEventId } from "./utils";
+import { generateEventId, isMarketIncurringPenalties } from "./utils";
+
+function storedDelinquencyClock(address: Address): i32 {
+  let market = getMarket(generateMarketId(address));
+  return market.repaymentDate === null
+    ? WildcatMarketLegacyState.bind(address).previousState().timeDelinquent.toI32()
+    : WildcatMarketV2_5.bind(address).previousState().timeDelinquent.toI32();
+}
+
+export function handleRepaymentDateReached(event: RepaymentDateReached): void {
+  let market = getMarket(generateMarketId(event.address));
+  market.repaymentActivatedAt = event.params.effectiveTimestamp;
+  market.reserveRatioBips = 10_000;
+  market.temporaryReserveRatioActive = false;
+  market.isIncurringPenalties = isMarketIncurringPenalties(market, event.block.timestamp);
+  saveMarketAndSnapshot(event, market);
+  recordMarketEvent(event, market, "REPAYMENT_DATE_REACHED");
+  let record = new MarketRepaymentDateReached(generateEventId(event));
+  record.market = market.id;
+  record.effectiveTimestamp = event.params.effectiveTimestamp;
+  record.blockNumber = event.block.number;
+  record.blockTimestamp = event.block.timestamp;
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex;
+  record.save();
+}
+
+export function handleDefaultRecorded(event: DefaultRecorded): void {
+  let market = getMarket(generateMarketId(event.address));
+  market.defaultedAt = event.params.effectiveTimestamp;
+  saveMarketAndSnapshot(event, market);
+  recordMarketEvent(event, market, "DEFAULT_RECORDED");
+  let record = new MarketDefaultRecorded(generateEventId(event));
+  record.market = market.id;
+  record.effectiveTimestamp = event.params.effectiveTimestamp;
+  record.blockNumber = event.block.number;
+  record.blockTimestamp = event.block.timestamp;
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex;
+  record.save();
+}
 
 function updateBorrowerCounts(
   event: BorrowerTransferred,
@@ -332,8 +377,7 @@ export function handleInterestAndFeesAccrued(
   // Earlier intervals retain their event-local clock, including on market closure.
   let storedTimeDelinquent = -1;
   if (event.params.toTimestamp.equals(event.block.timestamp)) {
-    storedTimeDelinquent = WildcatMarketV2_5.bind(event.address)
-      .previousState().timeDelinquent.toI32();
+    storedTimeDelinquent = storedDelinquencyClock(event.address);
   }
   handleInterestAndFeesAccruedValues(
     changetype<LegacyInterestAndFeesAccrued>(event),
@@ -389,8 +433,7 @@ export function handleSanctionedAccountWithdrawalSentToEscrow(
 }
 
 export function handleStateUpdated(event: StateUpdated): void {
-  let storedTimeDelinquent = WildcatMarketV2_5.bind(event.address)
-    .previousState().timeDelinquent.toI32();
+  let storedTimeDelinquent = storedDelinquencyClock(event.address);
   handleStateUpdatedValues(changetype<LegacyStateUpdated>(event), storedTimeDelinquent);
 }
 

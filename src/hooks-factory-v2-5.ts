@@ -23,9 +23,12 @@ import {
   HooksInstanceRoleProviderSnapshot,
   HooksTemplateRegistration,
   HooksTemplateRegistrationEvent,
+  HooksTemplateInitCodeHashRecord,
+  Market,
   MarketDeployed,
   MarketDeploymentConfig,
   MarketHooksData,
+  MarketRepaymentTerms,
   PendingMarketDeployment,
   RevolvingMarketDeployment,
 } from "../generated/schema";
@@ -56,8 +59,8 @@ import {
   getOrCreateHooksTemplate,
 } from "./hooks-template-domain";
 import { recordIndexerDiagnostic } from "./indexer-diagnostics";
-import { createInitialMarketSnapshot } from "./market-domain";
-import { recordMarketEventAt } from "./market-event-domain";
+import { createInitialMarketSnapshot, saveMarketAndSnapshot } from "./market-domain";
+import { recordMarketEvent, recordMarketEventAt } from "./market-event-domain";
 import { generateEventId, isNullAddress } from "./utils";
 
 function addressParam(event: ethereum.Event, index: i32): Address {
@@ -128,6 +131,60 @@ export function handleHooksTemplateDisabled(event: ethereum.Event): void {
     record.caller = addressParam(event, 1);
     record.save();
   }
+}
+
+export function handleHooksTemplateInitCodeHashRecorded(event: ethereum.Event): void {
+  let templateAddress = addressParam(event, 0);
+  let registration = HooksTemplateRegistration.load(
+    generateHooksTemplateRegistrationId(event.address, templateAddress)
+  );
+  if (registration == null) {
+    recordIndexerDiagnostic(event, "MISSING_TEMPLATE_REGISTRATION",
+      "Template commitment referenced an unindexed registration", templateAddress);
+    return;
+  }
+  let hash = event.parameters[1].value.toBytes();
+  registration.initCodeHash = hash;
+  registration.updatedAtBlock = event.block.number;
+  registration.updatedAtTimestamp = event.block.timestamp;
+  registration.updatedAtTransaction = event.transaction.hash;
+  registration.updatedAtLogIndex = event.logIndex;
+  registration.save();
+  let record = new HooksTemplateInitCodeHashRecord(generateEventId(event));
+  record.registration = registration.id;
+  record.hooksFactory = registration.hooksFactory;
+  record.hooksTemplate = registration.hooksTemplate;
+  record.initCodeHash = hash;
+  record.blockNumber = event.block.number;
+  record.blockTimestamp = event.block.timestamp;
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex;
+  record.save();
+}
+
+// Both factories emit this after the existing deployment bundle has finalized
+// the market. Older V2.5 factories emit no terms and retain the old state ABI.
+export function handleMarketRepaymentTerms(event: ethereum.Event): void {
+  let market = Market.load(generateMarketId(addressParam(event, 0)));
+  if (market == null) return;
+  let date = bigIntParam(event, 1);
+  let period = bigIntParam(event, 2);
+  market.repaymentDate = date;
+  market.repaymentPeriod = period;
+  market.repaymentDeadline = date.isZero() ? BigInt.zero() : date.plus(period);
+  market.defaultedAt = BigInt.zero();
+  market.withdrawalRemainder = BigInt.zero();
+  saveMarketAndSnapshot(event, market);
+  recordMarketEvent(event, market, "REPAYMENT_TERMS");
+  let record = new MarketRepaymentTerms(generateEventId(event));
+  record.market = market.id;
+  record.repaymentDate = date;
+  record.repaymentPeriod = period;
+  record.blockNumber = event.block.number;
+  record.blockTimestamp = event.block.timestamp;
+  record.transactionHash = event.transaction.hash;
+  record.blockLogIndex = event.logIndex;
+  record.save();
 }
 
 export function handleHooksTemplateFeesUpdated(event: ethereum.Event): void {

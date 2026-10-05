@@ -3,6 +3,11 @@ const test = require("node:test");
 const { getHinterlightPaths } = require("./hinterlight-paths");
 
 test("formats Hinterlight internal and public release paths", () => {
+  assert.deepEqual(getHinterlightPaths("sepolia", "v2.5.13"), {
+    internalSubgraphName: "sepolia/v2-5-13",
+    publicSubgraphName: "sepolia/v2.5.13",
+    publicQueryUrl: "https://graph.hinterlight.net/sepolia/v2.5.13",
+  });
   assert.deepEqual(getHinterlightPaths("sepolia", "v2.5.8"), {
     internalSubgraphName: "sepolia/v2-5-8",
     publicSubgraphName: "sepolia/v2.5.8",

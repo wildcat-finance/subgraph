@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { execSync, spawnSync } = require("child_process");
 const { getHinterlightPaths } = require("./hinterlight-paths");
+const { loadChainConfig } = require("./chain-config");
 require("dotenv").config();
 
 const provider = process.argv[2];
@@ -22,8 +23,8 @@ if (!version) {
   console.error(
     "Deployments require an explicit version label.\n" +
       "Examples:\n" +
-      "  yarn deploy:goldsky:sepolia v2.5.12\n" +
-      "  yarn deploy:hinterlight:sepolia v2.5.12"
+      "  yarn deploy:goldsky:sepolia v2.5.15\n" +
+      "  yarn deploy:hinterlight:sepolia v2.5.15"
   );
   process.exit(1);
 }
@@ -61,6 +62,11 @@ if (!supportedNetworks.has(network)) {
 
 if (!/^[A-Za-z0-9][A-Za-z0-9_/-]*$/.test(subgraphName)) {
   console.error(`Invalid subgraph name: ${subgraphName}`);
+  process.exit(1);
+}
+
+if (!loadChainConfig(network).deploymentTargetsReady) {
+  console.error(`Deployment targets for ${network} are pending. Finalize the protocol handoff before deploying.`);
   process.exit(1);
 }
 

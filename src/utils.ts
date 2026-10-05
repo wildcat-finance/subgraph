@@ -25,11 +25,27 @@ export function rayDivDown(a: BigInt, b: BigInt): BigInt {
 }
 
 export function rayMul(a: BigInt, b: BigInt): BigInt {
+  return normalizeWithRemainder(a, b, null);
+}
+
+export function normalizeWithRemainder(
+  scaledAmount: BigInt,
+  scaleFactor: BigInt,
+  remainder: BigInt | null
+): BigInt {
   let halfRay = BigInt.fromI32(10)
     .pow(27)
     .div(BigInt.fromI32(2));
-  let numerator = a.times(b).plus(halfRay);
+  let numerator = scaledAmount.times(scaleFactor).plus(halfRay);
+  if (remainder !== null) numerator = numerator.plus(remainder);
   return numerator.div(BigInt.fromI32(10).pow(27));
+}
+
+export function isMarketIncurringPenalties(market: Market, timestamp: BigInt): boolean {
+  if (market.isClosed) return false;
+  let date = market.repaymentDate;
+  return market.timeDelinquent > market.delinquencyGracePeriod ||
+    (date !== null && date.gt(BigInt.zero()) && timestamp.ge(date) && market.isDelinquent);
 }
 
 export function bipMul(a: BigInt, b: BigInt): BigInt {
@@ -48,24 +64,15 @@ export function calculateLiquidityRequired(market: Market): BigInt {
   // legacy markets apply the reserve ratio before normalization. v2.5 applies
   // it to normalized outstanding supply to match MarketState.liquidityRequired.
   if (market.eventGeneration == "V2_5") {
-    if (market.reserveRatioBips == 0) {
-      normalizedSupplyRequired = rayMul(scaledWithdrawals, market.scaleFactor);
-    } else if (market.reserveRatioBips == 10_000) {
-      normalizedSupplyRequired = rayMul(
-        market.scaledTotalSupply,
-        market.scaleFactor
-      );
-    } else {
-      let normalizedWithdrawals = rayMul(scaledWithdrawals, market.scaleFactor);
-      let normalizedOutstandingSupply = rayMul(
-        market.scaledTotalSupply,
-        market.scaleFactor
-      ).minus(normalizedWithdrawals);
-      normalizedSupplyRequired = bipMul(
-        normalizedOutstandingSupply,
-        reserveRatioBips
-      ).plus(normalizedWithdrawals);
-    }
+    let normalizedWithdrawals = normalizeWithRemainder(
+      scaledWithdrawals, market.scaleFactor, market.withdrawalRemainder
+    );
+    let normalizedOutstandingSupply = normalizeWithRemainder(
+      market.scaledTotalSupply, market.scaleFactor, market.withdrawalRemainder
+    ).minus(normalizedWithdrawals);
+    normalizedSupplyRequired = bipMul(
+      normalizedOutstandingSupply, reserveRatioBips
+    ).plus(normalizedWithdrawals);
   } else {
     let scaledRequiredReserves = bipMul(
       market.scaledTotalSupply.minus(scaledWithdrawals),
@@ -83,7 +90,7 @@ export function calculateLiquidityRequired(market: Market): BigInt {
 }
 
 export function calculateTotalDebt(market: Market): BigInt {
-  return rayMul(market.scaledTotalSupply, market.scaleFactor)
+  return normalizeWithRemainder(market.scaledTotalSupply, market.scaleFactor, market.withdrawalRemainder)
     .plus(market.normalizedUnclaimedWithdrawals)
     .plus(market.pendingProtocolFees);
 }
@@ -120,8 +127,8 @@ export function calculateBatchInterestEarned(
   ) {
     return BigInt.fromI32(0);
   }
-  let lastBalance = rayMul(scaledAmountOwed, batch.lastScaleFactor);
-  let currentBalance = rayMul(scaledAmountOwed, market.scaleFactor);
+  let lastBalance = normalizeWithRemainder(scaledAmountOwed, batch.lastScaleFactor, batch.paymentRemainder);
+  let currentBalance = normalizeWithRemainder(scaledAmountOwed, market.scaleFactor, batch.paymentRemainder);
   return currentBalance.minus(lastBalance);
 }
 
