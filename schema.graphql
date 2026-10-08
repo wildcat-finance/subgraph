@@ -786,6 +786,50 @@ type TokenDailyPrice @entity {
   priceUSD: BigDecimal!
 }
 
+type Wildcat4626WrapperFactory @entity {
+  id: ID!
+  address: Bytes!
+  archController: ArchController!
+  eventIndex: Int!
+  wrappers: [Wildcat4626Wrapper!]! @derivedFrom(field: "factory")
+  deployedEvents: [Wildcat4626WrapperDeployed!]! @derivedFrom(field: "factory")
+}
+
+"A wrapper discovered from a configured factory's deployment event."
+type Wildcat4626Wrapper @entity {
+  id: ID!
+  address: Bytes!
+  factory: Wildcat4626WrapperFactory!
+  market: Market
+  marketAddress: Bytes!
+  marketToken: Token!
+  token: Token!
+  deployedEvent: Wildcat4626WrapperDeployed @derivedFrom(field: "wrapper")
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+type Wildcat4626WrapperDeployed @entity(immutable: true) {
+  id: ID!
+  factory: Wildcat4626WrapperFactory!
+  market: Market
+  marketAddress: Bytes!
+  wrapper: Wildcat4626Wrapper!
+  wrapperAddress: Bytes!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  transactionHash: Bytes!
+  blockLogIndex: Int!
+}
+
+"Internal lookup for linking a wrapper observed before its market is indexed."
+type WrapperMarketIndex @entity {
+  id: ID! # market address
+  wrapper: Wildcat4626Wrapper!
+}
+
 type Market @entity {
   id: ID!
   archController: ArchController!
@@ -898,6 +942,8 @@ type Market @entity {
   collateralContracts: [SimpleCollateralContract!]!
     @derivedFrom(field: "market")
   numCollateralContracts: Int!
+
+  tokenWrapper: Wildcat4626Wrapper
 
   createdAt: Int!
 

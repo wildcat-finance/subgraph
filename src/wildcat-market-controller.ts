@@ -26,6 +26,7 @@ import {
 import { generateEventId } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
 import { recordMarketCreated } from "./daily-stats";
+import { reconcileWrapperMarketLink } from "./wrapper-market-links";
 import { generateControllerId } from "../generated/UncrashableEntityHelpers";
 import { WildcatMarket as MarketTemplate } from "../generated/templates";
 import { Token } from "../generated/schema";
@@ -112,7 +113,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
   });
 
   const version = "V1";
-  createMarket(marketId, {
+  let market = createMarket(marketId, {
     name: event.params.name,
     symbol: event.params.symbol,
     asset: assetId,
@@ -143,6 +144,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     totalDebtUSD: BigDecimal.zero(),
     numCollateralContracts: 0,
   });
+  reconcileWrapperMarketLink(market);
   controller.numMarkets = controller.numMarkets + 1;
   controller.save();
   recordMarketCreated(controller.borrower, event.block.timestamp);
