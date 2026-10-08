@@ -21,6 +21,11 @@ import {
   generateTokenId,
 } from "../generated/UncrashableEntityHelpers";
 import { handleMarketDeployed } from "../src/hooks-factory";
+import { handleWrapperDeployed } from "../src/wildcat-4626-wrapper-factory";
+import {
+  createWrapperDeployedEvent,
+  WRAPPER_ADDRESS,
+} from "./wildcat-4626-wrapper-utils";
 
 let hooksFactoryAddress = Address.fromString(
   "0x0000000000000000000000000000000000001000"
@@ -259,7 +264,7 @@ function mockFixedHookedMarket(): void {
 }
 
 describe("hooks factory market deployment", () => {
-  test("decodes and persists periodic term hooks config", () => {
+  test("preserves periodic term config while linking a previously observed wrapper", () => {
     clearStore();
     saveFixtures(
       periodicHooksAddress,
@@ -271,6 +276,9 @@ describe("hooks factory market deployment", () => {
     mockPeriodicHookedMarket();
     mockMarketBalance();
 
+    handleWrapperDeployed(createWrapperDeployedEvent(marketAddress));
+    assert.entityCount("Market", 0);
+
     handleMarketDeployed(
       createMarketDeployedEvent(
         periodicTemplateAddress,
@@ -280,6 +288,8 @@ describe("hooks factory market deployment", () => {
 
     let hooksConfigId = generateHooksConfigId(marketAddress);
     let marketId = generateMarketId(marketAddress);
+    assert.fieldEquals("Market", marketId, "tokenWrapper", WRAPPER_ADDRESS.toHexString());
+    assert.fieldEquals("Wildcat4626Wrapper", WRAPPER_ADDRESS.toHexString(), "market", marketId);
     assert.entityCount("HooksConfig", 1);
     assert.fieldEquals(
       "HooksConfig",

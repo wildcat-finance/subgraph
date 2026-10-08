@@ -14,11 +14,51 @@ let subgraphTemplateYamlName = 'subgraph.template.yaml';
 if (networkId.toLowerCase().includes("plasma")) {
   subgraphTemplateYamlName = "plasma-subgraph.template.yaml";
 }
+
+function buildWrapperFactoryDataSource(network, contracts) {
+  const factory = contracts.Wildcat4626WrapperFactory;
+  if (!factory) return "";
+
+  return `  - kind: ethereum
+    name: Wildcat4626WrapperFactory
+    network: ${network}
+    source:
+      address: "${factory.address}"
+      abi: Wildcat4626WrapperFactory
+      startBlock: ${factory.startBlock}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Market
+        - Token
+        - Wildcat4626WrapperFactory
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperDeployed
+        - WrapperMarketIndex
+      abis:
+        - name: Wildcat4626WrapperFactory
+          file: ./abis/Wildcat4626WrapperFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: WrapperDeployed(indexed address,indexed address)
+          handler: handleWrapperDeployed
+      file: ./src/wildcat-4626-wrapper-factory.ts
+`;
+}
+
 function setNetworkAddresses() {
   const { name: network, contracts } = networks[networkId];
   let subgraph = fs
     .readFileSync(path.join(__dirname, `../${subgraphTemplateYamlName}`), "utf8")
-    .replace(new RegExp(`{{NetworkName}}`, "g"), network);
+    .replace(new RegExp(`{{NetworkName}}`, "g"), network)
+    .replace(
+      "{{Wildcat4626WrapperFactoryDataSource}}",
+      buildWrapperFactoryDataSource(network, contracts)
+    );
   let uncrashable = fs
     .readFileSync(
       path.join(__dirname, "../uncrashable-config.template.yaml"),

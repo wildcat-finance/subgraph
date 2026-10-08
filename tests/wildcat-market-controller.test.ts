@@ -21,6 +21,8 @@ import {
   handleMarketDeployed
 } from "../src/wildcat-market-controller";
 import { generateEventId } from "../src/utils";
+import { handleWrapperDeployed } from "../src/wildcat-4626-wrapper-factory";
+import { createWrapperDeployedEvent, WRAPPER_ADDRESS } from "./wildcat-4626-wrapper-utils";
 import {
   createLenderAuthorizedEvent,
   createMarketDeployedEvent
@@ -87,6 +89,7 @@ describe("WildcatMarketController", () => {
     let assetAddress = Address.fromString(
       "0x0000000000000000000000000000000000005104"
     );
+    handleWrapperDeployed(createWrapperDeployedEvent(marketAddress));
     createControllerFactory(factoryAddress.toHex(), {
       sentinel: Address.zero(),
       originationFeeAsset: null,
@@ -131,6 +134,9 @@ describe("WildcatMarketController", () => {
     let event = createMarketDeployedEvent(marketAddress, assetAddress);
     event.address = controllerAddress;
     handleMarketDeployed(event);
+
+    assert.fieldEquals("Market", generateMarketId(marketAddress), "tokenWrapper", WRAPPER_ADDRESS.toHexString());
+    assert.fieldEquals("Wildcat4626Wrapper", WRAPPER_ADDRESS.toHexString(), "market", generateMarketId(marketAddress));
 
     assert.fieldEquals(
       "Token",

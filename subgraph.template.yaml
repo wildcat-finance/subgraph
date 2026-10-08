@@ -2,6 +2,7 @@ specVersion: 0.0.5
 schema:
   file: ./schema.graphql
 dataSources:
+{{Wildcat4626WrapperFactoryDataSource}}
   - kind: ethereum
     name: WildcatMarketCollateralFactory
     network: {{NetworkName}}
@@ -59,6 +60,8 @@ dataSources:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
+        - Wildcat4626Wrapper
+        - WrapperMarketIndex
         - LenderHooksAccess
         - HooksInstance
         - RoleProvider
@@ -277,6 +280,8 @@ templates:
         - Controller
         - LenderAuthorization
         - LenderAuthorizationChange
+        - Wildcat4626Wrapper
+        - WrapperMarketIndex
         - MarketDeployed
       abis:
         - name: WildcatMarketController

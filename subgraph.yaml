@@ -3,6 +3,35 @@ schema:
   file: ./schema.graphql
 dataSources:
   - kind: ethereum
+    name: Wildcat4626WrapperFactory
+    network: sepolia
+    source:
+      address: "0x0566Fe57682164af689f1440cb3BCEedEe3bf843"
+      abi: Wildcat4626WrapperFactory
+      startBlock: 10534112
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ArchController
+        - Market
+        - Token
+        - Wildcat4626WrapperFactory
+        - Wildcat4626Wrapper
+        - Wildcat4626WrapperDeployed
+        - WrapperMarketIndex
+      abis:
+        - name: Wildcat4626WrapperFactory
+          file: ./abis/Wildcat4626WrapperFactory.json
+        - name: IERC20
+          file: ./abis/IERC20.json
+      eventHandlers:
+        - event: WrapperDeployed(indexed address,indexed address)
+          handler: handleWrapperDeployed
+      file: ./src/wildcat-4626-wrapper-factory.ts
+
+  - kind: ethereum
     name: WildcatMarketCollateralFactory
     network: sepolia
     source:
@@ -59,6 +88,8 @@ dataSources:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
+        - Wildcat4626Wrapper
+        - WrapperMarketIndex
         - LenderHooksAccess
         - HooksInstance
         - RoleProvider
@@ -277,6 +308,8 @@ templates:
         - Controller
         - LenderAuthorization
         - LenderAuthorizationChange
+        - Wildcat4626Wrapper
+        - WrapperMarketIndex
         - MarketDeployed
       abis:
         - name: WildcatMarketController

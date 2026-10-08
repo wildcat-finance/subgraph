@@ -56,6 +56,7 @@ import {
 import { generateEventId, isNullAddress } from "./utils";
 import { setupTokenPriceFeeds } from "./price-feeds";
 import { recordMarketCreated } from "./daily-stats";
+import { reconcileWrapperMarketLink } from "./wrapper-market-links";
 import {
   CombinedHooks as CombinedHooksTemplate,
   WildcatMarket as MarketTemplate,
@@ -497,7 +498,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
     let hooksFactory = getOrCreateHooksFactory(event.address);
     let version = "V2";
 
-    createMarket(marketId, {
+    let market = createMarket(marketId, {
       name: params.name,
       symbol: params.symbol,
       asset: asset.id,
@@ -529,6 +530,7 @@ export function handleMarketDeployed(event: MarketDeployedEvent): void {
       numCollateralContracts: 0,
     });
 
+    reconcileWrapperMarketLink(market);
     hooks.numMarkets = hooks.numMarkets + 1;
     hooks.save();
     recordMarketCreated(hooks.borrower, event.block.timestamp);
