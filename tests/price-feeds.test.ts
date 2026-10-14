@@ -93,6 +93,16 @@ function mockFeedRound(
 }
 
 describe("price feed chain policy", () => {
+  test("does not assume Ethereum USDC pricing on Ink Sepolia", () => {
+    clearStore();
+    dataSourceMock.setNetwork("ink-sepolia");
+    let id = saveToken(Address.fromString("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), "USDC");
+    setupTokenPriceFeeds(getToken(id), BigInt.fromI32(86400));
+    assert.fieldEquals("Token", id, "isUsdStablecoin", "false");
+    assert.assertTrue(getTokenPriceUSD(id, BigInt.fromI32(86400)) === null);
+    assert.entityCount("TokenDailyPrice", 0);
+  });
+
   test("uses explicit fixed-dollar addresses on each target chain", () => {
     clearStore();
 

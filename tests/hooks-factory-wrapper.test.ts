@@ -47,6 +47,11 @@ describe("hooks market wrapper reconciliation", () => {
     createMockedFunction(hooks, "getHookedMarket", "getHookedMarket(address):((bool,bool,bool,uint128,bool,bool))")
       .withArgs([ethereum.Value.fromAddress(MARKET_ADDRESS)])
       .returns([ethereum.Value.fromTuple(hookedMarket)]);
+    let legacy = new ethereum.Tuple();
+    for (let i = 0; i < 5; i++) legacy.push(hookedMarket[i]);
+    createMockedFunction(hooks, "getHookedMarket", "getHookedMarket(address):((bool,bool,bool,uint128,bool))")
+      .withArgs([ethereum.Value.fromAddress(MARKET_ADDRESS)])
+      .returns([ethereum.Value.fromTuple(legacy)]);
     createMockedFunction(asset, "balanceOf", "balanceOf(address):(uint256)")
       .withArgs([ethereum.Value.fromAddress(MARKET_ADDRESS)])
       .returns([ethereum.Value.fromUnsignedBigInt(BigInt.zero())]);

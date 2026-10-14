@@ -5,13 +5,14 @@ const networkId = process.argv[2];
 if (!networks[networkId]) {
   throw Error(`No deployments for network: ${networkId}`);
 }
-// Plasma deployments use the same pre-force-buyback hooks ABI as mainnet.
+// Plasma and Ink use the same legacy hooks ABI as mainnet.
 const abiNetworkId = {
   "plasma-testnet": "mainnet",
   "plasma-mainnet": "mainnet",
+  "ink-sepolia": "mainnet",
 }[networkId] ?? networkId;
 let subgraphTemplateYamlName = 'subgraph.template.yaml';
-if (networkId.toLowerCase().includes("plasma")) {
+if (["plasma-testnet", "plasma-mainnet", "ink-sepolia"].includes(networkId)) {
   subgraphTemplateYamlName = "plasma-subgraph.template.yaml";
 }
 

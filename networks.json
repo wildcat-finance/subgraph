@@ -45,6 +45,27 @@
       }
     }
   },
+  "ink-sepolia": {
+    "name": "ink-sepolia",
+    "contracts": {
+      "WildcatArchController": {
+        "address": "0x0ac22d06121fc336B2F3DBeb284df65C97BcA547",
+        "startBlock": 62931617
+      },
+      "WildcatSanctionsSentinel": {
+        "address": "0xa83a6afACf2a461A824fbC35dC5e6A80eee53d9A",
+        "startBlock": 62960398
+      },
+      "HooksFactory": {
+        "address": "0xc54C18FBDa39A089901F59133909012EF116e464",
+        "startBlock": 62960474
+      },
+      "Wildcat4626WrapperFactory": {
+        "address": "0xF3fE96705d85A1592B31592B628667eA21fdd7C7",
+        "startBlock": 62960519
+      }
+    }
+  },
   "plasma-testnet": {
     "name": "plasma-testnet",
     "contracts": {

@@ -8,6 +8,8 @@ import {
 import { newMockEvent } from "matchstick-as";
 import { Address, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { MarketDeployed } from "../generated/HooksFactory/HooksFactory";
+import { FixedTermHooks } from "../generated/HooksFactory/FixedTermHooks";
+import { OpenTermHooks } from "../generated/HooksFactory/OpenTermHooks";
 import {
   createHooksFactory,
   createHooksInstance,
@@ -261,9 +263,55 @@ function mockFixedHookedMarket(): void {
   )
     .withArgs(singleAddressArg(marketAddress))
     .returns(singleTupleValue(hookedMarket));
+
+  // Ink/mainnet omit the final force-buyback flag; Sepolia retains it.
+  let legacy = new ethereum.Tuple();
+  for (let i = 0; i < 9; i++) legacy.push(hookedMarket[i]);
+  createMockedFunction(
+    fixedHooksAddress,
+    "getHookedMarket",
+    "getHookedMarket(address):((bool,bool,bool,bool,uint128,uint32,bool,bool,bool))"
+  )
+    .withArgs(singleAddressArg(marketAddress))
+    .returns(singleTupleValue(legacy));
 }
 
 describe("hooks factory market deployment", () => {
+  test("decodes open-term config with the selected network ABI", () => {
+    clearStore();
+    saveFixtures(fixedHooksAddress, fixedTemplateAddress, "OpenTerm", "OpenTermHooks");
+    mockVersion(fixedHooksAddress, "OpenTermHooks");
+    mockMarketBalance();
+    let values = new ethereum.Tuple();
+    values.push(ethereum.Value.fromBoolean(true));
+    values.push(ethereum.Value.fromBoolean(true));
+    values.push(ethereum.Value.fromBoolean(false));
+    values.push(ethereum.Value.fromUnsignedBigInt(BigInt.fromI32(25)));
+    values.push(ethereum.Value.fromBoolean(true));
+    createMockedFunction(
+      fixedHooksAddress, "getHookedMarket",
+      "getHookedMarket(address):((bool,bool,bool,uint128,bool))"
+    ).withArgs(singleAddressArg(marketAddress)).returns(singleTupleValue(values));
+    let modern = new ethereum.Tuple();
+    for (let i = 0; i < values.length; i++) modern.push(values[i]);
+    modern.push(ethereum.Value.fromBoolean(true));
+    createMockedFunction(
+      fixedHooksAddress, "getHookedMarket",
+      "getHookedMarket(address):((bool,bool,bool,uint128,bool,bool))"
+    ).withArgs(singleAddressArg(marketAddress)).returns(singleTupleValue(modern));
+
+    handleMarketDeployed(createMarketDeployedEvent(
+      fixedTemplateAddress, BigInt.fromString("973792339636541053990775338041344")
+    ));
+    let id = generateHooksConfigId(marketAddress);
+    assert.fieldEquals("HooksConfig", id, "minimumDeposit", "25");
+    assert.fieldEquals("HooksConfig", id, "depositRequiresAccess", "false");
+    assert.fieldEquals("HooksConfig", id, "transferRequiresAccess", "true");
+    assert.fieldEquals("HooksConfig", id, "transfersDisabled", "true");
+    let modernAbi = OpenTermHooks.bind(fixedHooksAddress).getHookedMarket(marketAddress).length == 6;
+    assert.fieldEquals("HooksConfig", id, "allowForceBuyBacks", modernAbi ? "true" : "false");
+  });
+
   test("preserves periodic term config while linking a previously observed wrapper", () => {
     clearStore();
     saveFixtures(
@@ -463,7 +511,7 @@ describe("hooks factory market deployment", () => {
       "HooksConfig",
       hooksConfigId,
       "allowForceBuyBacks",
-      "true"
+      FixedTermHooks.bind(fixedHooksAddress).getHookedMarket(marketAddress).length == 10 ? "true" : "false"
     );
     assert.fieldEquals(
       "HooksConfig",
