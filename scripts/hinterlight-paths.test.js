@@ -25,8 +25,9 @@ assert.strictEqual(
   "https://graph.hinterlight.net/plasma-mainnet/v2.0.22.4"
 );
 
-const inkPaths = getHinterlightPaths("ink_sepolia", "v2.1.9");
-assert.strictEqual(inkPaths.internalSubgraphName, "ink_sepolia/v2-1-9");
-assert.strictEqual(inkPaths.publicQueryUrl, "https://graph.hinterlight.net/ink_sepolia/v2.1.9");
+const inkPaths = getHinterlightPaths("ink-sepolia", "v2.1.9");
+assert.strictEqual(inkPaths.internalSubgraphName, "ink-sepolia/v2-1-9");
+assert.strictEqual(inkPaths.publicSubgraphName, "ink-sepolia/v2.1.9");
+assert.strictEqual(inkPaths.publicQueryUrl, "https://graph.hinterlight.net/ink-sepolia/v2.1.9");
 
 console.log("Hinterlight internal and public paths are formatted correctly.");

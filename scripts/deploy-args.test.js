@@ -4,6 +4,14 @@ const { spawnSync } = require("child_process");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const deployScript = path.join(__dirname, "deploy.js");
+const { scripts } = require("../package.json");
+
+for (const provider of ["goldsky", "hinterlight"]) {
+  assert.strictEqual(
+    scripts[`deploy:${provider}:ink-sepolia`],
+    `yarn deploy ${provider} ink-sepolia ink-sepolia`
+  );
+}
 
 function runDeploy(args, env = process.env) {
   return spawnSync(process.execPath, [deployScript, ...args], {

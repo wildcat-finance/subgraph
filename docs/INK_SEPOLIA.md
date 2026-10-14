@@ -1,9 +1,8 @@
 # Ink Sepolia deployment
 
 Base: `v2.1.9` / `fd71e960e6b547abb04351c4c23a4e9db28b3ed1`.
-Release: `ink_sepolia/v2.1.9`. No schema or mapping changes; no version bump.
-Network key: `ink-sepolia` (chain `763373`). The underscore name is the public
-subgraph name, not the manifest network.
+Release: `ink-sepolia/v2.1.9`. No schema or mapping changes; no version bump.
+Network key and public subgraph name: `ink-sepolia` (chain `763373`).
 
 ## Prepare
 
