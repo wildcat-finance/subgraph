@@ -581,11 +581,22 @@ function validateChainConfig(config, abiFamilies, options = {}) {
     `${context}.deploymentTargetsReady`
   );
 
+  const kyc = config.anchors?.kycRoleProvider;
   assertExactKeys(
     config.anchors,
-    ["archController", "sanctionsSentinel"],
+    ["archController", "sanctionsSentinel", ...(kyc === undefined ? [] : ["kycRoleProvider"])],
     `${context}.anchors`
   );
+  if (kyc !== undefined) {
+    const key = `${context}.anchors.kycRoleProvider`;
+    assertExactKeys(kyc, ["address", "startBlock", "initialAdministrator", "deployTxHash"], key);
+    assertNonZeroAddress(kyc.address, `${key}.address`);
+    assertStartBlock(kyc.startBlock, `${key}.startBlock`);
+    assertNonZeroAddress(kyc.initialAdministrator, `${key}.initialAdministrator`);
+    if (!/^0x[0-9a-fA-F]{64}$/.test(kyc.deployTxHash)) {
+      fail(`${key}.deployTxHash`, "must be a transaction hash");
+    }
+  }
   validateAnchor(
     config.anchors.archController,
     `${context}.anchors.archController`
@@ -840,6 +851,7 @@ function validateChainConfig(config, abiFamilies, options = {}) {
   const addressEntries = [
     ["anchors.archController", config.anchors.archController.address],
     ["anchors.sanctionsSentinel", config.anchors.sanctionsSentinel.address],
+    ...(kyc ? [["anchors.kycRoleProvider", kyc.address]] : []),
     ...config.factories.map(factory => [
       `factories.${factory.label}`,
       factory.address
@@ -878,7 +890,8 @@ function validateChainConfig(config, abiFamilies, options = {}) {
 
   const sourceNames = new Set([
     "WildcatArchController",
-    "WildcatSanctionsSentinel"
+    "WildcatSanctionsSentinel",
+    ...(kyc ? ["KYCRoleProvider"] : [])
   ]);
   const indexedSources = [
     ...config.factories

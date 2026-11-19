@@ -59,6 +59,7 @@ enum AdministratorChangeKind {
 
 enum RoleProviderKind {
   ACCESS_LIST
+  KYC
   MERKLE
   ERC20
   ERC4626_ASSETS
@@ -141,6 +142,7 @@ enum MarketEventKind {
   BORROWER_TRANSFERRED
   DRAWN_AMOUNT_UPDATED
   WRAPPER_REGISTERED
+  NUKE_PROTECTION_REGISTERED
 }
 
 enum FactoryLifecycle {
@@ -1135,6 +1137,8 @@ type HooksFactory @entity {
   id: ID!
   address: Bytes!
   label: String!
+  nukeProtectionApprovals: [NukeProtectionFactoryApproval!]! @derivedFrom(field: "hooksFactory")
+  nukeProtectionRequests: [NukeProtectionRequest!]! @derivedFrom(field: "hooksFactory")
   templateRegistrations: [HooksTemplateRegistration!]!
     @derivedFrom(field: "hooksFactory")
   hooksInstances: [HooksInstance!]! @derivedFrom(field: "hooksFactory")
@@ -1831,7 +1835,7 @@ type Market @entity {
   isDelinquent: Boolean!
   # Penalty exposure from the grace clock or immediate underfunding after repayment date.
   isIncurringPenalties: Boolean!
-  # Rolling delinquency clock. V2.5 reads stored contract state at the indexed block;
+  # v2.5 reads the delinquency clock from stored state at the indexed block.
   # earlier protocol families project the clock from events.
   timeDelinquent: Int!
   # Annual interest rate accrued to lenders, in basis points
@@ -1959,6 +1963,8 @@ type Market @entity {
   drawnAmountUpdates: [DrawnAmountUpdate!]! @derivedFrom(field: "market")
   wrapperRegistrations: [MarketWrapperRegistration!]!
     @derivedFrom(field: "market")
+  nukeProtectionRegistrations: [NukeProtectionRegistration!]! @derivedFrom(field: "market")
+  nukeProtectionRequests: [NukeProtectionRequest!]! @derivedFrom(field: "market")
 
   fixedTermUpdatedRecords: [FixedTermUpdated!]! @derivedFrom(field: "market")
   periodicTermUpdatedRecords: [PeriodicTermUpdated!]!
@@ -2259,8 +2265,8 @@ type MarketInterestAccrued @entity(immutable: true) {
   market: Market! # address
   fromTimestamp: Int!
   toTimestamp: Int!
-  # V2.5: seconds charged a delinquency fee, recovered from the emitted fee rate;
-  # zero when delinquencyFeeBips is zero. Earlier families retain projected exposure.
+  # v2.5 derives the seconds charged a delinquency fee from the emitted fee rate.
+  # zero when delinquencyFeeBips is zero. earlier families use projected exposure.
   timeWithPenalties: Int!
   baseInterestRay: BigInt! # uint256
   delinquencyFeeRay: BigInt! # uint256
@@ -2455,6 +2461,49 @@ type DrawnAmountUpdate @entity(immutable: true) {
   market: Market!
   previousDrawnAmount: BigInt!
   newDrawnAmount: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+"whether the feature factory can request protection on markets deployed by this hooks factory."
+type NukeProtectionFactoryApproval @entity {
+  id: ID! # hooks-factory-feature-factory
+  hooksFactory: HooksFactory!
+  featureFactory: Bytes!
+  approved: Boolean!
+  changes: [NukeProtectionFactoryApprovalChange!]! @derivedFrom(field: "approval")
+}
+
+type NukeProtectionFactoryApprovalChange @entity(immutable: true) {
+  id: ID!
+  approval: NukeProtectionFactoryApproval!
+  approved: Boolean!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+"the hooks factory records the feature factory's request after the market registers the account."
+type NukeProtectionRequest @entity(immutable: true) {
+  id: ID!
+  hooksFactory: HooksFactory!
+  market: Market!
+  account: Bytes!
+  featureFactory: Bytes!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  blockLogIndex: BigInt!
+}
+
+"protection is permanent for this account on this market. each registration keeps its own log record."
+type NukeProtectionRegistration @entity(immutable: true) {
+  id: ID!
+  market: Market!
+  account: Bytes!
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!

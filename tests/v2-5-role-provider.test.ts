@@ -1,13 +1,15 @@
 import {
   assert,
   clearStore,
+  dataSourceMock,
   describe,
   test,
 } from "matchstick-as/assembly";
-import { Address, Bytes, ethereum } from "@graphprotocol/graph-ts";
+import { Address, BigInt, Bytes, DataSourceContext, ethereum } from "@graphprotocol/graph-ts";
 import {
   AdministratorTransferRequested,
   AdministratorTransferred,
+  MemberAdded,
   MemberRemoved,
 } from "../generated/templates/AccessListRoleProvider/AccessListRoleProvider";
 import {
@@ -18,6 +20,7 @@ import {
   handleAdministratorTransferred,
   handleMemberRemoved,
 } from "../src/access-list-role-provider";
+import { handleDeployment, handleMemberAdded } from "../src/kyc-role-provider";
 import {
   createV25Event,
   pushAddress,
@@ -41,6 +44,44 @@ const DEPLOYER = Address.fromString(
 const MEMBER_A = Address.fromString(
   "0x000000000000000000000000000000000000c006"
 );
+
+test("tracks KYC enrollment, removal and re-enrollment", () => {
+  clearStore();
+  let deployment = createV25Event(PROVIDER, 0);
+  let context = new DataSourceContext();
+  context.setString("initialAdministrator", ADMINISTRATOR.toHexString());
+  context.setString("deployTxHash", deployment.transaction.hash.toHexString());
+  dataSourceMock.setAddressAndContext(PROVIDER.toHexString(), context);
+  handleDeployment(deployment.block);
+  let provider = PROVIDER.toHexString();
+  assert.fieldEquals("RoleProviderInstance", provider, "kind", "KYC");
+  assert.fieldEquals("RoleProviderInstance", provider, "administrator", ADMINISTRATOR.toHexString());
+  assert.fieldEquals("RoleProviderInstance", provider, "deployedAtTransaction", deployment.transaction.hash.toHexString());
+  assert.entityCount("RoleProviderAdministratorChange", 0);
+  assert.entityCount("RoleProviderMember", 0);
+
+  let id = provider + "-" + MEMBER_A.toHexString();
+  let added = changetype<MemberAdded>(createV25Event(PROVIDER, 1));
+  pushAddress(added, "administrator", ADMINISTRATOR);
+  pushAddress(added, "account", MEMBER_A);
+  handleMemberAdded(added);
+  assert.fieldEquals("RoleProviderMember", id, "isMember", "true");
+
+  let removed = changetype<MemberRemoved>(createV25Event(PROVIDER, 2));
+  pushAddress(removed, "administrator", ADMINISTRATOR);
+  pushAddress(removed, "account", MEMBER_A);
+  handleMemberRemoved(removed);
+  assert.fieldEquals("RoleProviderMember", id, "isMember", "false");
+
+  added.logIndex = BigInt.fromI32(3);
+  added.block.timestamp = BigInt.fromI32(2000);
+  handleMemberAdded(added);
+  assert.fieldEquals("RoleProviderMember", id, "isMember", "true");
+  assert.fieldEquals("RoleProviderMember", id, "updatedAtTimestamp", "2000");
+  assert.fieldEquals("RoleProviderInstance", provider, "kind", "KYC");
+  assert.entityCount("RoleProviderMembershipChange", 3);
+  dataSourceMock.resetValues();
+});
 const MEMBER_B = Address.fromString(
   "0x000000000000000000000000000000000000c007"
 );

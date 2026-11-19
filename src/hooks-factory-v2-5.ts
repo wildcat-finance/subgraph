@@ -29,6 +29,9 @@ import {
   MarketDeploymentConfig,
   MarketHooksData,
   MarketRepaymentTerms,
+  NukeProtectionFactoryApproval,
+  NukeProtectionFactoryApprovalChange,
+  NukeProtectionRequest,
   PendingMarketDeployment,
   RevolvingMarketDeployment,
 } from "../generated/schema";
@@ -102,6 +105,39 @@ export function handleChangedSpherexEngineAddress(
 
 export function handleChangedSpherexOperator(event: ethereum.Event): void {}
 
+export function handleNukeProtectionFactoryApproval(event: ethereum.Event): void {
+  let factory = getOrCreateHooksFactory(event.address, "Legacy");
+  let featureFactory = addressParam(event, 0);
+  let approved = event.parameters[1].value.toBoolean();
+  let approval = new NukeProtectionFactoryApproval(factory.id + "-" + featureFactory.toHexString());
+  approval.hooksFactory = factory.id;
+  approval.featureFactory = featureFactory;
+  approval.approved = approved;
+  approval.save();
+
+  let change = new NukeProtectionFactoryApprovalChange(generateEventId(event));
+  change.approval = approval.id;
+  change.approved = approved;
+  change.blockNumber = event.block.number;
+  change.blockTimestamp = event.block.timestamp;
+  change.transactionHash = event.transaction.hash;
+  change.blockLogIndex = event.logIndex;
+  change.save();
+}
+
+export function handleNukeProtectionRequested(event: ethereum.Event): void {
+  let request = new NukeProtectionRequest(generateEventId(event));
+  request.hooksFactory = getOrCreateHooksFactory(event.address, "Legacy").id;
+  request.market = generateMarketId(addressParam(event, 0));
+  request.account = addressParam(event, 1);
+  request.featureFactory = addressParam(event, 2);
+  request.blockNumber = event.block.number;
+  request.blockTimestamp = event.block.timestamp;
+  request.transactionHash = event.transaction.hash;
+  request.blockLogIndex = event.logIndex;
+  request.save();
+}
+
 export function handleHooksTemplateAdded(event: ethereum.Event): void {
   handleHooksTemplateAddedForMarketType(
     event,
@@ -162,8 +198,8 @@ export function handleHooksTemplateInitCodeHashRecorded(event: ethereum.Event): 
   record.save();
 }
 
-// Both factories emit this after the existing deployment bundle has finalized
-// the market. Older V2.5 factories emit no terms and retain the old state ABI.
+// both factories emit repayment terms after the market deployment events.
+// older v2.5 factories omit this event and use the legacy state ABI.
 export function handleMarketRepaymentTerms(event: ethereum.Event): void {
   let market = Market.load(generateMarketId(addressParam(event, 0)));
   if (market == null) return;

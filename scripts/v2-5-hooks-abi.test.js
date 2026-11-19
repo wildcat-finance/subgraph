@@ -192,6 +192,8 @@ test("v2.5 factory events retain the indexed data-model boundary", () => {
       "MarketDeploymentConfig(indexed address,uint256,uint256,uint256,uint256,uint256,uint256,address,uint256,address,uint256)",
       "MarketHooksData(indexed address,bytes)",
       "MarketRepaymentTerms(indexed address,uint256,uint256)",
+      "NukeProtectionFactoryApproval(indexed address,bool)",
+      "NukeProtectionRequested(indexed address,indexed address,indexed address)",
       "RevolvingMarketDeployed(indexed address,uint256)"
     ].sort()
   );
@@ -207,6 +209,7 @@ test("v2.5 market events retain borrower and drawn-principal history", () => {
     "DrawnAmountUpdated(uint256,uint256)",
     "DefaultRecorded(uint256)",
     "RepaymentDateReached(uint256)",
+    "NukeProtectionRegistered(indexed address)",
     "WrapperRegistered(indexed address)"
   ]) {
     assert.ok(signatures.includes(signature), `${signature} is missing`);

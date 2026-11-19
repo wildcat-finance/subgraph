@@ -212,6 +212,41 @@ dataSources:
           handler: handleBorrowerAccountRegistered
       file: ./src/borrower-identity-registry.ts
   - kind: ethereum
+    name: KYCRoleProvider
+    network: mainnet
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: KYCRoleProvider
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RoleProviderInstance
+        - RoleProviderMember
+        - RoleProviderMembershipChange
+        - RoleProviderAdministratorChange
+      abis:
+        - name: KYCRoleProvider
+          file: ./abis/v2.5/KYCRoleProvider.json
+      blockHandlers:
+        - handler: handleDeployment
+          filter:
+            kind: once
+      eventHandlers:
+        - event: AdministratorTransferRequested(indexed address,indexed address,indexed address)
+          handler: handleAdministratorTransferRequested
+        - event: AdministratorTransferCancelled(indexed address,indexed address)
+          handler: handleAdministratorTransferCancelled
+        - event: AdministratorTransferred(indexed address,indexed address)
+          handler: handleAdministratorTransferred
+        - event: MemberAdded(indexed address,indexed address)
+          handler: handleMemberAdded
+        - event: MemberRemoved(indexed address,indexed address)
+          handler: handleMemberRemoved
+      file: ./src/kyc-role-provider.ts
+  - kind: ethereum
     name: AccessListRoleProviderFactory
     network: mainnet
     source:
@@ -828,6 +863,7 @@ templates:
         - BorrowerAccount
         - MarketBorrowerChange
         - MarketWrapperRegistration
+        - NukeProtectionRegistration
         - MarketRepaymentDateReached
         - MarketDefaultRecorded
         - DrawnAmountUpdate
@@ -884,6 +920,8 @@ templates:
           handler: handleInterestAndFeesAccrued
         - event: MarketClosed(indexed address,uint256)
           handler: handleMarketClosed
+        - event: NukeProtectionRegistered(indexed address)
+          handler: handleNukeProtectionRegistered
         - event: MaxTotalSupplyUpdated(indexed address,uint256,uint256)
           handler: handleMaxTotalSupplyUpdated
         - event: ProtocolFeeBipsUpdated(indexed address,uint256,uint256)

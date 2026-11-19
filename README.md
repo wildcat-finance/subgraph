@@ -1,8 +1,8 @@
 # Deploying the subgraph
 
-Run these commands from `mono/subgraph`. On a fresh checkout, install dependencies
-with `yarn install --frozen-lockfile` first. The examples below publish
-`v2.5.15` to Sepolia; use the intended release label for later deployments.
+Run these commands from `mono/subgraph`. On a fresh checkout, run
+`yarn install --frozen-lockfile` first. The examples deploy `sepolia/v2.5.16`.
+Use the new version label for each release.
 
 ## Goldsky
 
@@ -11,7 +11,7 @@ project in your browser, then deploy:
 
 ```sh
 goldsky login
-yarn deploy:goldsky:sepolia v2.5.15
+yarn deploy:goldsky:sepolia v2.5.16
 ```
 
 Login is only needed when credentials are missing or you are switching projects.
@@ -27,7 +27,7 @@ Replace both `PORT` values with that callback port and `user@host` with your SSH
 destination. Keep the tunnel open while completing browser authorization.
 Each new login attempt may choose a different port.
 
-The deployed name is `sepolia/v2.5.15`. Use the query URL from the CLI output
+The deployed name is `sepolia/v2.5.16`. Use the query URL from the CLI output
 or Goldsky dashboard.
 
 ## Hinterlight
@@ -43,13 +43,12 @@ all three variables:
 | `IPFS_BEARER_TOKEN` | `Authorization: Bearer …` when uploading to `ipfs.hinterlight.net` |
 
 ```sh
-yarn deploy:hinterlight:sepolia v2.5.15
+yarn deploy:hinterlight:sepolia v2.5.16
 ```
 
-The script creates the subgraph if needed, uploads it, and prints its public
-query URL: `https://graph.hinterlight.net/sepolia/v2.5.15`.
-It converts the internal Graph Node name to `sepolia/v2-5-15` automatically;
-keep the dotted version in the command and public URL.
+The script creates the subgraph if needed, uploads it, and prints
+`https://graph.hinterlight.net/sepolia/v2.5.16`. Use the dotted version in
+commands and public URLs. The script uses `sepolia/v2-5-16` inside Graph Node.
 
 ## Checks and other networks
 
@@ -73,5 +72,5 @@ replace `sepolia` in the script name only when that network's release is ready.
 See [package.json](./package.json) for shortcuts,
 [scripts/deploy.js](./scripts/deploy.js) for credentials and deployment behavior,
 [configuration and builds](./docs/CONFIGURATION_AND_BUILDS.md) for network setup,
-and the [V2.5.15 release notes](./docs/V2_5_15_PROTOCOL_COMPATIBILITY.md)
-for the Sepolia V2.5.7 factory update.
+and the [v2.5.16 release notes](./docs/V2_5_16_PROTOCOL_COMPATIBILITY.md)
+for the Sepolia v2.5.9 factories and shared KYC provider.

@@ -1,15 +1,11 @@
-# V2.5 Subgraph Configuration and Builds
+# v2.5 subgraph configuration and builds
 
-The hard-cut v2.5 event-generation path is documented in
-`docs/V2_5_9_EVENT_MODEL.md`. The V2.5.15 release for the Sepolia V2.5.7 factory
-update is documented in `docs/V2_5_15_PROTOCOL_COMPATIBILITY.md`. The reused
-V2.5.6 templates are documented in `docs/V2_5_14_PROTOCOL_COMPATIBILITY.md`;
-the retained Sepolia V2.5.5 factory set and repayment event model are documented
-in `docs/V2_5_13_PROTOCOL_COMPATIBILITY.md`.
+The [v2.5.16 release notes](./V2_5_16_PROTOCOL_COMPATIBILITY.md) cover the
+Sepolia v2.5.9 factories, historical markets, and shared KYC provider.
+The [event model](./V2_5_9_EVENT_MODEL.md) describes the v2.5 mappings.
 
-The V2.5 subgraph uses one schema and mapping codebase with an explicit
-descriptor for each chain. Generated manifests are outputs, not configuration
-sources.
+The v2.5 subgraph shares one schema and one set of mappings across chains.
+Edit the chain descriptor to change what its manifest indexes.
 
 ## Sources of truth
 
@@ -33,8 +29,7 @@ These fields deliberately describe different things:
 
 - `indexed` means the subgraph must retain visibility into markets created by
   the factory.
-- `deploymentTarget` means the V2.5 release may use the factory for new market
-  creation.
+- `deploymentTarget` marks the factory that v2.5 selects for new deployments.
 - `lifecycle` describes operator intent; it does not delete history.
 - `compatibility.canonicalFactoryByMarketKind` chooses the stable generated
   binding and legacy `networks.json` alias. It does not follow
@@ -66,7 +61,7 @@ template state. Unknown factories/templates and missing references are recorded
 as `IndexerDiagnostic` entities.
 
 Before deployment addresses exist, `deploymentTargetsReady` must be `false`
-and no factory may set `deploymentTarget`. Once the V2.5 standard, revolving,
+and no factory may set `deploymentTarget`. Once the v2.5 standard, revolving,
 and wrapper addresses are final, set `deploymentTargetsReady` to `true`, select
 exactly one target of each market kind, and select one wrapper target on chains
 where wrappers are enabled.
@@ -105,19 +100,19 @@ The all-network build snapshots and restores the selected generated manifest.
 Each chain is built into `build/<network>/` because generated Graph bindings are
 shared and therefore must be produced serially.
 
-## V2.5 deployment handoff
+## v2.5 deployment handoff
 
 After the protocol deployment ceremony produces final addresses and start
 blocks:
 
 1. Verify the protocol factory inventory and deployment files.
-2. Add the standard, revolving, and wrapper V2.5 factory records to the relevant
+2. Add the v2.5 standard, revolving, and wrapper factory records to the relevant
    chain descriptor with exact generation and ABI-family metadata.
-   On Sepolia, existing pre-V2.5 hooks factories use the legacy ABI families;
-   the final V2.5 factories use the `hooks-v2-5` / `V2_5` / `BASE` family.
+   On Sepolia, pre-v2.5 hooks factories use the legacy ABI families.
+   The v2.5 release factories use `hooks-v2-5` / `V2_5` / `BASE`.
 3. Keep every historical factory with markets as `indexed: true`, even if it is
    no longer registered or deployable.
-4. Mark only the new V2.5 standard, revolving, and wrapper factories as
+4. Mark only the new v2.5 standard, revolving, and wrapper factories as
    deployment targets, and set `deploymentTargetsReady: true`.
 5. Change compatibility aliases only when the generated binding alias and the
    frozen protocol compatibility projection should move to the new factory.
@@ -146,7 +141,7 @@ kind, ABI family, hooked-market tuple adapter, and template registration through
 data-source context.
 
 The `BASE` and `FORCE_BUYBACK` hooked-market tuple shapes have separate minimal
-ABI bindings, so historical factories and V2.5 factories can coexist on one
+ABI bindings, so historical factories and v2.5 factories can coexist on one
 chain without network-wide ABI swapping. The single `CombinedHooks` and market
 dynamic templates still require their core event/call ABIs to match. Config
 validation permits different adapter families but fails if those core ABI paths

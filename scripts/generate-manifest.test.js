@@ -88,9 +88,9 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
       "Wildcat4626WrapperFactoryV2_5",
       "Wildcat4626WrapperFactoryV2_5_3",
       "Wildcat4626WrapperFactoryV2_5_4",
-      "Wildcat4626WrapperFactoryV2_5_5",
+      "Wildcat4626WrapperFactoryV2_5_7",
       "Wildcat4626WrapperFactory",
-      "HooksFactoryStandardV2_5_7",
+      "HooksFactoryStandardV2_5_9",
       "HooksFactory",
       "HooksFactoryStandardV2_1",
       "HooksFactoryRevolvingPreview20260424",
@@ -101,13 +101,13 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
       "HooksFactoryStandardV2_5_3",
       "HooksFactoryRevolvingV2_5_3",
       "HooksFactoryStandardV2_5_4",
-      "HooksFactoryRevolvingV2_5_4",
-      "HooksFactoryStandardV2_5_5",
-      "HooksFactoryRevolvingV2_5_5",
+      "HooksFactoryStandardV2_5_7",
+      "HooksFactoryRevolvingV2_5_7",
       "HooksFactoryRevolving",
       "WildcatBorrowerIdentityRegistryV2_5",
       "AccessListRoleProviderFactoryV2_5",
       "AccessListRoleProviderFactoryV2_5_5",
+      "KYCRoleProvider",
       "WildcatArchController",
       "WildcatSanctionsSentinel"
     ]
@@ -115,7 +115,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
   const legacyTypeAnchor = sourceByName(manifest, "HooksFactory");
   const standardFactory = sourceByName(
     manifest,
-    "HooksFactoryStandardV2_5_7"
+    "HooksFactoryStandardV2_5_9"
   );
   const revolvingFactory = sourceByName(manifest, "HooksFactoryRevolving");
   assert.equal(
@@ -147,7 +147,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
   );
   assert.equal(
     contextData(standardFactory, standardFactory.source.address),
-    "STANDARD|v2.5.7|hooks-v2-5|V2_5|BASE|11845725|true|true|ACTIVE|standard-v2.5.7|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
+    "STANDARD|v2.5.9|hooks-v2-5|V2_5|BASE|12170120|true|true|ACTIVE|standard-v2.5.9|0xC003f20F2642c76B81e5e1620c6D8cdEE826408f"
   );
   assert.deepEqual(
     Object.keys(standardFactory.context).filter(key =>
@@ -165,7 +165,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     Object.keys(standardFactory.context).filter(key =>
       key.startsWith("hooksTemplate_")
     ).length,
-    25
+    28
   );
   assert.equal(standardFactory.context.pricingMode.data, "SYNTHETIC_TESTNET");
   assert.match(
@@ -180,7 +180,7 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
     Object.keys(
       sourceByName(manifest, "WildcatArchController").context
     ).filter(key => key.startsWith("hooksFactory_")).length,
-    19
+    21
   );
   assert.equal(
     sourceByName(manifest, "HooksFactoryRevolving_20260419_233246"),
@@ -189,16 +189,16 @@ test("renders Sepolia historical factories, canonical aliases, mappings, and ABI
   const wrapperFactory = sourceByName(manifest, "Wildcat4626WrapperFactory");
   assert.equal(
     wrapperFactory.source.address,
-    "0xCf2338947eeE38b7D82E187698339B3E67E67CBf"
+    "0xF45bf6d89A34003226EbE388B0291798F534dE9F"
   );
-  assert.equal(wrapperFactory.source.startBlock, 11845719);
+  assert.equal(wrapperFactory.source.startBlock, 12170117);
   assert.equal(
     wrapperFactory.context.moduleFactoryLabel.data,
-    "wrapper-v2.5.7"
+    "wrapper-v2.5.9"
   );
   assert.equal(
     wrapperFactory.context.moduleFactoryGeneration.data,
-    "v2.5.7"
+    "v2.5.9"
   );
   assert.equal(wrapperFactory.context.moduleFactoryIndexed.data, "true");
   assert.equal(
@@ -331,12 +331,30 @@ test("wires repayment and commitment events for both factory kinds and retains t
     const events = source.mapping.eventHandlers.map(({ event }) => event);
     assert.ok(events.includes("MarketRepaymentTerms(indexed address,uint256,uint256)"));
     assert.ok(events.includes("HooksTemplateInitCodeHashRecorded(indexed address,bytes32)"));
+    assert.ok(events.includes("NukeProtectionFactoryApproval(indexed address,bool)"));
+    assert.ok(events.includes("NukeProtectionRequested(indexed address,indexed address,indexed address)"));
   }
   const market = manifest.templates.find(({ name }) => name === "WildcatMarketV2_5");
   assert.equal(abiPath(market.mapping, "WildcatMarketLegacyState"), "./abis/v2.5/WildcatMarketLegacyState.json");
   const events = market.mapping.eventHandlers.map(({ event }) => event);
   assert.ok(events.includes("RepaymentDateReached(uint256)"));
   assert.ok(events.includes("DefaultRecorded(uint256)"));
+  assert.ok(events.includes("NukeProtectionRegistered(indexed address)"));
+});
+
+test("indexes KYC from its deployment block", () => {
+  const { manifest } = renderOutputs("sepolia");
+  const source = sourceByName(manifest, "KYCRoleProvider");
+  assert.equal(source.source.address, "0x231ee08A700DdAe6FeD989D797BCa1e18f198aA8");
+  assert.equal(source.source.startBlock, 12170140);
+  assert.equal(source.context.initialAdministrator.data, "0xCa7007a75296b532Ce1606d9e130eAa849800Ca7");
+  assert.deepEqual(source.mapping.blockHandlers, [{ handler: "handleDeployment", filter: { kind: "once" } }]);
+  const accessList = manifest.templates.find(template => template.name === "AccessListRoleProvider");
+  assert.deepEqual(
+    source.mapping.eventHandlers.map(handler => handler.event).sort(),
+    accessList.mapping.eventHandlers.map(handler => handler.event).sort()
+  );
+  assert.equal(sourceByName(renderOutputs("mainnet").manifest, "KYCRoleProvider"), undefined);
 });
 
 test("feature flags remove unsupported Plasma sources without changing the core schema surface", () => {
@@ -365,22 +383,22 @@ test("legacy networks projection retains all inventory entries but aliases only 
   const networks = buildLegacyNetworks(configs);
   const sepolia = networks.sepolia;
 
-  assert.equal(sepolia.hooksFactories.length, 19);
+  assert.equal(sepolia.hooksFactories.length, 21);
   assert.equal(
     sepolia.hooksFactories.filter(factory => factory.indexed).length,
-    15
+    14
   );
   assert.equal(
     sepolia.contracts.HooksFactory.address,
-    "0xae525051d16912D13b63eCa01f52ADF576FC4380"
+    "0xE967A79399C3C4dE66F0d66B3B2656e1C63C8B47"
   );
   assert.equal(
     sepolia.contracts.HooksFactoryRevolving.address,
-    "0x2f0E18ae9134cD16b7Ec0C63cC4B11B38eAdB2aF"
+    "0x9d3E40508f9c9148e8529fbd81fCA75Ed4dCf13e"
   );
   assert.equal(
     sepolia.contracts.Wildcat4626WrapperFactory.address,
-    "0xCf2338947eeE38b7D82E187698339B3E67E67CBf"
+    "0xF45bf6d89A34003226EbE388B0291798F534dE9F"
   );
   assert.equal(
     sepolia.hooksFactories.find(
@@ -403,7 +421,7 @@ test("deployment-target changes do not alter current compatibility aliases", () 
   const config = loadChainConfig("sepolia", { abiFamilies });
   const modified = JSON.parse(JSON.stringify(config));
   modified.factories.find(
-    factory => factory.label === "standard-v2.5.7"
+    factory => factory.label === "standard-v2.5.9"
   ).deploymentTarget = false;
   modified.factories.find(
     factory => factory.label === "standard-v2"
@@ -411,8 +429,8 @@ test("deployment-target changes do not alter current compatibility aliases", () 
 
   const manifest = buildManifest(modified, abiFamilies, base);
   assert.equal(
-    sourceByName(manifest, "HooksFactoryStandardV2_5_7").source.address,
-    config.factories.find(factory => factory.label === "standard-v2.5.7")
+    sourceByName(manifest, "HooksFactoryStandardV2_5_9").source.address,
+    config.factories.find(factory => factory.label === "standard-v2.5.9")
       .address
   );
   const standardTarget = modified.factories.find(
@@ -448,17 +466,17 @@ test("selects the hard-cut mappings from the deployment ABI family", () => {
   const config = loadChainConfig("sepolia", { abiFamilies });
   const modified = JSON.parse(JSON.stringify(config));
   const standard = modified.factories.find(
-    factory => factory.label === "standard-v2.5.7"
+    factory => factory.label === "standard-v2.5.9"
   );
   const revolving = modified.factories.find(
-    factory => factory.label === "revolving-v2.5.7"
+    factory => factory.label === "revolving-v2.5.9"
   );
   standard.abiFamily = "hooks-v2-5";
   revolving.abiFamily = "hooks-v2-5";
 
   const manifest = buildManifest(modified, abiFamilies, base);
   const legacyTypeAnchor = sourceByName(manifest, "HooksFactory");
-  const standardSource = sourceByName(manifest, "HooksFactoryStandardV2_5_7");
+  const standardSource = sourceByName(manifest, "HooksFactoryStandardV2_5_9");
   const revolvingSource = sourceByName(manifest, "HooksFactoryRevolving");
   assert.equal(legacyTypeAnchor.mapping.file, "./src/hooks-factory.ts");
   assert.equal(
@@ -565,14 +583,14 @@ test("keeps a HooksFactory type anchor on a v2.5-only chain", () => {
   const modified = JSON.parse(JSON.stringify(config));
   for (const factory of modified.factories) {
     factory.indexed =
-      factory.label === "standard-v2.5.7" ||
-      factory.label === "revolving-v2.5.7";
+      factory.label === "standard-v2.5.9" ||
+      factory.label === "revolving-v2.5.9";
   }
   const standard = modified.factories.find(
-    factory => factory.label === "standard-v2.5.7"
+    factory => factory.label === "standard-v2.5.9"
   );
   const revolving = modified.factories.find(
-    factory => factory.label === "revolving-v2.5.7"
+    factory => factory.label === "revolving-v2.5.9"
   );
   standard.abiFamily = "hooks-v2-5";
   revolving.abiFamily = "hooks-v2-5";

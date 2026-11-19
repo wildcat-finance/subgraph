@@ -16,6 +16,7 @@ import {
   InterestAndFeesAccrued,
   MarketClosed,
   MaxTotalSupplyUpdated,
+  NukeProtectionRegistered,
   ProtocolFeeBipsUpdated,
   RepaymentDateReached,
   SanctionedAccountAssetsQueuedForWithdrawal,
@@ -57,6 +58,7 @@ import {
   MarketDefaultRecorded,
   MarketRepaymentDateReached,
   MarketWrapperRegistration,
+  NukeProtectionRegistration,
 } from "../generated/schema";
 import {
   generateMarketId,
@@ -479,6 +481,19 @@ export function handleWithdrawalExecuted(event: WithdrawalExecuted): void {
 
 export function handleWithdrawalQueued(event: WithdrawalQueued): void {
   handleLegacyWithdrawalQueued(changetype<LegacyWithdrawalQueued>(event));
+}
+
+export function handleNukeProtectionRegistered(event: NukeProtectionRegistered): void {
+  let market = getMarket(generateMarketId(event.address));
+  recordMarketEvent(event, market, "NUKE_PROTECTION_REGISTERED");
+  let registration = new NukeProtectionRegistration(generateEventId(event));
+  registration.market = market.id;
+  registration.account = event.params.account;
+  registration.blockNumber = event.block.number;
+  registration.blockTimestamp = event.block.timestamp;
+  registration.transactionHash = event.transaction.hash;
+  registration.blockLogIndex = event.logIndex;
+  registration.save();
 }
 
 export function handleWrapperRegistered(event: WrapperRegistered): void {

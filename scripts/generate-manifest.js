@@ -391,8 +391,19 @@ function buildManifest(config, abiFamilies, baseManifest) {
         {
           event: "MarketRepaymentTerms(indexed address,uint256,uint256)",
           handler: "handleMarketRepaymentTerms"
+        },
+        {
+          event: "NukeProtectionFactoryApproval(indexed address,bool)",
+          handler: "handleNukeProtectionFactoryApproval"
+        },
+        {
+          event: "NukeProtectionRequested(indexed address,indexed address,indexed address)",
+          handler: "handleNukeProtectionRequested"
         }
       ];
+      dataSource.mapping.entities.push(
+        "NukeProtectionFactoryApproval", "NukeProtectionFactoryApprovalChange", "NukeProtectionRequest"
+      );
       if (factory.marketKind === "REVOLVING") {
         dataSource.mapping.eventHandlers.push({
           event: "RevolvingMarketDeployed(indexed address,uint256)",
@@ -442,6 +453,21 @@ function buildManifest(config, abiFamilies, baseManifest) {
     );
     addOptionalModuleFactoryContext(dataSource, factory);
     dataSources.push(dataSource);
+  }
+
+  const kyc = config.anchors.kycRoleProvider;
+  if (kyc) {
+    // the KYC constructor emits no event, so a block handler records deployment.
+    manifest.specVersion = "0.0.8";
+    const source = configureDataSource(
+      namedEntry(prototypes, "KYCRoleProvider", "manifest base dataSources"),
+      config, kyc, "KYCRoleProvider"
+    );
+    mergeContext(source, {
+      initialAdministrator: stringContext(kyc.initialAdministrator),
+      deployTxHash: stringContext(kyc.deployTxHash)
+    });
+    dataSources.push(source);
   }
 
   const archController = configureDataSource(
